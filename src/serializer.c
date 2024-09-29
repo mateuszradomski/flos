@@ -148,7 +148,7 @@ pushNodeHeader(Serializer *s, ASTNode *node) {
 }
 
 static void pushExpression(Serializer *s, ASTNode *node);
-static void pushParameters(Serializer *s, ASTNodeList *list);
+static void pushParameters(Serializer *s, ASTNodeListRanged *list);
 
 static void
 pushType(Serializer *s, ASTNode *node) {
@@ -202,7 +202,7 @@ pushVariableDeclaration(Serializer *s, ASTNode *node) {
 }
 
 static void
-pushCallArgumentList(Serializer *s, ASTNodeList *expressions, TokenIdList *names) {
+pushCallArgumentList(Serializer *s, ASTNodeListRanged *expressions, TokenIdList *names) {
     pushU32(s, expressions->count);
     if(expressions->count == -1) {
         return;
@@ -645,7 +645,7 @@ pushStatement(Serializer *s, ASTNode *node) {
 }
 
 static void
-pushParameters(Serializer *s, ASTNodeList *list) {
+pushParameters(Serializer *s, ASTNodeListRanged *list) {
     if(list == 0x0) {
         pushU32(s, 0xffffffff);
         return;

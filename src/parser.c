@@ -94,9 +94,17 @@ typedef struct ASTNodeList {
     u32 count;
 } ASTNodeList;
 
+typedef struct ASTNodeListRanged {
+    TokenId startToken;
+    TokenId endToken;
+    ASTNodeLink *head;
+    ASTNodeLink *last;
+    u32 count;
+} ASTNodeListRanged;
+
 typedef struct ASTNodeStruct {
     TokenId nameTokenId;
-    ASTNodeList members;
+    ASTNodeListRanged members;
 } ASTNodeStruct;
 
 typedef struct ASTNodeBaseType {
@@ -116,10 +124,10 @@ typedef struct ASTNodeMapping {
 } ASTNodeMapping;
 
 typedef struct ASTNodeFunctionType {
-    ASTNodeList parameters;
-    u16 visibility;
-    u16 stateMutability;
-    ASTNodeList returnParameters;
+    ASTNodeListRanged parameters;
+    TokenId visibility;
+    TokenId stateMutability;
+    ASTNodeListRanged returnParameters;
 } ASTNodeFunctionType;
 
 typedef struct ASTNodeArrayType {
@@ -129,12 +137,12 @@ typedef struct ASTNodeArrayType {
 
 typedef struct ASTNodeError {
     TokenId identifier;
-    ASTNodeList parameters;
+    ASTNodeListRanged parameters;
 } ASTNodeError;
 
 typedef struct ASTNodeEvent {
     TokenId identifier;
-    ASTNodeList parameters;
+    ASTNodeListRanged parameters;
     u32 anonymous;
 } ASTNodeEvent;
 
@@ -147,10 +155,10 @@ typedef struct ASTNodeConstVariable {
     TokenId identifier;
     ASTNode *type;
     ASTNode *expression;
-    u8 visibility;
-    u8 mutability;
-    u8 override;
-    ASTNodeList overrides;
+    TokenId visibility;
+    TokenId mutability;
+    TokenId override;
+    ASTNodeListRanged overrides;
 } ASTNodeConstVariable;
 
 typedef struct ASTNodeNumberLitExpression {
@@ -187,7 +195,7 @@ typedef struct ASTNodeNewExpression {
 
 typedef struct ASTNodeFunctionCallExpression {
     ASTNode *expression;
-    ASTNodeList argumentsExpression;
+    ASTNodeListRanged argumentsExpression;
     TokenIdList argumentsName;
 } ASTNodeFunctionCallExpression;
 
@@ -214,16 +222,16 @@ typedef struct ASTNodeTerneryExpression {
 } ASTNodeTerneryExpression;
 
 typedef struct ASTNodeFunctionDefinition {
-    TokenId name;                  // 4 bytes
-    ASTNodeList parameters;        // 12 bytes
-    u8 visibility;                 // 1 byte
-    u8 stateMutability;            // 1 byte
-    u8 virtual;                    // 1 byte
-    u8 override;                   // 1 byte
-    ASTNodeList *overrides;        // 4 bytes
-    ASTNodeList *modifiers;        // 4 bytes
-    ASTNodeList *returnParameters; // 4 bytes
-    ASTNode *body;                 // 4 bytes
+    TokenId name;                        // 4 bytes
+    ASTNodeListRanged parameters;        // 12 bytes
+    TokenId visibility;                  // 4 byte
+    TokenId stateMutability;             // 4 byte
+    TokenId virtual;                     // 4 byte
+    TokenId override;                    // 1 byte
+    ASTNodeListRanged *overrides;        // 4 bytes
+    ASTNodeList *modifiers;              // 4 bytes
+    ASTNodeListRanged *returnParameters; // 4 bytes
+    ASTNode *body;                       // 4 bytes
 } ASTNodeFunctionDefinition;
 
 typedef struct ASTNodeBlockStatement {
@@ -243,7 +251,7 @@ typedef struct ASTNodeIfStatement {
 typedef struct ASTNodeVariableDeclaration {
     ASTNode *type;
     u32 name;
-    u32 dataLocation;
+    TokenId dataLocation;
 } ASTNodeVariableDeclaration;
 
 typedef struct ASTNodeVariableDeclarationStatement {
@@ -264,7 +272,7 @@ typedef struct ASTNodeWhileStatement {
 typedef struct ASTNodeInheritanceSpecifier {
     ASTNode *identifier;
     TokenIdList argumentsName;
-    ASTNodeList argumentsExpression;
+    ASTNodeListRanged argumentsExpression;
 } ASTNodeInheritanceSpecifier;
 
 typedef ASTNodeInheritanceSpecifier ASTNodeModifierInvocation;
@@ -302,10 +310,10 @@ typedef struct ASTNodeEmitStatement {
 } ASTNodeEmitStatement;
 
 typedef struct ASTNodeConstructorDefinition {
-    ASTNodeList parameters;
-    u8 visibility;
-    u8 stateMutability;
-    u8 virtual;
+    ASTNodeListRanged parameters;
+    TokenId visibility;
+    TokenId stateMutability;
+    TokenId virtual;
     ASTNodeList modifiers;
     ASTNode *body;
 } ASTNodeConstructorDefinition;
@@ -329,10 +337,10 @@ typedef struct ASTNodePragma {
 } ASTNodePragma;
 
 typedef struct ASTNodeUsing {
-    ASTNodeList identifiers;
+    ASTNodeListRanged identifiers;
     U16List operators;
     ASTNode *forType;
-    u8 global;
+    TokenId global;
     u8 onLibrary;
 } ASTNodeUsing;
 
@@ -342,14 +350,14 @@ typedef struct ASTNodeInlineArrayExpression {
 
 typedef struct ASTNodeTryStatement {
     ASTNode *expression;
-    ASTNodeList returnParameters;
+    ASTNodeListRanged returnParameters;
     ASTNode *body;
     ASTNodeList catches;
 } ASTNodeTryStatement;
 
 typedef struct ASTNodeCatchStatement {
     TokenId identifier;
-    ASTNodeList parameters;
+    ASTNodeListRanged parameters;
     ASTNode *body;
 } ASTNodeCatchStatement;
 
@@ -815,7 +823,7 @@ isBaseTypeName(String string) {
 static bool parseType(Parser *parser, ASTNode *node);
 
 static bool
-parseVariableDeclarationIntoList(Parser *parser, ASTNodeList *list) {
+parseVariableDeclarationIntoList(Parser *parser, ASTNodeListRanged *list) {
     ASTNodeLink *parameter = structPush(parser->arena, ASTNodeLink);
     ASTNode *node = &parameter->node;
     node->type = ASTNodeType_VariableDeclaration;
@@ -828,15 +836,15 @@ parseVariableDeclarationIntoList(Parser *parser, ASTNodeList *list) {
         return false;
     }
 
-    variableDeclaration->dataLocation = 0;
+    variableDeclaration->dataLocation = INVALID_TOKEN_ID;
     if(acceptToken(parser, TokenType_Memory)) {
-        variableDeclaration->dataLocation = 1;
+        variableDeclaration->dataLocation = peekLastTokenId(parser);
     } else if(acceptToken(parser, TokenType_Storage)) {
-        variableDeclaration->dataLocation = 2;
+        variableDeclaration->dataLocation = peekLastTokenId(parser);
     } else if(acceptToken(parser, TokenType_Calldata)) {
-        variableDeclaration->dataLocation = 3;
+        variableDeclaration->dataLocation = peekLastTokenId(parser);
     } else if(acceptToken(parser, TokenType_Indexed)) {
-        variableDeclaration->dataLocation = 4;
+        variableDeclaration->dataLocation = peekLastTokenId(parser);
     }
 
     variableDeclaration->name = parseIdentifier(parser);
@@ -849,12 +857,14 @@ parseVariableDeclarationIntoList(Parser *parser, ASTNodeList *list) {
 }
 
 static void
-parseFunctionParameters(Parser *parser, ASTNodeList *list) {
+parseFunctionParameters(Parser *parser, ASTNodeListRanged *list) {
+    list->startToken = parser->current;
     parseVariableDeclarationIntoList(parser, list);
     while(acceptToken(parser, TokenType_Comma)) {
         assertError(parseVariableDeclarationIntoList(parser, list),
                     parser, "Expected variable declaration after comma");
     }
+    list->endToken = parser->current - 1;
 }
 
 static bool
@@ -894,39 +904,39 @@ parseType(Parser *parser, ASTNode *node) {
             expectToken(parser, TokenType_RParen);
         }
 
-        function->stateMutability = 0;
-        function->visibility = 0;
+        function->stateMutability = INVALID_TOKEN_ID;
+        function->visibility = INVALID_TOKEN_ID;
         for(;;) {
             if(acceptToken(parser, TokenType_Internal)) {
-                if(function->visibility != 0) {
+                if(function->visibility != INVALID_TOKEN_ID) {
                     parser->current -= 1;
                     break;
                 }
-                function->visibility = 1;
+                function->visibility = peekLastTokenId(parser);
             } else if(acceptToken(parser, TokenType_External)) {
-                if(function->visibility != 0) {
+                if(function->visibility != INVALID_TOKEN_ID) {
                     parser->current -= 1;
                     break;
                 }
-                function->visibility = 2;
+                function->visibility = peekLastTokenId(parser);
             } else if(acceptToken(parser, TokenType_Private)) {
-                if(function->visibility != 0) {
+                if(function->visibility != INVALID_TOKEN_ID) {
                     parser->current -= 1;
                     break;
                 }
-                function->visibility = 3;
+                function->visibility = peekLastTokenId(parser);
             } else if(acceptToken(parser, TokenType_Public)) {
-                if(function->visibility != 0) {
+                if(function->visibility != INVALID_TOKEN_ID) {
                     parser->current -= 1;
                     break;
                 }
-                function->visibility = 4;
+                function->visibility = peekLastTokenId(parser);
             } else if(acceptToken(parser, TokenType_Pure)) {
-                function->stateMutability = 1;
+                function->stateMutability = peekLastTokenId(parser);
             } else if(acceptToken(parser, TokenType_View)) {
-                function->stateMutability = 2;
+                function->stateMutability = peekLastTokenId(parser);
             } else if(acceptToken(parser, TokenType_Payable)) {
-                function->stateMutability = 3;
+                function->stateMutability = peekLastTokenId(parser);
             } else {
                 break;
             }
@@ -1113,6 +1123,7 @@ parseUsing(Parser *parser, ASTNode *node) {
     ASTNodeUsing *using = &node->usingNode;
 
     if(acceptToken(parser, TokenType_LBrace)) {
+        using->identifiers.startToken = parser->current;
         using->onLibrary = 0;
         do {
             ASTNodeLink *identifierLink = structPush(parser->arena, ASTNodeLink);
@@ -1128,6 +1139,7 @@ parseUsing(Parser *parser, ASTNode *node) {
             listPushU16(&using->operators, operator, parser->arena);
         } while(acceptToken(parser, TokenType_Comma));
 
+        using->identifiers.endToken = parser->current - 1;
         expectToken(parser, TokenType_RBrace);
     } else {
         using->onLibrary = 1;
@@ -1146,9 +1158,9 @@ parseUsing(Parser *parser, ASTNode *node) {
         parseType(parser, using->forType);
     }
 
-    using->global = 0;
+    using->global = INVALID_TOKEN_ID;
     if(acceptToken(parser, TokenType_Global)) {
-        using->global = 1;
+        using->global = peekLastTokenId(parser);
     }
 
     expectToken(parser, TokenType_Semicolon);
@@ -1397,7 +1409,8 @@ getUnaryOperatorPrecedence(Parser *parser, TokenType type) {
 static bool parseExpressionImpl(Parser *parser, ASTNode *node, u32 previousPrecedence);
 
 static void
-parseCallArgumentList(Parser *parser, ASTNodeList *expressions, TokenIdList *names) {
+parseCallArgumentList(Parser *parser, ASTNodeListRanged *expressions, TokenIdList *names) {
+    expressions->startToken = parser->current;
     if(!acceptToken(parser, TokenType_RParen)) {
         if(acceptToken(parser, TokenType_LBrace)) {
             do {
@@ -1424,7 +1437,9 @@ parseCallArgumentList(Parser *parser, ASTNodeList *expressions, TokenIdList *nam
                 expressions->count += 1;
             } while(acceptToken(parser, TokenType_Comma));
         }
+
         expectToken(parser, TokenType_RParen);
+        expressions->endToken = parser->current - 1;
     }
 }
 
@@ -1728,13 +1743,13 @@ tryParseVariableDeclaration(Parser *parser, ASTNode *node) {
         return false;
     }
 
-    u32 dataLocation = 0;
+    TokenId dataLocation = INVALID_TOKEN_ID;
     if(acceptToken(parser, TokenType_Memory)) {
-        dataLocation = 1;
+        dataLocation = peekLastTokenId(parser);
     } else if(acceptToken(parser, TokenType_Storage)) {
-        dataLocation = 2;
+        dataLocation = peekLastTokenId(parser);
     } else if(acceptToken(parser, TokenType_Calldata)) {
-        dataLocation = 3;
+        dataLocation = peekLastTokenId(parser);
     }
 
     TokenId name = parseIdentifier(parser);
@@ -2340,8 +2355,9 @@ parseConstVariable(Parser *parser, ASTNode *node, ASTNode *type) {
 }
 
 static void
-parseOverrideSpecifierArgs(Parser *parser, ASTNodeList *list) {
+parseOverrideSpecifierArgs(Parser *parser, ASTNodeListRanged *list) {
     if(acceptToken(parser, TokenType_LParen)) {
+        list->startToken = parser->current;
         do {
             ASTNodeLink *argument = structPush(parser->arena, ASTNodeLink);
             parseType(parser, &argument->node);
@@ -2352,6 +2368,7 @@ parseOverrideSpecifierArgs(Parser *parser, ASTNodeList *list) {
             list->count += 1;
         } while(acceptToken(parser, TokenType_Comma));
 
+        list->endToken = parser->current - 1;
         expectToken(parser, TokenType_RParen);
     }
 }
@@ -2369,26 +2386,28 @@ tryParseStateVariableDeclaration(Parser *parser, ASTNode *node) {
         return false;
     }
 
-    decl->visibility = 0;
+    decl->visibility = INVALID_TOKEN_ID;
+    decl->mutability = INVALID_TOKEN_ID;
+    decl->override = INVALID_TOKEN_ID;
     for(;;) {
         if (acceptToken(parser, TokenType_Internal)) {
-            assertError(decl->visibility == 0, parser, "Visibility modifier already set");
-            decl->visibility = 3;
+            assertError(decl->visibility == INVALID_TOKEN_ID, parser, "Visibility modifier already set");
+            decl->visibility = peekLastTokenId(parser);
         } else if (acceptToken(parser, TokenType_Private)) {
-            assertError(decl->visibility == 0, parser, "Visibility modifier already set");
-            decl->visibility = 2;
+            assertError(decl->visibility == INVALID_TOKEN_ID, parser, "Visibility modifier already set");
+            decl->visibility = peekLastTokenId(parser);
         } else if (acceptToken(parser, TokenType_Public)) {
-            assertError(decl->visibility == 0, parser, "Visibility modifier already set");
-            decl->visibility = 1;
+            assertError(decl->visibility == INVALID_TOKEN_ID, parser, "Visibility modifier already set");
+            decl->visibility = peekLastTokenId(parser);
         } else if(acceptToken(parser, TokenType_Constant)) {
-            assertError(decl->mutability == 0, parser, "Mutability modifier already set");
-            decl->mutability = 1;
+            assertError(decl->mutability == INVALID_TOKEN_ID, parser, "Mutability modifier already set");
+            decl->mutability = peekLastTokenId(parser);
         } else if(acceptToken(parser, TokenType_Immutable)) {
-            assertError(decl->mutability == 0, parser, "Mutability modifier already set");
-            decl->mutability = 2;
+            assertError(decl->mutability == INVALID_TOKEN_ID, parser, "Mutability modifier already set");
+            decl->mutability = peekLastTokenId(parser);
         } else if(acceptToken(parser, TokenType_Override)) {
-            assertError(decl->override == 0, parser, "Override modifier already set");
-            decl->override = 1;
+            assertError(decl->override == INVALID_TOKEN_ID, parser, "Override modifier already set");
+            decl->override = peekLastTokenId(parser);
             parseOverrideSpecifierArgs(parser, &decl->overrides);
         } else {
             break;
@@ -2455,41 +2474,42 @@ parseFunction(Parser *parser, ASTNode *node) {
         expectToken(parser, TokenType_RParen);
     }
 
-    function->visibility = 0;
-    function->stateMutability = 0;
-    function->virtual = 0;
+    function->visibility = INVALID_TOKEN_ID;
+    function->stateMutability = INVALID_TOKEN_ID;
+    function->virtual = INVALID_TOKEN_ID;
+    function->override = INVALID_TOKEN_ID;
     for(;;) {
         if (acceptToken(parser, TokenType_Internal)) {
-            assertError(function->visibility == 0, parser, "Visibility modifier already set");
-            function->visibility = 1;
+            assertError(function->visibility == INVALID_TOKEN_ID, parser, "Visibility modifier already set");
+            function->visibility = peekLastTokenId(parser);
         } else if (acceptToken(parser, TokenType_External)) {
-            assertError(function->visibility == 0, parser, "Visibility modifier already set");
-            function->visibility = 2;
+            assertError(function->visibility == INVALID_TOKEN_ID, parser, "Visibility modifier already set");
+            function->visibility = peekLastTokenId(parser);
         } else if (acceptToken(parser, TokenType_Private)) {
-            assertError(function->visibility == 0, parser, "Visibility modifier already set");
-            function->visibility = 3;
+            assertError(function->visibility == INVALID_TOKEN_ID, parser, "Visibility modifier already set");
+            function->visibility = peekLastTokenId(parser);
         } else if (acceptToken(parser, TokenType_Public)) {
-            assertError(function->visibility == 0, parser, "Visibility modifier already set");
-            function->visibility = 4;
+            assertError(function->visibility == INVALID_TOKEN_ID, parser, "Visibility modifier already set");
+            function->visibility = peekLastTokenId(parser);
         } else if (acceptToken(parser, TokenType_Pure)) {
-            assertError(function->stateMutability == 0, parser, "State mutability modifier already set");
-            function->stateMutability = 1;
+            assertError(function->stateMutability == INVALID_TOKEN_ID, parser, "State mutability modifier already set");
+            function->stateMutability = peekLastTokenId(parser);
         } else if (acceptToken(parser, TokenType_View)) {
-            assertError(function->stateMutability == 0, parser, "State mutability modifier already set");
-            function->stateMutability = 2;
+            assertError(function->stateMutability == INVALID_TOKEN_ID, parser, "State mutability modifier already set");
+            function->stateMutability = peekLastTokenId(parser);
         } else if (acceptToken(parser, TokenType_Payable)) {
-            assertError(function->stateMutability == 0, parser, "State mutability modifier already set");
-            function->stateMutability = 3;
+            assertError(function->stateMutability == INVALID_TOKEN_ID, parser, "State mutability modifier already set");
+            function->stateMutability = peekLastTokenId(parser);
         } else if (acceptToken(parser, TokenType_Constant)) {
-            assertError(function->stateMutability == 0, parser, "State mutability modifier already set");
-            function->stateMutability = 4;
+            assertError(function->stateMutability == INVALID_TOKEN_ID, parser, "State mutability modifier already set");
+            function->stateMutability = peekLastTokenId(parser);
         } else if (acceptToken(parser, TokenType_Virtual)) {
-            assertError(function->virtual == 0, parser, "Virtual modifier already set");
-            function->virtual = 1;
+            assertError(function->virtual == INVALID_TOKEN_ID, parser, "Virtual modifier already set");
+            function->virtual = peekLastTokenId(parser);
         } else if (acceptToken(parser, TokenType_Override)) {
-            assertError(function->override == 0, parser, "Override modifier already set");
-            function->override = 1;
-            function->overrides = structPush(parser->arena, ASTNodeList);
+            assertError(function->override == INVALID_TOKEN_ID, parser, "Override modifier already set");
+            function->override = peekLastTokenId(parser);
+            function->overrides = structPush(parser->arena, ASTNodeListRanged);
             parseOverrideSpecifierArgs(parser, function->overrides);
         } else {
             ASTNode testExpression = { 0 };
@@ -2514,7 +2534,7 @@ parseFunction(Parser *parser, ASTNode *node) {
     }
 
     if(acceptToken(parser, TokenType_Returns)) {
-        function->returnParameters = structPush(parser->arena, ASTNodeList);
+        function->returnParameters = structPush(parser->arena, ASTNodeListRanged);
         function->returnParameters->count = 0;
         expectToken(parser, TokenType_LParen);
         parseFunctionParameters(parser, function->returnParameters);
@@ -2551,16 +2571,17 @@ parseModifier(Parser *parser, ASTNode *node) {
         }
     }
 
-    modifier->stateMutability = 0;
-    modifier->virtual = 0;
+    modifier->stateMutability = INVALID_TOKEN_ID;
+    modifier->virtual = INVALID_TOKEN_ID;
+    modifier->override = INVALID_TOKEN_ID;
     for(;;) {
         if (acceptToken(parser, TokenType_Virtual)) {
-            assertError(modifier->virtual == 0, parser, "Virtual modifier already set");
-            modifier->virtual = 1;
+            assertError(modifier->virtual == INVALID_TOKEN_ID, parser, "Virtual modifier already set");
+            modifier->virtual = peekLastTokenId(parser);
         } else if(acceptToken(parser, TokenType_Override)) {
-            assertError(modifier->override == 0, parser, "Override modifier already set");
-            modifier->override = 1;
-            modifier->overrides = structPush(parser->arena, ASTNodeList);
+            assertError(modifier->override == INVALID_TOKEN_ID, parser, "Override modifier already set");
+            modifier->override = peekLastTokenId(parser);
+            modifier->overrides = structPush(parser->arena, ASTNodeListRanged);
             parseOverrideSpecifierArgs(parser, modifier->overrides);
         } else {
             break;
@@ -2590,18 +2611,18 @@ parseConstructor(Parser *parser, ASTNode *node) {
         expectToken(parser, TokenType_RParen);
     }
 
-    constructor->stateMutability = 0;
-    constructor->visibility = 0;
+    constructor->stateMutability = INVALID_TOKEN_ID;
+    constructor->visibility = INVALID_TOKEN_ID;
     for(;;) {
         if (acceptToken(parser, TokenType_Payable)) {
-            assertError(constructor->stateMutability == 0, parser, "State mutability modifier already set");
-            constructor->stateMutability = 3;
+            assertError(constructor->stateMutability == INVALID_TOKEN_ID, parser, "State mutability modifier already set");
+            constructor->stateMutability = peekLastTokenId(parser);
         } else if(acceptToken(parser, TokenType_Internal)) {
-            assertError(constructor->visibility == 0, parser, "Visibility modifier already set");
-            constructor->visibility = 1;
+            assertError(constructor->visibility == INVALID_TOKEN_ID, parser, "Visibility modifier already set");
+            constructor->visibility = peekLastTokenId(parser);
         } else if (acceptToken(parser, TokenType_Public)) {
-            assertError(constructor->visibility == 0, parser, "Visibility modifier already set");
-            constructor->visibility = 4;
+            assertError(constructor->visibility == INVALID_TOKEN_ID, parser, "Visibility modifier already set");
+            constructor->visibility = peekLastTokenId(parser);
         } else {
             ASTNode testExpression = { 0 };
             bool isSuccess = parseType(parser, &testExpression);

@@ -116,6 +116,12 @@ typedef enum ConnectType {
 	NEWLINE,
 } ConnectType;
 
+static void renderExpression(Render *r, ASTNode *node, ConnectType connect);
+static void renderType(Render *r, ASTNode *node, ConnectType connect);
+static void renderYulExpression(Render *r, ASTNode *node, ConnectType connect);
+static void renderParameters(Render *r, ASTNodeListRanged *list, ConnectType connect, u32 connectIsInclusive);
+static void renderToken(Render *r, TokenId token, ConnectType connect);
+
 static u32
 renderComments(Render *r, u32 startOffset, u32 endOffset) {
     u32 commentCount = 0;
@@ -219,8 +225,6 @@ renderConnect(Render *r, ConnectType connect) {
     }
 }
 
-static void renderToken(Render *r, TokenId token, ConnectType connect);
-
 static void
 renderConnectWithComments(Render *r, TokenId token, ConnectType connect) {
     TokenId nextToken = token == r->tokens.count - 1 ? token : token + 1; 
@@ -270,45 +274,16 @@ renderString(Render *r, String string, ConnectType connect) {
 #define renderCString(r, s, c) renderString(r, LIT_TO_STR((s)), c)
 
 static void
-renderVisibility(Render *r, u32 visibility) {
-    switch(visibility) {
-        case 1: {
-            renderCString(r, "internal", SPACE);
-        } break;
-        case 2: {
-            renderCString(r, "external", SPACE);
-        } break;
-        case 3: {
-            renderCString(r, "private", SPACE);
-        } break;
-        case 4: {
-            renderCString(r, "public", SPACE);
-        } break;
-        default: { }
-    }
-}
-
-static void
-renderStateMutability(Render *r, u32 stateMutability) {
-    switch(stateMutability) {
-        case 1: {
-            renderCString(r, "pure", SPACE);
-        } break;
-        case 2: {
-            renderCString(r, "view", SPACE);
-        } break;
-        case 3: {
-            renderCString(r, "payable", SPACE);
-        } break;
-        default: { }
-    }
-}
-
-static void
 renderToken(Render *r, TokenId token, ConnectType connect) {
 	assert(token != INVALID_TOKEN_ID);
     write(r->writer, getTokenString(r->tokens, token));
     renderConnectWithComments(r, token, connect);
+}
+
+static void
+renderTokenChecked(Render *r, TokenId token, String expected, ConnectType connect) {
+    assert(stringMatch(expected, r->tokens.tokenStrings[token]));
+    renderToken(r, token, connect);
 }
 
 static void
@@ -320,13 +295,13 @@ renderTokenAsString(Render *r, TokenId token, ConnectType connect) {
 }
 
 static void
-renderCallArgumentList(Render *r, ASTNodeList *expressions, TokenIdList *names) {
+renderCallArgumentList(Render *r, TokenId startingToken, ASTNodeListRanged *expressions, TokenIdList *names) {
     if(expressions->count == -1) {
     	assert(false);
         return;
     }
 
-    renderCString(r, "(", NONE);
+    renderTokenChecked(r, startingToken, LIT_TO_STR("("), NONE);
     if(names->count == 0) {
 	    ASTNodeLink *argument = expressions->head;
 	    for(u32 i = 0; i < expressions->count; i++, argument = argument->next) {
@@ -335,21 +310,27 @@ renderCallArgumentList(Render *r, ASTNodeList *expressions, TokenIdList *names) 
 	        renderExpression(r, &argument->node, connect);
 	    }
     } else {
-	    renderCString(r, "{", SPACE);
+        renderTokenChecked(r, listGetTokenId(names, 0) - 1, LIT_TO_STR("{"), SPACE);
     	ASTNodeLink *argument = expressions->head;
     	assert(names->count == expressions->count);
     	for(u32 i = 0; i < expressions->count; i++, argument = argument->next) {
-    		void renderExpression(Render *r, ASTNode *node, ConnectType connect);
 
     		TokenId literal = listGetTokenId(names, i);
     		ConnectType connect = i == expressions->count - 1 ? NONE : COMMA_SPACE;
     		renderToken(r, literal, NONE);
-    		renderCString(r, ":", SPACE);
+    		renderTokenChecked(r, literal + 1, LIT_TO_STR(":"), SPACE);
     		renderExpression(r, &argument->node, connect);
     	}
-        renderCString(r, "}", NONE);
+        renderTokenChecked(r, expressions->last->node.endToken + 1, LIT_TO_STR("}"), NONE);
     }
-    renderCString(r, ")", NONE);
+
+    if(expressions->count > 0) {
+        TokenId token = expressions->last->node.endToken + 1;
+        token += names->count > 0;
+        renderTokenChecked(r, token, LIT_TO_STR(")"), NONE);
+    } else {
+        renderTokenChecked(r, startingToken + 1, LIT_TO_STR(")"), NONE);
+    }
 }
 
 static void
@@ -392,7 +373,6 @@ renderExpression(Render *r, ASTNode *node, ConnectType connect) {
         case ASTNodeType_IdentifierPath:
         case ASTNodeType_ArrayType:
         case ASTNodeType_MappingType: {
-        	void renderType(Render *r, ASTNode *node, ConnectType connect);
         	renderType(r, node, connect);
         } break;
         case ASTNodeType_IdentifierExpression: {
@@ -406,16 +386,17 @@ renderExpression(Render *r, ASTNode *node, ConnectType connect) {
         case ASTNodeType_TupleExpression: {
             ASTNodeTupleExpression *tuple = &node->tupleExpressionNode;
 
-            renderCString(r, "(", NONE);
+            renderTokenChecked(r, node->startToken, LIT_TO_STR("("), NONE);
             ASTNodeLink *element = tuple->elements.head;
             for(u32 i = 0; i < tuple->elements.count; i++, element = element->next) {
             	ConnectType connect = i == tuple->elements.count - 1 ? NONE : COMMA_SPACE;
                 if(element->node.type != ASTNodeType_None) {
                     renderExpression(r, &element->node, NONE);
                 }
-                renderConnect(r, connect);
+                printf("element->node.endToken + 1 = %u\n", element->node.endToken + 1);
+                renderTokenChecked(r, element->node.endToken + 1, LIT_TO_STR(","), SPACE);
             }
-            renderCString(r, ")", connect);
+            renderTokenChecked(r, node->endToken, LIT_TO_STR(")"), connect);
         } break;
         case ASTNodeType_UnaryExpression: {
             renderString(r, tokenTypeToString(node->unaryExpressionNode.operator), NONE);
@@ -426,7 +407,6 @@ renderExpression(Render *r, ASTNode *node, ConnectType connect) {
             renderString(r, tokenTypeToString(node->unaryExpressionNode.operator), connect);
         } break;
         case ASTNodeType_NewExpression: {
-        	void renderType(Render *r, ASTNode *node, ConnectType connect);
             assert(stringMatch(LIT_TO_STR("new"), r->tokens.tokenStrings[node->startToken]));
             renderToken(r, node->startToken, SPACE);
         	renderType(r, node->newExpressionNode.typeName, connect);
@@ -435,7 +415,7 @@ renderExpression(Render *r, ASTNode *node, ConnectType connect) {
             ASTNodeFunctionCallExpression *function = &node->functionCallExpressionNode;
 
             renderExpression(r, function->expression, NONE);
-            renderCallArgumentList(r, &function->argumentsExpression, &function->argumentsName);
+            renderCallArgumentList(r, function->expression->endToken + 1, &function->argumentsExpression, &function->argumentsName);
             renderConnect(r, connect);
         } break;
         case ASTNodeType_BaseType: {
@@ -449,45 +429,44 @@ renderExpression(Render *r, ASTNode *node, ConnectType connect) {
         case ASTNodeType_ArrayAccessExpression: {
             ASTNodeArrayAccessExpression *array = &node->arrayAccessExpressionNode;
             renderExpression(r, array->expression, NONE);
-            renderCString(r, "[", NONE);
+            renderTokenChecked(r, array->expression->endToken + 1, LIT_TO_STR("["), NONE);
             if(array->indexExpression != 0x0) {
                 renderExpression(r, array->indexExpression, NONE);
             }
-            assert(stringMatch(LIT_TO_STR("]"), r->tokens.tokenStrings[node->endToken]));
-            renderToken(r, node->endToken, connect);
+            renderTokenChecked(r, node->endToken, LIT_TO_STR("]"), connect);
         } break;
         case ASTNodeType_ArraySliceExpression: {
             ASTNodeArraySliceExpression *array = &node->arraySliceExpressionNode;
             renderExpression(r, array->expression, NONE);
-            renderCString(r, "[", NONE);
+            renderTokenChecked(r, array->expression->endToken + 1, LIT_TO_STR("["), NONE);
             if(array->leftFenceExpression != 0x0) {
                 renderExpression(r, array->leftFenceExpression, NONE);
+                renderTokenChecked(r, array->leftFenceExpression->endToken + 1, LIT_TO_STR(":"), NONE);
+            } else {
+                renderTokenChecked(r, array->expression->endToken + 2, LIT_TO_STR(":"), NONE);
             }
-            renderCString(r, ":", NONE);
             if(array->rightFenceExpression != 0x0) {
                 renderExpression(r, array->rightFenceExpression, NONE);
             }
-            assert(stringMatch(LIT_TO_STR("]"), r->tokens.tokenStrings[node->endToken]));
-            renderToken(r, node->endToken, connect);
+            renderTokenChecked(r, node->endToken, LIT_TO_STR("]"), connect);
         } break;
         case ASTNodeType_InlineArrayExpression: {
             ASTNodeInlineArrayExpression *array = &node->inlineArrayExpressionNode;
 
-            renderCString(r, "[", NONE);
+            renderTokenChecked(r, node->startToken, LIT_TO_STR("["), NONE);
             ASTNodeLink *expression = array->expressions.head;
             for(u32 i = 0; i < array->expressions.count; i++, expression = expression->next) {
                 ConnectType connect = i == array->expressions.count - 1 ? NONE : COMMA_SPACE;
                 renderExpression(r, &expression->node, connect);
             }
-            assert(stringMatch(LIT_TO_STR("]"), r->tokens.tokenStrings[node->endToken]));
-            renderToken(r, node->endToken, connect);
+            renderTokenChecked(r, node->endToken, LIT_TO_STR("]"), connect);
         } break;
         case ASTNodeType_TerneryExpression: {
             ASTNodeTerneryExpression *ternery = &node->terneryExpressionNode;
             renderExpression(r, ternery->condition, SPACE);
-            renderCString(r, "?", SPACE);
+            renderTokenChecked(r, ternery->condition->endToken + 1, LIT_TO_STR("?"), SPACE);
             renderExpression(r, ternery->trueExpression, SPACE);
-            renderCString(r, ":", SPACE);
+            renderTokenChecked(r, ternery->trueExpression->endToken + 1, LIT_TO_STR(":"), SPACE);
             renderExpression(r, ternery->falseExpression, connect);
         } break;
         case ASTNodeType_NamedParameterExpression: {
@@ -539,7 +518,8 @@ renderType(Render *r, ASTNode *node, ConnectType connect) {
 				renderToken(r, node->mappingNode.keyIdentifier, SPACE);
             }
 
-	    	renderCString(r, "=>", SPACE);
+	        renderTokenChecked(r, node->mappingNode.valueType->startToken - 2, LIT_TO_STR("="), NONE);
+	        renderTokenChecked(r, node->mappingNode.valueType->startToken - 1, LIT_TO_STR(">"), SPACE);
 
 	        renderType(r, node->mappingNode.valueType, node->mappingNode.valueIdentifier == INVALID_TOKEN_ID ? NONE : SPACE);
             if(node->mappingNode.valueIdentifier != INVALID_TOKEN_ID) {
@@ -560,21 +540,30 @@ renderType(Render *r, ASTNode *node, ConnectType connect) {
             renderToken(r, node->endToken, connect);
 	    } break;
 	    case ASTNodeType_FunctionType: {
-            void renderParameters(Render *r, ASTNodeList *list, ConnectType connect, u32 connectIsInclusive);
             assert(stringMatch(LIT_TO_STR("function"), r->tokens.tokenStrings[node->startToken]));
             assert(stringMatch(LIT_TO_STR("("), r->tokens.tokenStrings[node->startToken + 1]));
 
             renderToken(r, node->startToken, SPACE);
             renderToken(r, node->startToken + 1, NONE);
             renderParameters(r, &node->functionTypeNode.parameters, COMMA_SPACE, 0);
-            renderCString(r, ")", SPACE);
-            renderVisibility(r, node->functionTypeNode.visibility);
-            renderStateMutability(r, node->functionTypeNode.stateMutability);
+            if(node->functionTypeNode.parameters.count > 0) {
+                renderTokenChecked(r, node->functionTypeNode.parameters.last->node.endToken + 1, LIT_TO_STR(")"), SPACE);
+            } else {
+                renderTokenChecked(r, node->startToken + 2, LIT_TO_STR(")"), SPACE);
+            }
+
+            if(node->functionTypeNode.visibility != INVALID_TOKEN_ID) {
+                renderToken(r, node->functionTypeNode.visibility, SPACE);
+            }
+            if(node->functionTypeNode.stateMutability != INVALID_TOKEN_ID) {
+                renderToken(r, node->functionTypeNode.stateMutability, SPACE);
+            }
 
             if(node->functionTypeNode.returnParameters.count > 0) {
-                renderCString(r, "returns (", NONE);
+                renderTokenChecked(r, node->functionTypeNode.returnParameters.head->node.endToken - 2, LIT_TO_STR("returns"), SPACE);
+                renderTokenChecked(r, node->functionTypeNode.returnParameters.head->node.endToken - 1, LIT_TO_STR("("), NONE);
                 renderParameters(r, &node->functionTypeNode.returnParameters, COMMA_SPACE, 0);
-                renderCString(r, ")", SPACE);
+                renderTokenChecked(r, node->functionTypeNode.returnParameters.last->node.endToken + 1, LIT_TO_STR(")"), SPACE);
             }
 
             assert(connect == SPACE);
@@ -590,20 +579,9 @@ static void
 renderVariableDeclaration(Render *r, ASTNode *node, ConnectType connect) {
     ASTNodeVariableDeclaration *decl = &node->variableDeclarationNode;
     renderType(r, decl->type, SPACE);
-    switch(decl->dataLocation) {
-	    case 1: {
-	    	renderCString(r, "memory", SPACE);
-	    } break;
-    	case 2: {
-    		renderCString(r, "storage", SPACE);
-    	} break;
-    	case 3: {
-    		renderCString(r, "calldata", SPACE);
-    	}break;
-    	case 4: {
-    		renderCString(r, "indexed", SPACE);
-    	}break;
-	}
+    if(decl->dataLocation != INVALID_TOKEN_ID) {
+        renderToken(r, decl->dataLocation, SPACE);
+    }
     renderToken(r, decl->name, connect);
 }
 
@@ -616,7 +594,6 @@ renderYulFunctionCall(Render *r, ASTNode *node, ConnectType connect) {
     renderToken(r, function->identifier + 1, NONE);
     ASTNodeLink *argument = function->arguments.head;
     for(u32 i = 0; i < function->arguments.count; i++, argument = argument->next) {
-        void renderYulExpression(Render *r, ASTNode *node, ConnectType connect);
         ConnectType connect = i == function->arguments.count - 1 ? NONE : COMMA_SPACE;
         renderYulExpression(r, &argument->node, connect);
     }
@@ -696,11 +673,10 @@ renderStatement(Render *r, ASTNode *node, ConnectType connect) {
         } break;
         case ASTNodeType_ReturnStatement: {
             assert(stringMatch(LIT_TO_STR("return"), r->tokens.tokenStrings[node->startToken]));
-            renderToken(r, node->startToken, node->returnStatementNode.expression != 0x0 ? SPACE : NONE);
+            renderToken(r, node->startToken, node->returnStatementNode.expression != 0x0 ? SPACE : SEMICOLON);
             if(node->returnStatementNode.expression != 0x0) {
-                renderExpression(r, node->returnStatementNode.expression, NONE);
+                renderExpression(r, node->returnStatementNode.expression, SEMICOLON);
             }
-            renderConnect(r, SEMICOLON);
         } break;
         case ASTNodeType_ExpressionStatement: {
             if(node->expressionStatementNode.expression != 0x0) {
@@ -708,13 +684,14 @@ renderStatement(Render *r, ASTNode *node, ConnectType connect) {
             }
         } break;
         case ASTNodeType_IfStatement: {
-        	renderCString(r, "if(", NONE);
+            renderTokenChecked(r, node->startToken, LIT_TO_STR("if"), NONE);
+            renderTokenChecked(r, node->startToken + 1, LIT_TO_STR("("), NONE);
         	renderExpression(r, node->ifStatementNode.conditionExpression, NONE);
-        	renderCString(r, ")", SPACE);
+            renderTokenChecked(r, node->ifStatementNode.conditionExpression->endToken + 1, LIT_TO_STR(")"), SPACE);
             ConnectType trueConnect = node->ifStatementNode.trueStatement->type == ASTNodeType_BlockStatement ? NEWLINE : NONE;
         	renderStatement(r, node->ifStatementNode.trueStatement, node->ifStatementNode.falseStatement ? SPACE : trueConnect);
             if(node->ifStatementNode.falseStatement) {
-            	renderCString(r, "else", SPACE);
+                renderTokenChecked(r, node->ifStatementNode.falseStatement->startToken - 1, LIT_TO_STR("else"), SPACE);
                 ConnectType falseConnect = node->ifStatementNode.falseStatement->type == ASTNodeType_BlockStatement ? NEWLINE : NONE;
                 renderStatement(r, node->ifStatementNode.falseStatement, falseConnect);
             }
@@ -724,44 +701,47 @@ renderStatement(Render *r, ASTNode *node, ConnectType connect) {
 
             renderVariableDeclaration(r, statement->variableDeclaration, statement->initialValue != 0x0 ? SPACE : SEMICOLON);
             if(statement->initialValue != 0x0) {
-            	renderCString(r, "=", SPACE);
+                renderTokenChecked(r, statement->initialValue->startToken - 1, LIT_TO_STR("="), SPACE);
                 renderExpression(r, statement->initialValue, SEMICOLON);
             }
         } break;
         case ASTNodeType_VariableDeclarationTupleStatement: {
             ASTNodeVariableDeclarationTupleStatement *statement = &node->variableDeclarationTupleStatementNode;
 
-            renderCString(r, "(", NONE);
+            renderTokenChecked(r, node->startToken, LIT_TO_STR("("), NONE);
             ASTNodeLink *decl = statement->declarations.head;
             for(u32 i = 0; i < statement->declarations.count; i++, decl = decl->next) {
                 if(decl->node.type != ASTNodeType_None) {
-                	ConnectType connect = i == statement->declarations.count - 1 ? NONE : COMMA_SPACE;
+                	ConnectType connect = i == statement->declarations.count - 1 ? connect : COMMA_SPACE;
                     renderVariableDeclaration(r, &decl->node, connect);
                 }
-                renderConnect(r, connect);
             }
-            renderCString(r, ") =", SPACE);
+            renderTokenChecked(r, statement->initialValue->startToken - 2, LIT_TO_STR(")"), SPACE);
+            renderTokenChecked(r, statement->initialValue->startToken - 1, LIT_TO_STR("="), SPACE);
 
             renderExpression(r, statement->initialValue, SEMICOLON);
         } break;
         case ASTNodeType_DoWhileStatement: {
             ASTNodeWhileStatement *statement = &node->whileStatementNode;
-            renderCString(r, "do", SPACE);
+            renderTokenChecked(r, node->startToken, LIT_TO_STR("do"), SPACE);
             renderStatement(r, statement->body, SPACE);
-            renderCString(r, "while(", NONE);
+            renderTokenChecked(r, statement->expression->startToken - 2, LIT_TO_STR("while"), NONE);
+            renderTokenChecked(r, statement->expression->startToken - 1, LIT_TO_STR("("), NONE);
             renderExpression(r, statement->expression, NONE);
-            renderCString(r, ")", SEMICOLON);
+            renderTokenChecked(r, node->endToken - 1, LIT_TO_STR(")"), SEMICOLON);
         } break;
         case ASTNodeType_WhileStatement: {
             ASTNodeWhileStatement *statement = &node->whileStatementNode;
-            renderCString(r, "while(", NONE);
+            renderTokenChecked(r, node->startToken, LIT_TO_STR("while"), NONE);
+            renderTokenChecked(r, node->startToken + 1, LIT_TO_STR("("), NONE);
             renderExpression(r, statement->expression, NONE);
-            renderCString(r, ")", SPACE);
+            renderTokenChecked(r, statement->expression->endToken + 1, LIT_TO_STR(")"), SPACE);
             renderStatement(r, statement->body, NEWLINE);
         } break;
         case ASTNodeType_ForStatement: {
             ASTNodeForStatement *statement = &node->forStatementNode;
-            renderCString(r, "for(", NONE);
+            renderTokenChecked(r, node->startToken, LIT_TO_STR("for"), NONE);
+            renderTokenChecked(r, node->startToken + 1, LIT_TO_STR("("), NONE);
 
             if(statement->variableStatement != 0x0) {
                 renderStatement(r, statement->variableStatement, NONE);
@@ -770,59 +750,63 @@ renderStatement(Render *r, ASTNode *node, ConnectType connect) {
                 renderExpression(r, statement->conditionExpression, NONE);
             }
             renderCString(r, ";", SPACE);
+            if(statement->incrementExpression != 0x0) {
+                renderExpression(r, statement->incrementExpression, NONE);
+            }
 
-            ASTNode virtualExpressionStatement = { 0 };
-            virtualExpressionStatement.type = ASTNodeType_ExpressionStatement;
-            virtualExpressionStatement.expressionStatementNode.expression = statement->incrementExpression;
-            renderStatement(r, &virtualExpressionStatement, NONE);
-
-            renderCString(r, ")", SPACE);
+            renderTokenChecked(r, statement->body->startToken - 1, LIT_TO_STR(")"), SPACE);
             renderStatement(r, statement->body, NEWLINE);
         } break;
         case ASTNodeType_RevertStatement: {
             ASTNodeRevertStatement *statement = &node->revertStatementNode;
-            renderCString(r, "revert", SPACE);
+            renderTokenChecked(r, node->startToken, LIT_TO_STR("revert"), SPACE);
             renderExpression(r, statement->expression, SEMICOLON);
         } break;
         case ASTNodeType_EmitStatement: {
             ASTNodeEmitStatement *statement = &node->emitStatementNode;
-            renderCString(r, "emit", SPACE);
+            renderTokenChecked(r, node->startToken, LIT_TO_STR("emit"), SPACE);
             renderExpression(r, statement->expression, SEMICOLON);
         } break;
         case ASTNodeType_TryStatement: {
-            void renderParameters(Render *r, ASTNodeList *list, ConnectType connect, u32 connectIsInclusive);
-
             ASTNodeTryStatement *statement = &node->tryStatementNode;
-            renderCString(r, "try", SPACE);
+            renderTokenChecked(r, node->startToken, LIT_TO_STR("try"), SPACE);
 
             renderExpression(r, statement->expression, SPACE);
-            renderCString(r, "returns (", NONE);
+            renderTokenChecked(r, statement->expression->endToken + 1, LIT_TO_STR("returns"), SPACE);
+            renderTokenChecked(r, statement->expression->endToken + 2, LIT_TO_STR("("), NONE);
             renderParameters(r, &statement->returnParameters, COMMA_SPACE, 0);
-            renderCString(r, ")", SPACE);
+            renderTokenChecked(r, statement->body->startToken - 1, LIT_TO_STR(")"), SPACE);
             renderStatement(r, statement->body, statement->catches.count > 0 ? SPACE : NEWLINE);
 
             ASTNodeLink *catchLink = statement->catches.head;
             for(u32 i = 0; i < statement->catches.count; i++, catchLink = catchLink->next) {
+                renderTokenChecked(r, catchLink->node.startToken, LIT_TO_STR("catch"), SPACE);
                 ASTNodeCatchStatement *catch = &catchLink->node.catchStatementNode;
-                renderCString(r, "catch", SPACE);
+
+                u32 openParenToken = catchLink->node.startToken + 1;
+                if(catch->identifier != INVALID_TOKEN_ID) {
+                    renderToken(r, catch->identifier, NONE);
+                    openParenToken = catch->identifier + 1;
+                }
+
                 if(catch->parameters.count != -1) {
-                    renderCString(r, "(", NONE);
+                    renderTokenChecked(r, openParenToken, LIT_TO_STR("("), NONE);
                     renderParameters(r, &catch->parameters, COMMA_SPACE, 0);
-                    renderCString(r, ")", SPACE);
+                    renderTokenChecked(r, catch->body->startToken - 1, LIT_TO_STR(")"), SPACE);
                 }
                 renderStatement(r, catch->body, i == statement->catches.count - 1 ? NEWLINE : SPACE);
             }
         } break;
         case ASTNodeType_BreakStatement: {
-            renderCString(r, "break", SEMICOLON);
+            renderTokenChecked(r, node->startToken, LIT_TO_STR("break"), SEMICOLON);
         } break;
         case ASTNodeType_ContinueStatement: {
-            renderCString(r, "continue", SEMICOLON);
+            renderTokenChecked(r, node->startToken, LIT_TO_STR("continue"), SEMICOLON);
         } break;
         case ASTNodeType_AssemblyStatement: {
             ASTNodeAssemblyStatement *statement = &node->assemblyStatementNode;
 
-            renderCString(r, "assembly", SPACE);
+            renderTokenChecked(r, node->startToken, LIT_TO_STR("assembly"), SPACE);
             if(statement->isEVMAsm) {
                 renderCString(r, "\"evmasm\"", SPACE);
             }
@@ -860,8 +844,8 @@ renderStatement(Render *r, ASTNode *node, ConnectType connect) {
         } break;
         case ASTNodeType_YulVariableDeclaration: {
             ASTNodeYulVariableDeclaration *statement = &node->yulVariableDeclarationNode;
+            renderTokenChecked(r, node->startToken, LIT_TO_STR("let"), SPACE);
 
-            renderCString(r, "let", SPACE);
             ConnectType valueConnect = statement->value != 0x0 ? SPACE : NEWLINE;
             for(u32 i = 0; i < statement->identifiers.count; i++) {
                 ConnectType connect = i == statement->identifiers.count - 1 ? valueConnect : COMMA_SPACE;
@@ -869,7 +853,8 @@ renderStatement(Render *r, ASTNode *node, ConnectType connect) {
             }
 
             if(statement->value != 0x0) {
-                renderCString(r, ":=", SPACE);
+                renderTokenChecked(r, statement->value->startToken - 2, LIT_TO_STR(":"), NONE);
+                renderTokenChecked(r, statement->value->startToken - 1, LIT_TO_STR("="), SPACE);
                 renderYulExpression(r, statement->value, NEWLINE);
             }
         } break;
@@ -884,7 +869,8 @@ renderStatement(Render *r, ASTNode *node, ConnectType connect) {
             }
 
             if(statement->value != 0x0) {
-                renderCString(r, ":=", SPACE);
+                renderTokenChecked(r, statement->value->startToken - 2, LIT_TO_STR(":"), NONE);
+                renderTokenChecked(r, statement->value->startToken - 1, LIT_TO_STR("="), SPACE);
                 renderYulExpression(r, statement->value, NEWLINE);
             }
         } break;
@@ -894,14 +880,14 @@ renderStatement(Render *r, ASTNode *node, ConnectType connect) {
         case ASTNodeType_YulIfStatement: {
             ASTNodeYulIfStatement *statement = &node->yulIfStatementNode;
 
-            renderCString(r, "if", SPACE);
+            renderTokenChecked(r, node->startToken, LIT_TO_STR("if"), SPACE);
             renderYulExpression(r, statement->expression, SPACE);
             renderStatement(r, statement->body, NEWLINE);
         } break;
         case ASTNodeType_YulForStatement: {
             ASTNodeYulForStatement *statement = &node->yulForStatementNode;
 
-            renderCString(r, "for", SPACE);
+            renderTokenChecked(r, node->startToken, LIT_TO_STR("for"), SPACE);
             renderStatement(r, statement->variableDeclaration, SPACE);
             renderYulExpression(r, statement->condition, SPACE);
             renderStatement(r, statement->increment, SPACE);
@@ -910,7 +896,7 @@ renderStatement(Render *r, ASTNode *node, ConnectType connect) {
         case ASTNodeType_YulFunctionDefinition: {
             ASTNodeYulFunctionDefinition *statement = &node->yulFunctionDefinitionNode;
 
-            renderCString(r, "function", SPACE);
+            renderTokenChecked(r, node->startToken, LIT_TO_STR("function"), SPACE);
             renderToken(r, statement->identifier, statement->parameters.count > 0 ? NONE : SPACE);
             if(statement->parameters.count > 0) {
                 renderCString(r, "(", NONE);
@@ -934,30 +920,30 @@ renderStatement(Render *r, ASTNode *node, ConnectType connect) {
         case ASTNodeType_YulSwitchStatement: {
             ASTNodeYulSwitchStatement *statement = &node->yulSwitchStatementNode;
 
-            renderCString(r, "switch", SPACE);
+            renderTokenChecked(r, node->startToken, LIT_TO_STR("switch"), SPACE);
             ConnectType expressionConnect = statement->cases.count > 0 || statement->defaultBlock != 0x0 ? NEWLINE : SPACE;
             renderYulExpression(r, statement->expression, expressionConnect);
 
             ASTNodeLink *it = statement->cases.head;
             for(u32 i = 0; i < statement->cases.count; i++, it = it->next) {
-                renderCString(r, "case", SPACE);
+                renderTokenChecked(r, it->node.yulCaseNode.literal->startToken - 1, LIT_TO_STR("case"), SPACE);
                 renderYulExpression(r, it->node.yulCaseNode.literal, SPACE);
                 renderStatement(r, it->node.yulCaseNode.block, NEWLINE);
             }
 
             if(statement->defaultBlock != 0x0) {
-                renderCString(r, "default", SPACE);
+                renderTokenChecked(r, statement->defaultBlock->yulCaseNode.block->startToken - 1, LIT_TO_STR("default"), SPACE);
                 renderStatement(r, statement->defaultBlock->yulCaseNode.block, NEWLINE);
             }
         } break;
         case ASTNodeType_YulLeaveStatement: {
-            renderCString(r, "leave", NEWLINE);
+            renderTokenChecked(r, node->startToken, LIT_TO_STR("leave"), NEWLINE);
         } break;
         case ASTNodeType_YulBreakStatement: {
-            renderCString(r, "break", NEWLINE);
+            renderTokenChecked(r, node->startToken, LIT_TO_STR("break"), NEWLINE);
         } break;
         case ASTNodeType_YulContinueStatement: {
-            renderCString(r, "continue", NEWLINE);
+            renderTokenChecked(r, node->startToken, LIT_TO_STR("continue"), NEWLINE);
         } break;
         default: {
             javascriptPrintString("Unreachable, unhandled statement type = ");
@@ -971,7 +957,7 @@ renderStatement(Render *r, ASTNode *node, ConnectType connect) {
 
 
 static void
-renderParameters(Render *r, ASTNodeList *list, ConnectType connect, u32 connectIsInclusive) {
+renderParameters(Render *r, ASTNodeListRanged *list, ConnectType connect, u32 connectIsInclusive) {
 	ASTNodeLink *it = list->head;
 	for(u32 i = 0; i < list->count; i++, it = it->next) {
 		ASTNodeVariableDeclaration *decl = &it->node.variableDeclarationNode;
@@ -983,7 +969,7 @@ renderParameters(Render *r, ASTNodeList *list, ConnectType connect, u32 connectI
         if(decl->name != INVALID_TOKEN_ID) {
             connections[2] = connect;
         } else {
-            if(decl->dataLocation > 0) {
+            if(decl->dataLocation != INVALID_TOKEN_ID) {
                 connections[1] = connect;
             } else {
                 connections[0] = connect;
@@ -992,14 +978,8 @@ renderParameters(Render *r, ASTNodeList *list, ConnectType connect, u32 connectI
 
 		renderType(r, decl->type, connections[0]);
 
-        if(decl->dataLocation == 1) {
-            renderCString(r, "memory", connections[1]);
-        } else if(decl->dataLocation == 2) {
-            renderCString(r, "storage", connections[1]);
-        } else if(decl->dataLocation == 3) {
-            renderCString(r, "calldata", connections[1]);
-        } else if(decl->dataLocation == 4) {
-            renderCString(r, "indexed", connections[1]);
+        if(decl->dataLocation != INVALID_TOKEN_ID) {
+            renderToken(r, decl->dataLocation, connections[1]);
         }
 
 		if(decl->name != INVALID_TOKEN_ID) {
@@ -1012,7 +992,9 @@ static void
 renderInheritanceSpecifier(Render *r, ASTNode *node, ConnectType connect) {
     ASTNodeInheritanceSpecifier *inheritance = &node->inheritanceSpecifierNode;
     renderType(r, inheritance->identifier, NONE);
-    renderCallArgumentList(r, &inheritance->argumentsExpression, &inheritance->argumentsName);
+    if(inheritance->argumentsExpression.count > 0) {
+        renderCallArgumentList(r, inheritance->identifier->endToken + 1, &inheritance->argumentsExpression, &inheritance->argumentsName);
+    }
     renderConnect(r, connect);
 }
 
@@ -1024,7 +1006,7 @@ renderModiferInvocations(Render *r, ASTNodeList *modifiers) {
             ASTNodeModifierInvocation *invocation = &it->node.modifierInvocationNode;
             renderType(r, invocation->identifier, NONE);
             if(invocation->argumentsExpression.count != -1) {
-                renderCallArgumentList(r, &invocation->argumentsExpression, &invocation->argumentsName);
+                renderCallArgumentList(r, invocation->identifier->endToken + 1, &invocation->argumentsExpression, &invocation->argumentsName);
             }
             renderConnect(r, SPACE);
         }
@@ -1032,18 +1014,17 @@ renderModiferInvocations(Render *r, ASTNodeList *modifiers) {
 }
 
 static void
-renderOverrides(Render *r, u32 hasOverride, ASTNodeList *overrides) {
-    if(hasOverride) {
-        renderCString(r, "override", NONE);
+renderOverrides(Render *r, TokenId overrideToken, ASTNodeListRanged *overrides) {
+    if(overrideToken != INVALID_TOKEN_ID) {
+        renderTokenChecked(r, overrideToken, LIT_TO_STR("override"), overrides->count > 0 ? NONE : SPACE);
         if(overrides->count > 0) {
-            renderCString(r, "(", NONE);
+            renderTokenChecked(r, overrides->startToken - 1, LIT_TO_STR("("), NONE);
             ASTNodeLink *override = overrides->head;
             for(u32 i = 0; i < overrides->count; i++, override = override->next) {
                 renderType(r, &override->node, i == overrides->count - 1 ? NONE : COMMA_SPACE);
             }
-            renderCString(r, ")", NONE);
+            renderTokenChecked(r, overrides->endToken + 1, LIT_TO_STR(")"), SPACE);
         }
-        renderConnect(r, SPACE);
     }
 }
 
@@ -1052,7 +1033,7 @@ renderMember(Render *r, ASTNode *member) {
     switch(member->type) {
         case ASTNodeType_Pragma: {
         	ASTNodePragma *pragma = &member->pragmaNode;
-            renderCString(r, "pragma", SPACE);
+            renderTokenChecked(r, member->startToken, LIT_TO_STR("pragma"), SPACE);
         	renderToken(r, pragma->major, SPACE);
     	    TokenId firstTokenId = listGetTokenId(&pragma->following, 0);
 		    TokenId lastTokenId = listGetTokenId(&pragma->following, pragma->following.count - 1);
@@ -1093,15 +1074,13 @@ renderMember(Render *r, ASTNode *member) {
                 renderToken(r, member->pathTokenId - 1, SPACE);
         	}
 
-		    ConnectType connect = member->unitAliasTokenId != INVALID_TOKEN_ID ? SPACE : NONE;
+		    ConnectType connect = member->unitAliasTokenId != INVALID_TOKEN_ID ? SPACE : SEMICOLON;
 		    renderTokenAsString(r, member->pathTokenId, connect);
 		    if(member->unitAliasTokenId != INVALID_TOKEN_ID) {
                 assert(stringMatch(LIT_TO_STR("as"), r->tokens.tokenStrings[member->unitAliasTokenId - 1]));
 		    	renderToken(r, member->unitAliasTokenId - 1, SPACE);
-		    	renderToken(r, member->unitAliasTokenId, NONE);
+		    	renderToken(r, member->unitAliasTokenId, SEMICOLON);
 		    }
-
-            renderConnect(r, SEMICOLON);
         } break;
         case ASTNodeType_Using: {
             assert(stringMatch(LIT_TO_STR("using"), r->tokens.tokenStrings[member->startToken]));
@@ -1112,33 +1091,29 @@ renderMember(Render *r, ASTNode *member) {
 				assert(using->identifiers.count == 1);
 				renderType(r, &using->identifiers.head->node, SPACE);
 			} else {
-				renderCString(r, "{", SPACE);
+                renderTokenChecked(r, using->identifiers.startToken - 1, LIT_TO_STR("{"), SPACE);
 				ASTNodeLink *it = using->identifiers.head;
 				for(u32 i = 0; i < using->identifiers.count; i++, it = it->next) {
 					ConnectType connect = i == using->identifiers.count - 1 ? SPACE : COMMA_SPACE;
 					u16 operator = listGetU16(&using->operators, i);
-					renderType(r, &it->node, operator ? SPACE : NONE);
+					renderType(r, &it->node, operator ? SPACE : connect);
 
 					if(operator) {
-						renderCString(r, "as", SPACE);
-                        renderString(r, tokenTypeToString(operator), NONE);
+                        renderTokenChecked(r, it->node.endToken + 1, LIT_TO_STR("as"), SPACE);
+                        renderString(r, tokenTypeToString(operator), connect);
 					}
-
-					renderConnect(r, connect);
 				}
-				renderCString(r, "}", SPACE);
+                renderTokenChecked(r, using->identifiers.endToken + 1, LIT_TO_STR("}"), SPACE);
 			}
 
 			if(using->forType != 0x0) {
-				renderCString(r, "for", SPACE);
-				renderType(r, using->forType, using->global ? SPACE : NONE);
+                renderTokenChecked(r, using->forType->startToken - 1, LIT_TO_STR("for"), SPACE);
+				renderType(r, using->forType, using->global != INVALID_TOKEN_ID ? SPACE : SEMICOLON);
 			}
 
-			if(using->global) {
-                renderCString(r, "global", NONE);
+			if(using->global != INVALID_TOKEN_ID) {
+                renderTokenChecked(r, using->global, LIT_TO_STR("global"), SEMICOLON);
 			}
-
-			renderConnect(r, SEMICOLON);
         } break;
         case ASTNodeType_EnumDefinition: {
             renderToken(r, member->startToken, SPACE);
@@ -1219,38 +1194,35 @@ renderMember(Render *r, ASTNode *member) {
         case ASTNodeType_ConstVariable: {
     	    ASTNodeConstVariable *constNode = &member->constVariableNode;
     	    renderType(r, constNode->type, SPACE);
-    	    renderCString(r, "constant", SPACE);
+            renderTokenChecked(r, constNode->identifier - 1, LIT_TO_STR("constant"), SPACE);
     	    renderToken(r, constNode->identifier, SPACE);
-    	    renderCString(r, "=", SPACE);
+            renderTokenChecked(r, constNode->identifier + 1, LIT_TO_STR("="), SPACE);
     	    renderExpression(r, constNode->expression, SEMICOLON);
         } break;
         case ASTNodeType_StateVariableDeclaration: {
             ASTNodeConstVariable *decl = &member->constVariableNode;
 
             renderType(r, decl->type, SPACE);
-            renderVisibility(r, decl->visibility);
-            switch(decl->mutability) {
-                case 1: {
-                    renderCString(r, "constant", SPACE);
-                } break;
-                case 2: {
-                    renderCString(r, "immutable", SPACE);
-                } break;
+            if(decl->visibility != INVALID_TOKEN_ID) {
+                renderToken(r, decl->visibility, SPACE);
+            }
+            if(decl->mutability != INVALID_TOKEN_ID) {
+                renderToken(r, decl->mutability, SPACE);
             }
 
             renderOverrides(r, decl->override, &decl->overrides);
-            renderToken(r, decl->identifier, decl->expression ? SPACE : NONE);
+            renderToken(r, decl->identifier, decl->expression ? SPACE : SEMICOLON);
 
             if(decl->expression) {
                 assert(stringMatch(LIT_TO_STR("="), r->tokens.tokenStrings[decl->identifier + 1]));
                 renderToken(r, decl->identifier + 1, SPACE);
-                renderExpression(r, decl->expression, NONE);
+                renderExpression(r, decl->expression, SEMICOLON);
             }
-            renderConnect(r, SEMICOLON);
         } break;
         case ASTNodeType_FallbackFunction:
         case ASTNodeType_ReceiveFunction:
         case ASTNodeType_FunctionDefinition: {
+            TokenId openParenToken = member->startToken + 1;
     	    ASTNodeFunctionDefinition *function = &member->functionDefinitionNode;
             if(member->type == ASTNodeType_FallbackFunction) {
                 assert(stringMatch(LIT_TO_STR("fallback"), r->tokens.tokenStrings[member->startToken]));
@@ -1263,36 +1235,35 @@ renderMember(Render *r, ASTNode *member) {
                 renderToken(r, member->startToken, SPACE);
                 if(function->name != INVALID_TOKEN_ID) {
         			renderToken(r, function->name, NONE);
+                    openParenToken = function->name + 1;
                 }
             }
 
-			renderCString(r, "(", NONE);
-			renderParameters(r, &member->structNode.members, COMMA_SPACE, 0);
-			renderCString(r, ")", SPACE);
-
-            renderVisibility(r, function->visibility);
-            renderStateMutability(r, function->stateMutability);
-
-            if(function->virtual) {
-                renderCString(r, "virtual", SPACE);
+			renderTokenChecked(r, openParenToken, LIT_TO_STR("("), NONE);
+			renderParameters(r, &member->functionDefinitionNode.parameters, COMMA_SPACE, 0);
+            if(member->functionDefinitionNode.parameters.count > 0) {
+                renderTokenChecked(r, member->functionDefinitionNode.parameters.last->node.endToken + 1, LIT_TO_STR(")"), SPACE);
+            } else {
+                renderTokenChecked(r, openParenToken + 1, LIT_TO_STR(")"), SPACE);
             }
 
-            if(function->override) {
-                renderCString(r, "override", SPACE);
-                if(function->overrides->count > 0) {
-                    renderCString(r, "(", NONE);
-                    ASTNodeLink *override = function->overrides->head;
-                    for(u32 i = 0; i < function->overrides->count; i++, override = override->next) {
-                        renderType(r, &override->node, i == function->overrides->count - 1 ? NONE : COMMA_SPACE);
-                    }
-                    renderCString(r, ")", NONE);
-                }
+            if(function->visibility != INVALID_TOKEN_ID) {
+                renderToken(r, function->visibility, SPACE);
+            }
+            if(function->stateMutability != INVALID_TOKEN_ID) {
+                renderToken(r, function->stateMutability, SPACE);
             }
 
+            if(function->virtual != INVALID_TOKEN_ID) {
+                renderToken(r, function->virtual, SPACE);
+            }
+
+            renderOverrides(r, function->override, function->overrides);
 			if(function->returnParameters) {
-				renderCString(r, "returns (", NONE);
+                renderTokenChecked(r, function->returnParameters->startToken - 2, LIT_TO_STR("returns"), SPACE);
+                renderTokenChecked(r, function->returnParameters->startToken - 1, LIT_TO_STR("("), NONE);
 				renderParameters(r, function->returnParameters, COMMA_SPACE, 0);
-				renderCString(r, ")", SPACE);
+                renderTokenChecked(r, function->returnParameters->endToken + 1, LIT_TO_STR(")"), SPACE);
 			}
 
             renderModiferInvocations(r, function->modifiers);
@@ -1312,12 +1283,20 @@ renderMember(Render *r, ASTNode *member) {
             assert(stringMatch(LIT_TO_STR("("), r->tokens.tokenStrings[member->startToken + 1]));
             renderToken(r, member->startToken + 1, NONE);
             renderParameters(r, &constructor->parameters, COMMA_SPACE, 0);
-            renderCString(r, ")", SPACE);
+            if(constructor->parameters.count > 0) {
+                renderTokenChecked(r, constructor->parameters.last->node.endToken + 1, LIT_TO_STR(")"), SPACE);
+            } else {
+                renderTokenChecked(r, member->startToken + 2, LIT_TO_STR(")"), SPACE);
+            }
 
             renderModiferInvocations(r, &constructor->modifiers);
 
-            renderVisibility(r, constructor->visibility);
-            renderStateMutability(r, constructor->stateMutability);
+            if(constructor->visibility != INVALID_TOKEN_ID) {
+                renderToken(r, constructor->visibility, SPACE);
+            }
+            if(constructor->stateMutability != INVALID_TOKEN_ID) {
+                renderToken(r, constructor->stateMutability, SPACE);
+            }
 
             renderStatement(r, constructor->body, NEWLINE);
         } break;
@@ -1331,25 +1310,18 @@ renderMember(Render *r, ASTNode *member) {
                 assert(stringMatch(LIT_TO_STR("("), r->tokens.tokenStrings[function->name + 1]));
                 renderToken(r, function->name + 1, NONE);
                 renderParameters(r, &function->parameters, COMMA_SPACE, 0);
-                renderCString(r, ")", SPACE);
-            }
-
-            if(function->virtual) {
-                renderCString(r, "virtual", SPACE);
-            }
-
-            if(function->override) {
-                renderCString(r, "override", NONE);
-                if(function->overrides->count > 0) {
-                    renderCString(r, "(", NONE);
-                    ASTNodeLink *override = function->overrides->head;
-                    for(u32 i = 0; i < function->overrides->count; i++, override = override->next) {
-                        renderType(r, &override->node, i == function->overrides->count - 1 ? NONE : COMMA_SPACE);
-                    }
-                    renderCString(r, ")", NONE);
+                if(function->parameters.count > 0) {
+                    renderTokenChecked(r, function->parameters.last->node.endToken + 1, LIT_TO_STR(")"), SPACE);
+                } else {
+                    renderTokenChecked(r, function->name + 2, LIT_TO_STR(")"), SPACE);
                 }
             }
 
+            if(function->virtual != INVALID_TOKEN_ID) {
+                renderToken(r, function->virtual, SPACE);
+            }
+
+            renderOverrides(r, function->override, function->overrides);
             if(function->body != 0x0) {
                 renderStatement(r, function->body, NEWLINE);
             } else {

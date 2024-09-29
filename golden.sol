@@ -3456,7 +3456,7 @@ type UFixed is uint256;
 
 contract Foo {
   type Id is uint8;
-  Id internal id;
+  Id public id;
 }
 
 contract test {
@@ -3606,7 +3606,7 @@ contract base {
   }
 }
 
-contract derived is base() {
+contract derived is base {
   function fun() {
     uint64(2);
   }
@@ -3694,8 +3694,7 @@ contract test {
   function fun(uint256 a) {
     uint256 i = 0;
     for(i = 0;
-    i < 10; i++;
-    ) {
+    i < 10; i++) {
       uint256 x = i;
       break;
       continue;
@@ -3707,8 +3706,7 @@ contract test {
   function fun(uint256 a) {
     uint256 i = 0;
     for(i = 0;
-    i < 10; i--;
-    ) {
+    i < 10; i--) {
       uint256 x = i;
       break;
       continue;
@@ -3729,16 +3727,14 @@ contract test {
   function fun(uint256 a) {
     uint256 i = 0;
     for(i = 0;
-    i < 10; i++;
-    ) continue;
+    i < 10; i++) continue;
     
   }
 }
 contract test {
   function fun(uint256 a) {
     for(uint256 i = 0;
-    i < 10; i++;
-    ) {
+    i < 10; i++) {
       uint256 x = i;
       break;
       continue;
@@ -3996,9 +3992,9 @@ contract test {
   }
 }
 contract c {
-  uint external a;
-  uint private b;
-  uint internal c;
+  uint private a;
+  uint internal b;
+  uint public c;
   uint d;
   function f() { }
   function f_priv() private { }
@@ -4115,10 +4111,8 @@ contract FeedConsumer {
     require(errorCount < 10);
     try feed.getData(token) returns (uint v) {
       return (v, true);
-    } catch (string memory) {
-      // This is executed in case
-      // revert was called inside getData
-      // and a reason string was provided.
+    } catch Error(string memory) {
+      // This is executed in case// revert was called inside getData// and a reason string was provided.
       errorCount++;
       return (0, false);
     } catch (bytes memory) {
@@ -4143,7 +4137,7 @@ contract test {
 }
 
 contract D {
-  uint internal x;
+  uint public x;
   constructor(uint a) public payable {
     x = a;
   }
@@ -4163,7 +4157,7 @@ contract C {
 }
 
 contract D {
-  uint internal x;
+  uint public x;
   constructor(uint a) public {
     x = a;
   }
@@ -4188,26 +4182,26 @@ contract owned {
   address payable owner;
 }
 
-contract Destructible is owned() {
+contract Destructible is owned {
   function destroy() public virtual {
     if(msg.sender == owner) selfdestruct(owner);
   }
 }
 
-contract Base1 is Destructible() {
+contract Base1 is Destructible {
   function destroy() public virtual override { /* do cleanup 1 */
     super.destroy();
   }
 }
 
-contract Base2 is Destructible() {
+contract Base2 is Destructible {
   function destroy() public virtual override { /* do cleanup 2 */
     super.destroy();
   }
 }
 
-contract Final is Base1(), Base2() {
-  function destroy() public override (Base1, Base2){
+contract Final is Base1, Base2 {
+  function destroy() public override(Base1, Base2) {
     super.destroy();
   }
 }
@@ -4232,8 +4226,8 @@ contract VirtualB {
     //does nothing }
 }
 
-contract VirtualOverdide is VirtualA(), VirtualB() {
-  function funA() public override (VirtualB, VirtualA){
+contract VirtualOverdide is VirtualA, VirtualB {
+  function funA() public override(VirtualB, VirtualA) {
     emit MyEvent("from B");
     super.funA();
   }
@@ -4309,10 +4303,9 @@ contract Base2 {
   function foo() public virtual { }
 }
 
-contract Inherited is Base1(), Base2() {
-  // Derives from multiple bases defining foo(), so we must explicitly
-  // override it
-  function foo() public override (Base1, Base2){ }
+contract Inherited is Base1, Base2 {
+  // Derives from multiple bases defining foo(), so we must explicitly// override it
+  function foo() public override(Base1, Base2) { }
 }
 
 contract CallWithNameValue {
@@ -4380,33 +4373,33 @@ interface AcrossMessageHandler {
  * submits a proof that the relayer correctly submitted a relay on this SpokePool.
  * @custom:security-contact bugs@across.to
  */
-abstract contract SpokePool is V3SpokePoolInterface(), SpokePoolInterface(), UUPSUpgradeable(), ReentrancyGuardUpgradeable(), MultiCallerUpgradeable(), EIP712CrossChainUpgradeable() {
-  using SafeERC20Upgradeable for IERC20Upgradeable;
-  using AddressLibUpgradeable for address;
-  address internal crossDomainAdmin;
-  address internal hubPool;
-  WETH9Interface external DEPRECATED_wrappedNativeToken;
-  uint32 external DEPRECATED_depositQuoteTimeBuffer;
-  uint32 internal numberOfDeposits;
-  bool internal pausedFills;
-  bool internal pausedDeposits;
-  RootBundle[] internal rootBundles;
-  mapping(address => mapping(uint256 => bool)) internal enabledDepositRoutes;
-  mapping(bytes32 => uint256) external DEPRECATED_relayFills;
-  mapping(address => uint256) external DEPRECATED_fillCounter;
-  mapping(address => uint256) external DEPRECATED_depositCounter;
-  mapping(bytes32 => uint256) external DEPRECATED_refundsRequested;
-  mapping(bytes32 => uint256) internal fillStatuses;
-  WETH9Interface internal immutable wrappedNativeToken;
-  uint32 internal immutable depositQuoteTimeBuffer;
-  uint32 internal immutable fillDeadlineBuffer;
-  uint256 internal constant MAX_TRANSFER_SIZE = 1e36;
-  uint256 internal constant SLOW_FILL_MAX_TOKENS_TO_SEND = 1e40;
-  bytes32 internal constant UPDATE_DEPOSIT_DETAILS_HASH = keccak256("UpdateDepositDetails(uint32 depositId,uint256 originChainId,int64 updatedRelayerFeePct,address updatedRecipient,bytes updatedMessage)");
-  bytes32 internal constant UPDATE_V3_DEPOSIT_DETAILS_HASH = keccak256("UpdateDepositDetails(uint32 depositId,uint256 originChainId,uint256 updatedOutputAmount,address updatedRecipient,bytes updatedMessage)");
-  uint256 internal constant EMPTY_REPAYMENT_CHAIN_ID = 0;
-  address internal constant EMPTY_RELAYER = address(0);
-  uint32 internal constant INFINITE_FILL_DEADLINE = type(uint32).max;
+abstract contract SpokePool is V3SpokePoolInterface, SpokePoolInterface, UUPSUpgradeable, ReentrancyGuardUpgradeable, MultiCallerUpgradeable, EIP712CrossChainUpgradeable {
+  using SafeERC20Upgradeable for IERC20Upgradeable ;
+  using AddressLibUpgradeable for address ;
+  address public crossDomainAdmin;
+  address public hubPool;
+  WETH9Interface private DEPRECATED_wrappedNativeToken;
+  uint32 private DEPRECATED_depositQuoteTimeBuffer;
+  uint32 public numberOfDeposits;
+  bool public pausedFills;
+  bool public pausedDeposits;
+  RootBundle[] public rootBundles;
+  mapping(address => mapping(uint256 => bool)) public enabledDepositRoutes;
+  mapping(bytes32 => uint256) private DEPRECATED_relayFills;
+  mapping(address => uint256) private DEPRECATED_fillCounter;
+  mapping(address => uint256) private DEPRECATED_depositCounter;
+  mapping(bytes32 => uint256) private DEPRECATED_refundsRequested;
+  mapping(bytes32 => uint256) public fillStatuses;
+  WETH9Interface public immutable wrappedNativeToken;
+  uint32 public immutable depositQuoteTimeBuffer;
+  uint32 public immutable fillDeadlineBuffer;
+  uint256 public constant MAX_TRANSFER_SIZE = 1e36;
+  uint256 public constant SLOW_FILL_MAX_TOKENS_TO_SEND = 1e40;
+  bytes32 public constant UPDATE_DEPOSIT_DETAILS_HASH = keccak256("UpdateDepositDetails(uint32 depositId,uint256 originChainId,int64 updatedRelayerFeePct,address updatedRecipient,bytes updatedMessage)");
+  bytes32 public constant UPDATE_V3_DEPOSIT_DETAILS_HASH = keccak256("UpdateDepositDetails(uint32 depositId,uint256 originChainId,uint256 updatedOutputAmount,address updatedRecipient,bytes updatedMessage)");
+  uint256 public constant EMPTY_REPAYMENT_CHAIN_ID = 0;
+  address public constant EMPTY_RELAYER = address(0);
+  uint32 public constant INFINITE_FILL_DEADLINE = type(uint32).max;
   event SetXDomainAdmin(address indexed newAdmin);
   event SetHubPool(address indexed newHubPool);
   event EnabledDepositRoute(address indexed originToken, uint256 indexed destinationChainId, bool enabled);
@@ -5169,8 +5162,7 @@ abstract contract SpokePool is V3SpokePoolInterface(), SpokePoolInterface(), UUP
     if(refundAddresses.length != refundAmounts.length) revert InvalidMerkleLeaf();
     uint256 length = refundAmounts.length;
     for(uint256 i = 0;
-    i < length; ++i
-    ) {
+    i < length; ++i) {
       uint256 amount = refundAmounts[i];
       if(amount > 0) IERC20Upgradeable(l2TokenAddress).safeTransfer(refundAddresses[i], amount);
     }
@@ -5432,14 +5424,14 @@ abstract contract SpokePool is V3SpokePoolInterface(), SpokePoolInterface(), UUP
   // Reserve storage slots for future versions of this base contract to add state variables without
   // affecting the storage layout of child contracts. Decrement the size of __gap whenever state variables
   // are added. This is at bottom of contract to make sure it's always at the end of storage.
-  uint256[999] external __gap;
+  uint256[999] private __gap;
 }
 
 abstract contract C {
   function foo() external pure virtual returns (uint);
 }
-contract X is C() {
-  uint internal constant override foo = 7;
+contract X is C {
+  uint public constant override foo = 7;
 }
 
 contract B {
@@ -5456,9 +5448,9 @@ contract C {
   }
 }
 
-contract D is C(), B() {
+contract D is C, B {
   /// @inheritdoc C
-  uint internal override(C, B) x;
+  uint public override(C, B) x;
 }
 
 contract C {
