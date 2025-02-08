@@ -97,56 +97,18 @@ UTEST_F_TEARDOWN(SolFmtFixture) {
     arenaDestroy(&arena);
 }
 
-UTEST_F(SolFmtFixture, structs) {
-  utest_fixture->path = "tests/structs.sol";
-}
-
-UTEST_F(SolFmtFixture, enums) {
-  utest_fixture->path = "tests/enums.sol";
-}
-
-UTEST_F(SolFmtFixture, addressPayable) {
-  utest_fixture->path = "tests/addressPayable.sol";
-}
-
-UTEST_F(SolFmtFixture, basicIterator) {
-  utest_fixture->path = "tests/basicIterator.sol";
-}
-
-UTEST_F(SolFmtFixture, breakingChangesV0_8_0) {
-  utest_fixture->path = "tests/breakingChangesV0.8.0.sol";
-}
-
-UTEST_F(SolFmtFixture, customErrors) {
-  utest_fixture->path = "tests/customErrors.sol";
-}
-
-UTEST_F(SolFmtFixture, enumsBigger) {
-  utest_fixture->path = "tests/enumsBigger.sol";
-}
-
-UTEST_F(SolFmtFixture, hashLiteral) {
-  utest_fixture->path = "tests/hashLiteral.sol";
-}
-
-UTEST_F(SolFmtFixture, immutable) {
-  utest_fixture->path = "tests/immutable.sol";
-}
-
-UTEST_F(SolFmtFixture, indexRangeAccess) {
-  utest_fixture->path = "tests/indexRangeAccess.sol";
-}
-
-UTEST_F(SolFmtFixture, modifierDefinitions) {
-  utest_fixture->path = "tests/modifierDefinitions.sol";
-}
-
-UTEST_F(SolFmtFixture, modifierInvocations) {
-  utest_fixture->path = "tests/modifierInvocations.sol";
-}
-
-UTEST_F(SolFmtFixture, numberLiteral) {
-  utest_fixture->path = "tests/numberLiteral.sol";
-}
+UTEST_F(SolFmtFixture, structs) { utest_fixture->path = "tests/structs.sol"; }
+UTEST_F(SolFmtFixture, enums) { utest_fixture->path = "tests/enums.sol"; }
+UTEST_F(SolFmtFixture, addressPayable) { utest_fixture->path = "tests/addressPayable.sol"; }
+UTEST_F(SolFmtFixture, basicIterator) { utest_fixture->path = "tests/basicIterator.sol"; }
+UTEST_F(SolFmtFixture, breakingChangesV0_8_0) { utest_fixture->path = "tests/breakingChangesV0.8.0.sol"; }
+UTEST_F(SolFmtFixture, customErrors) { utest_fixture->path = "tests/customErrors.sol"; }
+UTEST_F(SolFmtFixture, enumsBigger) { utest_fixture->path = "tests/enumsBigger.sol"; }
+UTEST_F(SolFmtFixture, hashLiteral) { utest_fixture->path = "tests/hashLiteral.sol"; }
+UTEST_F(SolFmtFixture, immutable) { utest_fixture->path = "tests/immutable.sol"; }
+UTEST_F(SolFmtFixture, indexRangeAccess) { utest_fixture->path = "tests/indexRangeAccess.sol"; }
+UTEST_F(SolFmtFixture, modifierDefinitions) { utest_fixture->path = "tests/modifierDefinitions.sol"; }
+UTEST_F(SolFmtFixture, modifierInvocations) { utest_fixture->path = "tests/modifierInvocations.sol"; }
+UTEST_F(SolFmtFixture, numberLiteral) { utest_fixture->path = "tests/numberLiteral.sol"; }
 
 UTEST_MAIN();
