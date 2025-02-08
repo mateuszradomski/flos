@@ -133,4 +133,8 @@ UTEST_F(SolFmtFixture, immutable) {
   utest_fixture->path = "tests/immutable.sol";
 }
 
+UTEST_F(SolFmtFixture, indexRangeAccess) {
+  utest_fixture->path = "tests/indexRangeAccess.sol";
+}
+
 UTEST_MAIN();
