@@ -1449,6 +1449,9 @@ renderMember(Render *r, ASTNode *member) {
 
             ASTNodeLink *element = contract->elements.head;
             for(u32 i = 0; i < contract->elements.count; i++, element = element->next) {
+                if(i > 0) {
+                    preservePresentNewLines(r, &element->node);
+                }
                 renderMember(r, &element->node);
             }
 

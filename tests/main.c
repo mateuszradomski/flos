@@ -109,4 +109,8 @@ UTEST_F(SolFmtFixture, addressPayable) {
   utest_fixture->path = "tests/addressPayable.sol";
 }
 
+UTEST_F(SolFmtFixture, basicIterator) {
+  utest_fixture->path = "tests/basicIterator.sol";
+}
+
 UTEST_MAIN();
