@@ -9,10 +9,12 @@ struct KeyValuePair {
     uint8 a38;
     uint256 a69;
     bytes32 a101;
+
     abc.a a102;
     abc.b a103;
     MyContract.MyStruct a104;
     MyContract.MyStruct1.MyStruct2 a105;
+      
     mapping(address => uint) a106;
     mapping(address => mapping(address => uint)) a107;
     mapping(uint=>x) a108;
@@ -26,6 +28,7 @@ struct KeyValuePair {
     mapping (address =>  bool) a116;
     mapping (address a => bool) a117;
     mapping (address => bool b) a118;
+
     uint[] a119;
     uint[][] a120;
     uint[][][] a121;
@@ -45,10 +48,12 @@ struct KeyValuePair {
     uint8 a38;
     uint256 a69;
     bytes32 a101;
+
     abc.a a102;
     abc.b a103;
     MyContract.MyStruct a104;
     MyContract.MyStruct1.MyStruct2 a105;
+
     mapping(address => uint) a106;
     mapping(address => mapping(address => uint)) a107;
     mapping(uint => x) a108;
@@ -62,6 +67,7 @@ struct KeyValuePair {
     mapping(address => bool) a116;
     mapping(address a => bool) a117;
     mapping(address => bool b) a118;
+
     uint[] a119;
     uint[][] a120;
     uint[][][] a121;

@@ -16,7 +16,8 @@ typedef struct Render {
 
 static void
 wwrite(Writer *w, String str) {
-    if(w->lineSize == 0) {
+    String newline = LIT_TO_STR("\n") ;
+    if(w->lineSize == 0 && !stringMatch(newline, str)) {
         for(u32 i = 0; i < w->indentSize * w->indentCount; i++) {
             w->data[w->size++] = ' ';
             w->lineSize += 1;
