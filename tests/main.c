@@ -117,4 +117,8 @@ UTEST_F(SolFmtFixture, breakingChangesV0_8_0) {
   utest_fixture->path = "tests/breakingChangesV0.8.0.sol";
 }
 
+UTEST_F(SolFmtFixture, customErrors) {
+  utest_fixture->path = "tests/customErrors.sol";
+}
+
 UTEST_MAIN();
