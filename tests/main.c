@@ -110,5 +110,6 @@ UTEST_F(SolFmtFixture, indexRangeAccess) { utest_fixture->path = "tests/indexRan
 UTEST_F(SolFmtFixture, modifierDefinitions) { utest_fixture->path = "tests/modifierDefinitions.sol"; }
 UTEST_F(SolFmtFixture, modifierInvocations) { utest_fixture->path = "tests/modifierInvocations.sol"; }
 UTEST_F(SolFmtFixture, numberLiteral) { utest_fixture->path = "tests/numberLiteral.sol"; }
+UTEST_F(SolFmtFixture, pragma) { utest_fixture->path = "tests/pragma.sol"; }
 
 UTEST_MAIN();
