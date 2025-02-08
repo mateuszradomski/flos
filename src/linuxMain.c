@@ -1,8 +1,4 @@
-#include "./src/utils.c"
-#include "./src/tokenize.c"
-#include "./src/yulLexer.c"
-#include "./src/parser.c"
-#include "./src/renderTree.c"
+#include "./src/format.c"
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -32,15 +28,6 @@ readCPUFrequency()
 #else
     return 24e6;
 #endif
-}
-
-String format(Arena *arena, String input) {
-    TokenizeResult tokens = tokenize(input, arena);
-    Parser parser = createParser(tokens, arena);
-    ASTNode node = parseSourceUnit(&parser);
-    String result = renderTree(arena, node, input, tokens);
-
-    return result;
 }
 
 int main(int argCount, char **args) {

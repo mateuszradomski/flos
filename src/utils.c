@@ -454,6 +454,34 @@ stringCompare(String a, String b){
     return(result);
 }
 
+static String
+stringTrim(String str) {
+    while(str.size > 0 && isWhitespace(str.data[0])) {
+        str.data++;
+        str.size--;
+    }
+
+    while(str.size > 0 && isWhitespace(str.data[str.size - 1])) {
+        str.size--;
+    }
+
+    return str;
+}
+
+static String
+stringUnixLines(String a){
+    size_t size = 0;
+
+    for (size_t i = 0; i < a.size; i += 1) {
+        if(a.data[i] != '\r') {
+            a.data[size++] = a.data[i];
+        }
+    }
+
+    a.size = size;
+    return a;
+}
+
 static SplitIterator
 stringSplit(String string, char delim) {
     SplitIterator it = { };
