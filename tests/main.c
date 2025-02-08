@@ -76,8 +76,37 @@ showDifferences(String result, String expected) {
   }
 }
 
-#include "structs.c"
-#include "enums.c"
-#include "addressPayable.c"
+static void
+testGivenFile(char *path) {
+}
+
+struct SolFmtFixture{
+  char *path;
+};
+
+UTEST_F_SETUP(SolFmtFixture) { }
+
+UTEST_F_TEARDOWN(SolFmtFixture) {
+    Arena arena = arenaCreate(1024*1024, 4096, 32);
+    TestData data = readTestInput(&arena, utest_fixture->path);
+
+    String result = stringTrim(format(&arena, data.input));
+
+    showDifferences(result, data.output);
+    ASSERT_TRUE(stringMatch(result, data.output));
+    arenaDestroy(&arena);
+}
+
+UTEST_F(SolFmtFixture, structs) {
+  utest_fixture->path = "tests/structs.sol";
+}
+
+UTEST_F(SolFmtFixture, enums) {
+  utest_fixture->path = "tests/enums.sol";
+}
+
+UTEST_F(SolFmtFixture, addressPayable) {
+  utest_fixture->path = "tests/addressPayable.sol";
+}
 
 UTEST_MAIN();
