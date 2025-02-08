@@ -129,4 +129,8 @@ UTEST_F(SolFmtFixture, hashLiteral) {
   utest_fixture->path = "tests/hashLiteral.sol";
 }
 
+UTEST_F(SolFmtFixture, immutable) {
+  utest_fixture->path = "tests/immutable.sol";
+}
+
 UTEST_MAIN();
