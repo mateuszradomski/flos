@@ -1,6 +1,6 @@
-UTEST(solfmt, enums) {
+UTEST(solfmt, addressPayable) {
 	Arena arena = arenaCreate(1024*1024, 4096, 32);
-	TestData data = readTestInput(&arena, "tests/enums.sol");
+	TestData data = readTestInput(&arena, "tests/addressPayable.sol");
 
 	String result = stringTrim(format(&arena, data.input));
 

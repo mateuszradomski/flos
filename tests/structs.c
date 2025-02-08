@@ -6,4 +6,5 @@ UTEST(solfmt, structs) {
 
 	showDifferences(result, data.output);
 	ASSERT_TRUE(stringMatch(result, data.output));
+    arenaDestroy(&arena);
 }

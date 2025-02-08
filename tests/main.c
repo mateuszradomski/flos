@@ -78,5 +78,6 @@ showDifferences(String result, String expected) {
 
 #include "structs.c"
 #include "enums.c"
+#include "addressPayable.c"
 
 UTEST_MAIN();
