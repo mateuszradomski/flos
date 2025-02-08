@@ -4,3 +4,6 @@ solfmt.pdb
 test.exe
 test.ilk
 test.pdb
+test.dSYM/Contents
+solfmt
+test

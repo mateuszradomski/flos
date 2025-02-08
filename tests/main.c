@@ -34,7 +34,7 @@ readTestInput(Arena *arena, char *path) {
 
   assert(i > 0);
   result.input = (String){ .data = memory, .size = i };
-  result.output = (String){ .data = memory + i + delimiter.size + 2, .size = contentLength - i - delimiter.size - 2 };
+  result.output = (String){ .data = memory + i + delimiter.size, .size = contentLength - i - delimiter.size };
 
   result.input = stringTrim(stringUnixLines(result.input));
   result.output = stringTrim(stringUnixLines(result.output));
