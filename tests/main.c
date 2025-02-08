@@ -141,4 +141,8 @@ UTEST_F(SolFmtFixture, modifierDefinitions) {
   utest_fixture->path = "tests/modifierDefinitions.sol";
 }
 
+UTEST_F(SolFmtFixture, modifierInvocations) {
+  utest_fixture->path = "tests/modifierInvocations.sol";
+}
+
 UTEST_MAIN();
