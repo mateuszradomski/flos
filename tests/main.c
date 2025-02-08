@@ -113,5 +113,6 @@ UTEST_F(SolFmtFixture, numberLiteral) { utest_fixture->path = "tests/numberLiter
 UTEST_F(SolFmtFixture, pragma) { utest_fixture->path = "tests/pragma.sol"; }
 UTEST_F(SolFmtFixture, simpleAuction) { utest_fixture->path = "tests/simpleAuction.sol"; }
 UTEST_F(SolFmtFixture, simpleStorage) { utest_fixture->path = "tests/simpleStorage.sol"; }
+UTEST_F(SolFmtFixture, blanklines) { utest_fixture->path = "tests/blanklines.sol"; }
 
 UTEST_MAIN();
