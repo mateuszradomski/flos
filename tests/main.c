@@ -111,5 +111,6 @@ UTEST_F(SolFmtFixture, modifierDefinitions) { utest_fixture->path = "tests/modif
 UTEST_F(SolFmtFixture, modifierInvocations) { utest_fixture->path = "tests/modifierInvocations.sol"; }
 UTEST_F(SolFmtFixture, numberLiteral) { utest_fixture->path = "tests/numberLiteral.sol"; }
 UTEST_F(SolFmtFixture, pragma) { utest_fixture->path = "tests/pragma.sol"; }
+UTEST_F(SolFmtFixture, simpleAuction) { utest_fixture->path = "tests/simpleAuction.sol"; }
 
 UTEST_MAIN();
