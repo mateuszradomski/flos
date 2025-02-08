@@ -77,5 +77,6 @@ showDifferences(String result, String expected) {
 }
 
 #include "structs.c"
+#include "enums.c"
 
 UTEST_MAIN();
