@@ -145,4 +145,8 @@ UTEST_F(SolFmtFixture, modifierInvocations) {
   utest_fixture->path = "tests/modifierInvocations.sol";
 }
 
+UTEST_F(SolFmtFixture, numberLiteral) {
+  utest_fixture->path = "tests/numberLiteral.sol";
+}
+
 UTEST_MAIN();
