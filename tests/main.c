@@ -121,4 +121,8 @@ UTEST_F(SolFmtFixture, customErrors) {
   utest_fixture->path = "tests/customErrors.sol";
 }
 
+UTEST_F(SolFmtFixture, enumsBigger) {
+  utest_fixture->path = "tests/enumsBigger.sol";
+}
+
 UTEST_MAIN();
