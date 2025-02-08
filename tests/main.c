@@ -125,4 +125,8 @@ UTEST_F(SolFmtFixture, enumsBigger) {
   utest_fixture->path = "tests/enumsBigger.sol";
 }
 
+UTEST_F(SolFmtFixture, hashLiteral) {
+  utest_fixture->path = "tests/hashLiteral.sol";
+}
+
 UTEST_MAIN();
