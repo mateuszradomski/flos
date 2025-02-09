@@ -23,7 +23,7 @@ commitIndent(Writer *w) {
 }
 
 static void
-wwrite(Writer *w, String str) {
+writeString(Writer *w, String str) {
     String newline = LIT_TO_STR("\n") ;
     if(w->lineSize == 0 && !stringMatch(newline, str)) {
         commitIndent(w);
@@ -40,7 +40,7 @@ finishLine(Writer *w) {
         w->size -= 1;
     }
 
-    wwrite(w, LIT_TO_STR("\n"));
+    writeString(w, LIT_TO_STR("\n"));
     w->lineSize = 0;
 }
 
@@ -223,9 +223,9 @@ renderComments(Render *r, u32 startOffset, u32 endOffset) {
                 } else if(preceedingNewlines > 0) {
                     finishLine(r->writer);
                 } else if(index == 0) {
-                    wwrite(r->writer, LIT_TO_STR(" "));
+                    writeString(r->writer, LIT_TO_STR(" "));
                 } else if(index > 0 && commentType == CommentType_MultiLine) {
-                    wwrite(r->writer, LIT_TO_STR(" "));
+                    writeString(r->writer, LIT_TO_STR(" "));
                 }
 
                 index = commentEnd + indexSkipSize;
@@ -270,12 +270,12 @@ static void
 renderConnect(Render *r, ConnectType connect) {
     switch(connect) {
         case NONE: break;
-        case SPACE: wwrite(r->writer, LIT_TO_STR(" ")); break;
-        case COMMA: wwrite(r->writer, LIT_TO_STR(",")); finishLine(r->writer); break;
-        case COMMA_SPACE: wwrite(r->writer, LIT_TO_STR(", ")); break;
-        case COLON_SPACE: wwrite(r->writer, LIT_TO_STR(": ")); break;
-        case SEMICOLON: wwrite(r->writer, LIT_TO_STR(";")); finishLine(r->writer); break;
-        case DOT: wwrite(r->writer, LIT_TO_STR(".")); break;
+        case SPACE: writeString(r->writer, LIT_TO_STR(" ")); break;
+        case COMMA: writeString(r->writer, LIT_TO_STR(",")); finishLine(r->writer); break;
+        case COMMA_SPACE: writeString(r->writer, LIT_TO_STR(", ")); break;
+        case COLON_SPACE: writeString(r->writer, LIT_TO_STR(": ")); break;
+        case SEMICOLON: writeString(r->writer, LIT_TO_STR(";")); finishLine(r->writer); break;
+        case DOT: writeString(r->writer, LIT_TO_STR(".")); break;
         case NEWLINE: finishLine(r->writer); break;
     }
 }
@@ -294,7 +294,7 @@ renderConnectWithComments(Render *r, TokenId token, ConnectType connect) {
         case NONE: break;
         case SPACE: {
             if(writtenComments == 0) {
-                wwrite(r->writer, LIT_TO_STR(" "));
+                writeString(r->writer, LIT_TO_STR(" "));
             }
         } break;
         case COMMA: {
@@ -308,10 +308,10 @@ renderConnectWithComments(Render *r, TokenId token, ConnectType connect) {
             if(r->tokens.tokenTypes[nextToken] == TokenType_Comma) {
                 renderToken(r, nextToken, SPACE);
             } else if(writtenComments == 0) {
-                wwrite(r->writer, LIT_TO_STR(" "));
+                writeString(r->writer, LIT_TO_STR(" "));
             }
         } break;
-        case COLON_SPACE: wwrite(r->writer, LIT_TO_STR(": ")); break;
+        case COLON_SPACE: writeString(r->writer, LIT_TO_STR(": ")); break;
         case SEMICOLON: {
             if(r->tokens.tokenTypes[nextToken] == TokenType_Semicolon) {
                 renderToken(r, nextToken, NEWLINE);
@@ -319,7 +319,7 @@ renderConnectWithComments(Render *r, TokenId token, ConnectType connect) {
                 finishLine(r->writer);
             }
         } break;
-        case DOT: wwrite(r->writer, LIT_TO_STR(".")); break;
+        case DOT: writeString(r->writer, LIT_TO_STR(".")); break;
         case NEWLINE: {
             if(writtenComments == 0) {
                 finishLine(r->writer);
@@ -330,7 +330,7 @@ renderConnectWithComments(Render *r, TokenId token, ConnectType connect) {
 
 static void
 renderString(Render *r, String string, ConnectType connect) {
-    wwrite(r->writer, string);
+    writeString(r->writer, string);
     renderConnect(r, connect);
 }
 
@@ -339,7 +339,7 @@ renderString(Render *r, String string, ConnectType connect) {
 static void
 renderToken(Render *r, TokenId token, ConnectType connect) {
     assert(token != INVALID_TOKEN_ID);
-    wwrite(r->writer, getTokenString(r->tokens, token));
+    writeString(r->writer, getTokenString(r->tokens, token));
     renderConnectWithComments(r, token, connect);
 }
 
@@ -351,9 +351,9 @@ renderTokenChecked(Render *r, TokenId token, String expected, ConnectType connec
 
 static void
 renderTokenAsString(Render *r, TokenId token, ConnectType connect) {
-    wwrite(r->writer, LIT_TO_STR("\""));
+    writeString(r->writer, LIT_TO_STR("\""));
     renderToken(r, token, NONE);
-    wwrite(r->writer, LIT_TO_STR("\""));
+    writeString(r->writer, LIT_TO_STR("\""));
     renderConnect(r, connect);
 }
 
@@ -422,12 +422,12 @@ renderExpression(Render *r, ASTNode *node, ConnectType connect) {
             } else if(node->type == ASTNodeType_UnicodeStringLitExpression) {
                 renderCString(r, "unicode", NONE);
             }
-            wwrite(r->writer, LIT_TO_STR("\""));
+            writeString(r->writer, LIT_TO_STR("\""));
             for(u32 i = 0; i < expression->values.count; i++) {
                 TokenId literal = listGetTokenId(&expression->values, i);
                 renderToken(r, literal, NONE);
             }
-            wwrite(r->writer, LIT_TO_STR("\""));
+            writeString(r->writer, LIT_TO_STR("\""));
             renderConnect(r, connect);
         } break;
         case ASTNodeType_BoolLitExpression: {
@@ -670,9 +670,9 @@ renderYulExpression(Render *r, ASTNode *node, ConnectType connect) {
         } break;
         case ASTNodeType_YulStringLitExpression: {
             // TODO(radomski): Escaping
-            wwrite(r->writer, LIT_TO_STR("\""));
+            writeString(r->writer, LIT_TO_STR("\""));
             renderToken(r, node->yulHexStringLitExpressionNode.value, NONE);
-            wwrite(r->writer, LIT_TO_STR("\""));
+            writeString(r->writer, LIT_TO_STR("\""));
             renderConnect(r, connect);
         } break;
         case ASTNodeType_YulHexNumberLitExpression: {
@@ -683,9 +683,9 @@ renderYulExpression(Render *r, ASTNode *node, ConnectType connect) {
         } break;
         case ASTNodeType_YulHexStringLitExpression: {
             // TODO(radomski): Escaping
-            wwrite(r->writer, LIT_TO_STR("hex\""));
+            writeString(r->writer, LIT_TO_STR("hex\""));
             renderToken(r, node->yulHexStringLitExpressionNode.value, NONE);
-            wwrite(r->writer, LIT_TO_STR("\""));
+            writeString(r->writer, LIT_TO_STR("\""));
             renderConnect(r, connect);
         } break;
         case ASTNodeType_YulMemberAccessExpression: {
@@ -875,9 +875,9 @@ renderStatement(Render *r, ASTNode *node, ConnectType connect) {
             if(statement->flags.count > 0) {
                 renderCString(r, "(", NONE);
                 for(u32 i = 0; i < statement->flags.count; i++) {
-                    wwrite(r->writer, LIT_TO_STR("\""));
+                    writeString(r->writer, LIT_TO_STR("\""));
                     renderToken(r, listGetTokenId(&statement->flags, i), NONE);
-                    wwrite(r->writer, LIT_TO_STR("\""));
+                    writeString(r->writer, LIT_TO_STR("\""));
                     if(i != statement->flags.count - 1) {
                         renderCString(r, ",", SPACE);
                     }
