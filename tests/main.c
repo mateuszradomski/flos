@@ -69,8 +69,8 @@ showDifferences(String result, String expected) {
 
     if(!stringMatch(resultLine, expectedLine)) {
       printf("Result does not match expected on the following line:\n");
-      printf("%.*s\n", (int)resultLine.size, resultLine.data);
-      printf("%.*s\n", (int)expectedLine.size, expectedLine.data);
+      printf("Got:    %.*s\n", (int)resultLine.size, resultLine.data);
+      printf("Wanted: %.*s\n", (int)expectedLine.size, expectedLine.data);
       break;
     }
   }
@@ -119,5 +119,6 @@ UTEST_F(SolFmtFixture, simpleStorage) { utest_fixture->path = "tests/simpleStora
 UTEST_F(SolFmtFixture, blanklines) { utest_fixture->path = "tests/blanklines.sol"; }
 UTEST_F(SolFmtFixture, typeDefinitions) { utest_fixture->path = "tests/typeDefinitions.sol"; }
 UTEST_F(SolFmtFixture, operators) { utest_fixture->path = "tests/operators.sol"; }
+UTEST_F(SolFmtFixture, comments) { utest_fixture->path = "tests/comments.sol"; }
 
 UTEST_MAIN();

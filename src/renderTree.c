@@ -15,36 +15,23 @@ typedef struct Render {
 } Render;
 
 static void
+commitIndent(Writer *w) {
+    for(u32 i = 0; i < w->indentSize * w->indentCount; i++) {
+        w->data[w->size++] = ' ';
+        w->lineSize += 1;
+    }
+}
+
+static void
 wwrite(Writer *w, String str) {
     String newline = LIT_TO_STR("\n") ;
     if(w->lineSize == 0 && !stringMatch(newline, str)) {
-        for(u32 i = 0; i < w->indentSize * w->indentCount; i++) {
-            w->data[w->size++] = ' ';
-            w->lineSize += 1;
-        }
+        commitIndent(w);
     }
 
     memcpy(w->data + w->size, str.data, str.size);
     w->size += str.size;
     w->lineSize += str.size;
-}
-
-// TODO(radomski): Write a function that will print out the multiline comments correctly.
-static void
-writeSkippingCR(Writer *w, String str) {
-    if(w->lineSize == 0) {
-        for(u32 i = 0; i < w->indentSize * w->indentCount; i++) {
-            w->data[w->size++] = ' ';
-            w->lineSize += 1;
-        }
-    }
-
-    for(u32 i = 0; i < str.size; i++) {
-        if(str.data[i] != '\r') {
-            w->data[w->size++] = str.data[i];
-            w->lineSize += 1;
-        }
-    }
 }
 
 static void
@@ -55,6 +42,23 @@ finishLine(Writer *w) {
 
     wwrite(w, LIT_TO_STR("\n"));
     w->lineSize = 0;
+}
+
+// TODO(radomski): Write a function that will print out the multiline comments correctly.
+static void
+writeSkippingCR(Writer *w, String str) {
+    if(w->lineSize == 0) {
+        commitIndent(w);
+    }
+
+    for(u32 i = 0; i < str.size; i++) {
+        if(str.data[i] == '\n') {
+            finishLine(w);
+        } else if(str.data[i] != '\r') {
+            w->data[w->size++] = str.data[i];
+            w->lineSize += 1;
+        }
+    }
 }
 
 static void
@@ -169,13 +173,14 @@ renderComments(Render *r, u32 startOffset, u32 endOffset) {
             u32 commentEnd = i;
 
             u32 commentType = CommentType_None;
-            u32 indexSkipSize = 1;
+            u32 indexSkipSize = 0;
             if(input.data[i] == '/' && input.data[i + 1] == '/') {
                 u32 newlineIndex = i;
                 while(newlineIndex < input.size && input.data[newlineIndex] != '\n') {
                     newlineIndex += 1;
                 }
 
+                indexSkipSize += 1;
                 if(input.data[newlineIndex - 1] == '\r') {
                     newlineIndex -= 1;
                     indexSkipSize += 1;
@@ -219,6 +224,8 @@ renderComments(Render *r, u32 startOffset, u32 endOffset) {
                     finishLine(r->writer);
                 } else if(index == 0) {
                     wwrite(r->writer, LIT_TO_STR(" "));
+                } else if(index > 0 && commentType == CommentType_MultiLine) {
+                    wwrite(r->writer, LIT_TO_STR(" "));
                 }
 
                 index = commentEnd + indexSkipSize;
@@ -239,9 +246,6 @@ renderComments(Render *r, u32 startOffset, u32 endOffset) {
                 }
 
                 finished = false;
-                if(stringMatch(LIT_TO_STR("// Verify the leafId in the leaf has not yet been claimed."), comment)) {
-                    int k = 1;
-                }
             }
         }
 
@@ -746,7 +750,7 @@ renderStatement(Render *r, ASTNode *node, ConnectType connect) {
             renderExpression(r, node->ifStatementNode.conditionExpression, NONE);
             renderTokenChecked(r, node->ifStatementNode.conditionExpression->endToken + 1, LIT_TO_STR(")"), SPACE);
             ConnectType trueConnect = node->ifStatementNode.trueStatement->type == ASTNodeType_BlockStatement ? NEWLINE : NONE;
-            renderStatement(r, node->ifStatementNode.trueStatement, node->ifStatementNode.falseStatement ? SPACE : trueConnect);
+            renderStatement(r, node->ifStatementNode.trueStatement, node->ifStatementNode.falseStatement ? NONE : trueConnect);
             if(node->ifStatementNode.falseStatement) {
                 renderTokenChecked(r, node->ifStatementNode.falseStatement->startToken - 1, LIT_TO_STR("else"), SPACE);
                 ConnectType falseConnect = node->ifStatementNode.falseStatement->type == ASTNodeType_BlockStatement ? NEWLINE : NONE;
