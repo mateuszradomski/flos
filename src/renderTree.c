@@ -224,7 +224,7 @@ renderComments(Render *r, u32 startOffset, u32 endOffset) {
                     finishLine(r->writer);
                 } else if(index == 0) {
                     writeString(r->writer, LIT_TO_STR(" "));
-                } else if(index > 0 && commentType == CommentType_MultiLine) {
+                } else if(commentType == CommentType_MultiLine) {
                     writeString(r->writer, LIT_TO_STR(" "));
                 }
 
