@@ -1308,10 +1308,12 @@ renderMember(Render *r, ASTNode *member) {
                 renderToken(r, member->startToken, SPACE);
             } else {
                 assert(stringMatch(LIT_TO_STR("function"), r->tokens.tokenStrings[member->startToken]));
-                renderToken(r, member->startToken, SPACE);
                 if(function->name != INVALID_TOKEN_ID) {
+                    renderToken(r, member->startToken, SPACE);
                     renderToken(r, function->name, NONE);
                     openParenToken = function->name + 1;
+                } else {
+                    renderToken(r, member->startToken, NONE);
                 }
             }
 
