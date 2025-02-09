@@ -127,6 +127,33 @@ contract Comments13 {
       {
   }
 }
+
+contract Comments14 {
+    /*
+* is going to be star aligned
+  * here
+                */
+
+    /****** lkasjdf
+* is going to be star aligned
+  * here
+                */
+
+    /****** lkasjdf
+ is not going to be star aligned
+  * here
+                */
+
+    /****** lkasjdf
+abc * is not going to be star aligned
+  * here
+                */
+
+    /****** lkasjdf
+ * is not going to be star aligned
+  * here
+ abc*/
+}
 // Above input, below output
 pragma solidity ^0.4.24;
 
@@ -176,7 +203,7 @@ contract Comments8 {
     function someFunction() {
         if(something) { }
         /* comment
-     * comment */
+         * comment */
         else { }
     }
 }
@@ -238,4 +265,31 @@ contract Comments13 {
     // comment 12
     ) // comment 13
         { }
+}
+
+contract Comments14 {
+    /*
+     * is going to be star aligned
+     * here
+     */
+
+    /****** lkasjdf
+     * is going to be star aligned
+     * here
+     */
+
+    /****** lkasjdf
+ is not going to be star aligned
+  * here
+                */
+
+    /****** lkasjdf
+abc * is not going to be star aligned
+  * here
+                */
+
+    /****** lkasjdf
+ * is not going to be star aligned
+  * here
+ abc*/
 }

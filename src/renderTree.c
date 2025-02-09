@@ -44,23 +44,6 @@ finishLine(Writer *w) {
     w->lineSize = 0;
 }
 
-// TODO(radomski): Write a function that will print out the multiline comments correctly.
-static void
-writeSkippingCR(Writer *w, String str) {
-    if(w->lineSize == 0) {
-        commitIndent(w);
-    }
-
-    for(u32 i = 0; i < str.size; i++) {
-        if(str.data[i] == '\n') {
-            finishLine(w);
-        } else if(str.data[i] != '\r') {
-            w->data[w->size++] = str.data[i];
-            w->lineSize += 1;
-        }
-    }
-}
-
 static void
 pushIndent(Writer *w) {
     w->indentCount += 1;
@@ -149,7 +132,8 @@ static void renderToken(Render *r, TokenId token, ConnectType connect);
 enum CommentType {
     CommentType_None,
     CommentType_SingleLine,
-    CommentType_MultiLine
+    CommentType_MultiLine,
+    CommentType_StarAligned
 };
 
 static u32
@@ -194,7 +178,21 @@ renderComments(Render *r, u32 startOffset, u32 endOffset) {
                 commentEnd = newlineIndex;
                 commentType = CommentType_SingleLine;
             } else if(input.data[i] == '/' && input.data[i + 1] == '*') {
+                bool isStarAligned = true;
+                bool checkStarAlignment = false;
                 while(commentEnd < input.size - 1 && (input.data[commentEnd] != '*' || input.data[commentEnd + 1] != '/')) {
+                    if(input.data[commentEnd] == '\n') {
+                        checkStarAlignment = true;
+                    }
+
+                    if(checkStarAlignment && !(isWhitespace(input.data[commentEnd]) || input.data[commentEnd] == '*')) {
+                        isStarAligned = false;
+                    }
+
+                    if(checkStarAlignment && input.data[commentEnd] == '*') {
+                        checkStarAlignment = false;
+                    }
+
                     commentEnd += 1;
                 }
                 commentEnd += 2;
@@ -208,7 +206,8 @@ renderComments(Render *r, u32 startOffset, u32 endOffset) {
                     .data = input.data + commentStart,
                     .size = commentEnd - commentStart
                 };
-                commentType = CommentType_MultiLine;
+
+                commentType = isStarAligned ? CommentType_StarAligned : CommentType_MultiLine;
             }
 
             if(comment.size > 0) {
@@ -224,17 +223,52 @@ renderComments(Render *r, u32 startOffset, u32 endOffset) {
                     finishLine(r->writer);
                 } else if(index == 0) {
                     writeString(r->writer, LIT_TO_STR(" "));
-                } else if(commentType == CommentType_MultiLine) {
+                } else if(commentType != CommentType_SingleLine) {
                     writeString(r->writer, LIT_TO_STR(" "));
                 }
 
                 index = commentEnd + indexSkipSize;
                 i = index - 1;
 
-                writeSkippingCR(r->writer, comment);
+                assert(commentType != CommentType_None);
+
+                // Write comment out
+                bool startOfLine = r->writer->lineSize == 0;
+                if(startOfLine) {
+                    commitIndent(r->writer);
+                }
+
+                if(commentType == CommentType_StarAligned && startOfLine) {
+                    for(u32 i = 0; i < comment.size; i++) {
+                        u8 c = comment.data[i];
+                        if(c == '\n') {
+                            finishLine(r->writer);
+                        } else if(!(isWhitespace(c) && r->writer->lineSize == 0)) {
+                            if(r->writer->lineSize == 0) {
+                                commitIndent(r->writer);
+                                r->writer->data[r->writer->size++] = ' ';
+                                r->writer->lineSize += 1;
+                            }
+
+                            r->writer->data[r->writer->size++] = c;
+                            r->writer->lineSize += 1;
+                        }
+                    }
+                } else {
+                    for(u32 i = 0; i < comment.size; i++) {
+                        if(comment.data[i] == '\n') {
+                            finishLine(r->writer);
+                        } else if(comment.data[i] != '\r') {
+                            r->writer->data[r->writer->size++] = comment.data[i];
+                            r->writer->lineSize += 1;
+                        }
+                    }
+                }
+
+                // Endings
                 if(commentType == CommentType_SingleLine) {
                     finishLine(r->writer);
-                } else if(commentType == CommentType_MultiLine) {
+                } else {
                     u8 *head = comment.data + comment.size;
                     while(isWhitespace(*head)) {
                         if(*head == '\n') {
