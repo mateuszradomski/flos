@@ -391,6 +391,134 @@ renderTokenAsString(Render *r, TokenId token, ConnectType connect) {
     renderConnect(r, connect);
 }
 
+typedef enum DocType {
+    DocType_None,
+    DocType_Line,
+    DocType_Softline,
+    DocType_Hardline,
+    DocType_Text,
+    DocType_Token,
+    DocType_TokenAsString,
+    DocType_Nest,
+    DocType_Group,
+    DocType_Count,
+} DocType;
+
+typedef struct Doc {
+    DocType type;
+    union {
+        String text;
+        struct {
+            struct Doc *array;
+            u32 length;
+        } docs;
+        struct {
+            TokenId id;
+            ConnectType connect;
+        } token;
+    };
+} Doc;
+
+typedef enum DocRenderLineType {
+    DocRenderLineType_Space,
+    DocRenderLineType_Newline,
+} DocRenderLineType;
+
+static void renderDocumentEntry(Render *r, Doc *d, DocRenderLineType lineType);
+
+static void
+renderGroup(Render *r, Doc *d) {
+    assert(d->type == DocType_Group);
+    Writer *w = r->writer;
+
+    u32 checkpoint = w->lineSize;
+    for(u32 i = 0; i < d->docs.length; i++) {
+        renderDocumentEntry(r, &d->docs.array[i], DocRenderLineType_Space);
+    }
+
+    if(w->lineSize > 120) {
+        u32 diff = w->lineSize - checkpoint;
+        w->size -= diff;
+        w->lineSize -= diff;
+
+        for(u32 i = 0; i < d->docs.length; i++) {
+            renderDocumentEntry(r, &d->docs.array[i], DocRenderLineType_Newline);
+        }
+    }
+}
+
+static void
+renderDocumentEntry(Render *r, Doc *d, DocRenderLineType lineType) {
+    Writer *w = r->writer;
+    switch(d->type) {
+        case DocType_Text: {
+            memcpy(w->data + w->size, d->text.data, d->text.size);
+        } break;
+        case DocType_Token: {
+            renderToken(r, d->token.id, d->token.connect);
+        } break;
+        case DocType_TokenAsString: {
+            renderTokenAsString(r, d->token.id, d->token.connect);
+        } break;
+        case DocType_Line: {
+            switch (lineType) {
+                case DocRenderLineType_Space: {
+                    w->data[w->size++] = ' ';
+                } break;
+                case DocRenderLineType_Newline: {
+                    finishLine(w);
+                    commitIndent(w);
+                } break;
+            }
+        } break;
+        case DocType_Softline: {
+            switch (lineType) {
+                case DocRenderLineType_Space: { } break;
+                case DocRenderLineType_Newline: {
+                    finishLine(w);
+                    commitIndent(w);
+                } break;
+            }
+        } break;
+        case DocType_Hardline: {
+            finishLine(w);
+            commitIndent(w);
+        } break;
+        case DocType_Nest: {
+            pushIndent(w);
+            for(u32 i = 0; i < d->docs.length; i++) {
+                renderDocumentEntry(r, &d->docs.array[i], lineType);
+            }
+            popIndent(w);
+        } break;
+        case DocType_Group: {
+            renderGroup(r, d);
+        } break;
+        default: { assert(false); }
+    }
+}
+
+static void
+renderDocument(Render *r, Doc *d) {
+    renderGroup(r, d);
+}
+
+static Doc
+docToken(TokenId id, ConnectType connect) {
+    return (Doc) {
+        .type = DocType_Token,
+        .token = { .id = id, .connect = connect }
+    };
+}
+
+static Doc
+docTokenAsString(TokenId id, ConnectType connect) {
+    return (Doc) {
+        .type = DocType_TokenAsString,
+        .token = { .id = id, .connect = connect }
+    };
+}
+
 static void
 renderCallArgumentList(Render *r, TokenId startingToken, ASTNodeListRanged *expressions, TokenIdList *names, ConnectType connect) {
     if(expressions->count == -1) {
@@ -1153,11 +1281,18 @@ renderMember(Render *r, ASTNode *member) {
         } break;
         case ASTNodeType_Import: {
             assert(stringMatch(LIT_TO_STR("import"), r->tokens.tokenStrings[member->startToken]));
-            renderToken(r, member->startToken, SPACE);
+            Doc buffer[32] = { 0 };
+            Doc d = { 
+                .type = DocType_Group,
+                .docs.array = buffer,
+            };
+            
+            d.docs.array[d.docs.length++] = docToken(member->startToken, SPACE);
 
             if(member->symbols.count > 0) {
                 assert(stringMatch(LIT_TO_STR("{"), r->tokens.tokenStrings[member->startToken + 1]));
-                renderToken(r, member->startToken + 1, SPACE);
+                d.docs.array[d.docs.length++] = docToken(member->startToken + 1, SPACE);
+
                 u32 endingToken = member->startToken + 2;
                 for(u32 i = 0; i < member->symbols.count; i++) {
                     TokenId symbol = listGetTokenId(&member->symbols, i);
@@ -1165,30 +1300,32 @@ renderMember(Render *r, ASTNode *member) {
 
                     ConnectType lastConnect = i == member->symbols.count - 1 ? SPACE : COMMA_SPACE;
                     ConnectType connect = alias == INVALID_TOKEN_ID ? lastConnect : SPACE;
-                    renderToken(r, symbol, connect);
+                    d.docs.array[d.docs.length++] = docToken(symbol, connect);
                     if(alias != INVALID_TOKEN_ID) {
                         assert(stringMatch(LIT_TO_STR("as"), r->tokens.tokenStrings[alias - 1]));
-                        renderToken(r, alias - 1, SPACE);
-                        renderToken(r, alias, lastConnect);
+                        d.docs.array[d.docs.length++] = docToken(alias - 1, SPACE);
+                        d.docs.array[d.docs.length++] = docToken(alias, lastConnect);
                     }
                 }
 
                 assert(stringMatch(LIT_TO_STR("}"), r->tokens.tokenStrings[member->pathTokenId - 2]));
                 assert(stringMatch(LIT_TO_STR("from"), r->tokens.tokenStrings[member->pathTokenId - 1]));
-                renderToken(r, member->pathTokenId - 2, SPACE);
-                renderToken(r, member->pathTokenId - 1, SPACE);
+                d.docs.array[d.docs.length++] = docToken(member->pathTokenId - 2, SPACE);
+                d.docs.array[d.docs.length++] = docToken(member->pathTokenId - 1, SPACE);
             }
 
             ConnectType connect = member->unitAliasTokenId != INVALID_TOKEN_ID ? SPACE : SEMICOLON;
-            renderTokenAsString(r, member->pathTokenId, connect);
+            d.docs.array[d.docs.length++] = docTokenAsString(member->pathTokenId, connect);
             if(member->unitAliasTokenId != INVALID_TOKEN_ID) {
                 assert(stringMatch(LIT_TO_STR("as"), r->tokens.tokenStrings[member->unitAliasTokenId - 1]));
-                renderToken(r, member->unitAliasTokenId - 1, SPACE);
-                renderToken(r, member->unitAliasTokenId, NONE);
+                d.docs.array[d.docs.length++] = docToken(member->unitAliasTokenId - 1, SPACE);
+                d.docs.array[d.docs.length++] = docToken(member->unitAliasTokenId, NONE);
 
                 TokenId semicolon = searchForToken(r, member->unitAliasTokenId, TokenType_Semicolon);
-                renderTokenChecked(r, semicolon, LIT_TO_STR(";"), NEWLINE);
+                d.docs.array[d.docs.length++] = docToken(semicolon, NEWLINE);
             }
+
+            renderDocument(r, &d);
         } break;
         case ASTNodeType_Using: {
             assert(stringMatch(LIT_TO_STR("using"), r->tokens.tokenStrings[member->startToken]));
