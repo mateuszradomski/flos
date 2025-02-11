@@ -396,19 +396,19 @@ renderTokenAsString(Render *r, TokenId token, ConnectType connect) {
     renderConnect(r, connect);
 }
 
-typedef enum DocType {
-    DocType_None,
-    DocType_Line,
-    DocType_Softline,
-    DocType_Hardline,
-    DocType_Text,
-    DocType_Token,
-    DocType_TokenAsString,
-    DocType_Count,
-} DocType;
+typedef enum WordType {
+    WordType_None,
+    WordType_Line,
+    WordType_Softline,
+    WordType_Hardline,
+    WordType_Text,
+    WordType_Token,
+    WordType_TokenAsString,
+    WordType_Count,
+} WordType;
 
-typedef struct Doc {
-    DocType type;
+typedef struct Word {
+    WordType type;
     u8 group;
     u8 nest;
     union {
@@ -418,28 +418,27 @@ typedef struct Doc {
             ConnectType connect;
         } token;
     };
-} Doc;
+} Word;
 
-typedef enum DocRenderLineType {
-    DocRenderLineType_Space,
-    DocRenderLineType_Newline,
-} DocRenderLineType;
+typedef enum WordRenderLineType {
+    WordRenderLineType_Space,
+    WordRenderLineType_Newline,
+} WordRenderLineType;
 
-static void renderDocumentEntry(Render *r, Doc *d, DocRenderLineType lineType);
+static void renderDocumentWord(Render *r, Word *word, WordRenderLineType lineType);
 
 static void
-renderGroup(Render *r, Doc *docs, u32 count, u32 group) {
+renderGroup(Render *r, Word *words, s32 count, u32 group) {
     Writer *w = r->writer;
 
     u32 checkpoint = w->lineSize;
+    for(u32 i = 0; i < count && words[i].group >= group; i++) {
+        Word *word = &words[i];
 
-    for(u32 i = 0; i < count && docs[i].group >= group; i++) {
-        Doc *e = &docs[i];
-
-        if(e->group > group) {
-            renderGroup(r, docs, count - i - 1, e->group);
+        if(word->group > group) {
+            renderGroup(r, words + i, count - i - 1, word->group);
         } else {
-            renderDocumentEntry(r, e, DocRenderLineType_Space);
+            renderDocumentWord(r, word, WordRenderLineType_Space);
         }
     }
 
@@ -448,54 +447,54 @@ renderGroup(Render *r, Doc *docs, u32 count, u32 group) {
         w->size -= diff;
         w->lineSize -= diff;
 
-        for(u32 i = 0; i < count && docs[i].group >= group; i++) {
-            Doc *e = &docs[i];
+        for(u32 i = 0; i < count && words[i].group >= group; i++) {
+            Word *word = &words[i];
 
-            if(e->group > group) {
-                renderGroup(r, docs, count - i - 1, e->group);
+            if(word->group > group) {
+                renderGroup(r, words + i, count - i - 1, word->group);
             } else {
-                renderDocumentEntry(r, e, DocRenderLineType_Newline);
+                renderDocumentWord(r, word, WordRenderLineType_Newline);
             }
         }
     }
 }
 
 static void
-renderDocumentEntry(Render *r, Doc *d, DocRenderLineType lineType) {
+renderDocumentWord(Render *r, Word *word, WordRenderLineType lineType) {
     Writer *w = r->writer;
-    setIndent(w, d->nest);
+    setIndent(w, word->nest);
 
-    switch(d->type) {
-        case DocType_Text: {
-            memcpy(w->data + w->size, d->text.data, d->text.size);
+    switch(word->type) {
+        case WordType_Text: {
+            memcpy(w->data + w->size, word->text.data, word->text.size);
         } break;
-        case DocType_Token: {
-            renderToken(r, d->token.id, d->token.connect);
+        case WordType_Token: {
+            renderToken(r, word->token.id, word->token.connect);
         } break;
-        case DocType_TokenAsString: {
-            renderTokenAsString(r, d->token.id, d->token.connect);
+        case WordType_TokenAsString: {
+            renderTokenAsString(r, word->token.id, word->token.connect);
         } break;
-        case DocType_Line: {
+        case WordType_Line: {
             switch (lineType) {
-                case DocRenderLineType_Space: {
+                case WordRenderLineType_Space: {
                     w->data[w->size++] = ' ';
                 } break;
-                case DocRenderLineType_Newline: {
+                case WordRenderLineType_Newline: {
                     finishLine(w);
                     commitIndent(w);
                 } break;
             }
         } break;
-        case DocType_Softline: {
+        case WordType_Softline: {
             switch (lineType) {
-                case DocRenderLineType_Space: { } break;
-                case DocRenderLineType_Newline: {
+                case WordRenderLineType_Space: { } break;
+                case WordRenderLineType_Newline: {
                     finishLine(w);
                     commitIndent(w);
                 } break;
             }
         } break;
-        case DocType_Hardline: {
+        case WordType_Hardline: {
             finishLine(w);
             commitIndent(w);
         } break;
@@ -504,22 +503,22 @@ renderDocumentEntry(Render *r, Doc *d, DocRenderLineType lineType) {
 }
 
 static void
-renderDocument(Render *r, Doc *docs, u32 count) {
-    renderGroup(r, docs, count, 0);
+renderDocument(Render *r, Word *words, u32 count) {
+    renderGroup(r, words, count, 0);
 }
 
-static Doc
+static Word
 docToken(TokenId id, ConnectType connect) {
-    return (Doc) {
-        .type = DocType_Token,
+    return (Word) {
+        .type = WordType_Token,
         .token = { .id = id, .connect = connect }
     };
 }
 
-static Doc
+static Word
 docTokenAsString(TokenId id, ConnectType connect) {
-    return (Doc) {
-        .type = DocType_TokenAsString,
+    return (Word) {
+        .type = WordType_TokenAsString,
         .token = { .id = id, .connect = connect }
     };
 }
@@ -1286,14 +1285,14 @@ renderMember(Render *r, ASTNode *member) {
         } break;
         case ASTNodeType_Import: {
             assert(stringMatch(LIT_TO_STR("import"), r->tokens.tokenStrings[member->startToken]));
-            Doc docs[32] = { 0 };
+            Word words[32] = { 0 };
             u32 docCount = 0;
             
-            docs[docCount++] = docToken(member->startToken, SPACE);
+            words[docCount++] = docToken(member->startToken, SPACE);
 
             if(member->symbols.count > 0) {
                 assert(stringMatch(LIT_TO_STR("{"), r->tokens.tokenStrings[member->startToken + 1]));
-                docs[docCount++] = docToken(member->startToken + 1, SPACE);
+                words[docCount++] = docToken(member->startToken + 1, SPACE);
 
                 u32 endingToken = member->startToken + 2;
                 for(u32 i = 0; i < member->symbols.count; i++) {
@@ -1302,32 +1301,32 @@ renderMember(Render *r, ASTNode *member) {
 
                     ConnectType lastConnect = i == member->symbols.count - 1 ? SPACE : COMMA_SPACE;
                     ConnectType connect = alias == INVALID_TOKEN_ID ? lastConnect : SPACE;
-                    docs[docCount++] = docToken(symbol, connect);
+                    words[docCount++] = docToken(symbol, connect);
                     if(alias != INVALID_TOKEN_ID) {
                         assert(stringMatch(LIT_TO_STR("as"), r->tokens.tokenStrings[alias - 1]));
-                        docs[docCount++] = docToken(alias - 1, SPACE);
-                        docs[docCount++] = docToken(alias, lastConnect);
+                        words[docCount++] = docToken(alias - 1, SPACE);
+                        words[docCount++] = docToken(alias, lastConnect);
                     }
                 }
 
                 assert(stringMatch(LIT_TO_STR("}"), r->tokens.tokenStrings[member->pathTokenId - 2]));
                 assert(stringMatch(LIT_TO_STR("from"), r->tokens.tokenStrings[member->pathTokenId - 1]));
-                docs[docCount++] = docToken(member->pathTokenId - 2, SPACE);
-                docs[docCount++] = docToken(member->pathTokenId - 1, SPACE);
+                words[docCount++] = docToken(member->pathTokenId - 2, SPACE);
+                words[docCount++] = docToken(member->pathTokenId - 1, SPACE);
             }
 
             ConnectType connect = member->unitAliasTokenId != INVALID_TOKEN_ID ? SPACE : SEMICOLON;
-            docs[docCount++] = docTokenAsString(member->pathTokenId, connect);
+            words[docCount++] = docTokenAsString(member->pathTokenId, connect);
             if(member->unitAliasTokenId != INVALID_TOKEN_ID) {
                 assert(stringMatch(LIT_TO_STR("as"), r->tokens.tokenStrings[member->unitAliasTokenId - 1]));
-                docs[docCount++] = docToken(member->unitAliasTokenId - 1, SPACE);
-                docs[docCount++] = docToken(member->unitAliasTokenId, NONE);
+                words[docCount++] = docToken(member->unitAliasTokenId - 1, SPACE);
+                words[docCount++] = docToken(member->unitAliasTokenId, NONE);
 
                 TokenId semicolon = searchForToken(r, member->unitAliasTokenId, TokenType_Semicolon);
-                docs[docCount++] = docToken(semicolon, NEWLINE);
+                words[docCount++] = docToken(semicolon, NEWLINE);
             }
 
-            renderDocument(r, docs, docCount);
+            renderDocument(r, words, docCount);
         } break;
         case ASTNodeType_Using: {
             assert(stringMatch(LIT_TO_STR("using"), r->tokens.tokenStrings[member->startToken]));
