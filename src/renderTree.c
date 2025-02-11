@@ -123,6 +123,7 @@ typedef enum ConnectType {
     COMMA_SPACE,
     COLON_SPACE,
     SEMICOLON,
+    JUST_SEMICOLON,
     DOT,
     NEWLINE,
 } ConnectType;
@@ -314,6 +315,7 @@ renderConnect(Render *r, ConnectType connect) {
         case COMMA_SPACE: writeString(r->writer, LIT_TO_STR(", ")); break;
         case COLON_SPACE: writeString(r->writer, LIT_TO_STR(": ")); break;
         case SEMICOLON: writeString(r->writer, LIT_TO_STR(";")); finishLine(r->writer); break;
+        case JUST_SEMICOLON: writeString(r->writer, LIT_TO_STR(";")); break;
         case DOT: writeString(r->writer, LIT_TO_STR(".")); break;
         case NEWLINE: finishLine(r->writer); break;
     }
@@ -356,6 +358,11 @@ renderConnectWithComments(Render *r, TokenId token, ConnectType connect) {
                 renderToken(r, nextToken, NEWLINE);
             } else if(writtenComments == 0) {
                 finishLine(r->writer);
+            }
+        } break;
+        case JUST_SEMICOLON: {
+            if(r->tokens.tokenTypes[nextToken] == TokenType_Semicolon) {
+                renderToken(r, nextToken, NEWLINE);
             }
         } break;
         case DOT: writeString(r->writer, LIT_TO_STR(".")); break;
@@ -508,7 +515,7 @@ renderDocument(Render *r, Word *words, u32 count) {
 }
 
 static Word
-docToken(TokenId id, ConnectType connect) {
+wordToken(TokenId id, ConnectType connect) {
     return (Word) {
         .type = WordType_Token,
         .token = { .id = id, .connect = connect }
@@ -516,7 +523,7 @@ docToken(TokenId id, ConnectType connect) {
 }
 
 static Word
-docTokenAsString(TokenId id, ConnectType connect) {
+wordTokenAsString(TokenId id, ConnectType connect) {
     return (Word) {
         .type = WordType_TokenAsString,
         .token = { .id = id, .connect = connect }
@@ -1288,11 +1295,11 @@ renderMember(Render *r, ASTNode *member) {
             Word words[32] = { 0 };
             u32 docCount = 0;
             
-            words[docCount++] = docToken(member->startToken, SPACE);
+            words[docCount++] = wordToken(member->startToken, SPACE);
 
             if(member->symbols.count > 0) {
                 assert(stringMatch(LIT_TO_STR("{"), r->tokens.tokenStrings[member->startToken + 1]));
-                words[docCount++] = docToken(member->startToken + 1, SPACE);
+                words[docCount++] = wordToken(member->startToken + 1, SPACE);
 
                 u32 endingToken = member->startToken + 2;
                 for(u32 i = 0; i < member->symbols.count; i++) {
@@ -1301,32 +1308,33 @@ renderMember(Render *r, ASTNode *member) {
 
                     ConnectType lastConnect = i == member->symbols.count - 1 ? SPACE : COMMA_SPACE;
                     ConnectType connect = alias == INVALID_TOKEN_ID ? lastConnect : SPACE;
-                    words[docCount++] = docToken(symbol, connect);
+                    words[docCount++] = wordToken(symbol, connect);
                     if(alias != INVALID_TOKEN_ID) {
                         assert(stringMatch(LIT_TO_STR("as"), r->tokens.tokenStrings[alias - 1]));
-                        words[docCount++] = docToken(alias - 1, SPACE);
-                        words[docCount++] = docToken(alias, lastConnect);
+                        words[docCount++] = wordToken(alias - 1, SPACE);
+                        words[docCount++] = wordToken(alias, lastConnect);
                     }
                 }
 
                 assert(stringMatch(LIT_TO_STR("}"), r->tokens.tokenStrings[member->pathTokenId - 2]));
                 assert(stringMatch(LIT_TO_STR("from"), r->tokens.tokenStrings[member->pathTokenId - 1]));
-                words[docCount++] = docToken(member->pathTokenId - 2, SPACE);
-                words[docCount++] = docToken(member->pathTokenId - 1, SPACE);
+                words[docCount++] = wordToken(member->pathTokenId - 2, SPACE);
+                words[docCount++] = wordToken(member->pathTokenId - 1, SPACE);
             }
 
-            ConnectType connect = member->unitAliasTokenId != INVALID_TOKEN_ID ? SPACE : SEMICOLON;
-            words[docCount++] = docTokenAsString(member->pathTokenId, connect);
+            ConnectType connect = member->unitAliasTokenId != INVALID_TOKEN_ID ? SPACE : JUST_SEMICOLON;
+            words[docCount++] = wordTokenAsString(member->pathTokenId, connect);
             if(member->unitAliasTokenId != INVALID_TOKEN_ID) {
                 assert(stringMatch(LIT_TO_STR("as"), r->tokens.tokenStrings[member->unitAliasTokenId - 1]));
-                words[docCount++] = docToken(member->unitAliasTokenId - 1, SPACE);
-                words[docCount++] = docToken(member->unitAliasTokenId, NONE);
+                words[docCount++] = wordToken(member->unitAliasTokenId - 1, SPACE);
+                words[docCount++] = wordToken(member->unitAliasTokenId, NONE);
 
                 TokenId semicolon = searchForToken(r, member->unitAliasTokenId, TokenType_Semicolon);
-                words[docCount++] = docToken(semicolon, NEWLINE);
+                words[docCount++] = wordToken(semicolon, NONE);
             }
 
             renderDocument(r, words, docCount);
+            finishLine(r->writer);
         } break;
         case ASTNodeType_Using: {
             assert(stringMatch(LIT_TO_STR("using"), r->tokens.tokenStrings[member->startToken]));
