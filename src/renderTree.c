@@ -45,6 +45,11 @@ finishLine(Writer *w) {
 }
 
 static void
+setIndent(Writer *w, u32 indentCount) {
+    w->indentCount += indentCount;
+}
+
+static void
 pushIndent(Writer *w) {
     w->indentCount += 1;
 }
@@ -399,19 +404,15 @@ typedef enum DocType {
     DocType_Text,
     DocType_Token,
     DocType_TokenAsString,
-    DocType_Nest,
-    DocType_Group,
     DocType_Count,
 } DocType;
 
 typedef struct Doc {
     DocType type;
+    u8 group;
+    u8 nest;
     union {
         String text;
-        struct {
-            struct Doc *array;
-            u32 length;
-        } docs;
         struct {
             TokenId id;
             ConnectType connect;
@@ -427,13 +428,19 @@ typedef enum DocRenderLineType {
 static void renderDocumentEntry(Render *r, Doc *d, DocRenderLineType lineType);
 
 static void
-renderGroup(Render *r, Doc *d) {
-    assert(d->type == DocType_Group);
+renderGroup(Render *r, Doc *docs, u32 count, u32 group) {
     Writer *w = r->writer;
 
     u32 checkpoint = w->lineSize;
-    for(u32 i = 0; i < d->docs.length; i++) {
-        renderDocumentEntry(r, &d->docs.array[i], DocRenderLineType_Space);
+
+    for(u32 i = 0; i < count && docs[i].group >= group; i++) {
+        Doc *e = &docs[i];
+
+        if(e->group > group) {
+            renderGroup(r, docs, count - i - 1, e->group);
+        } else {
+            renderDocumentEntry(r, e, DocRenderLineType_Space);
+        }
     }
 
     if(w->lineSize > 120) {
@@ -441,8 +448,14 @@ renderGroup(Render *r, Doc *d) {
         w->size -= diff;
         w->lineSize -= diff;
 
-        for(u32 i = 0; i < d->docs.length; i++) {
-            renderDocumentEntry(r, &d->docs.array[i], DocRenderLineType_Newline);
+        for(u32 i = 0; i < count && docs[i].group >= group; i++) {
+            Doc *e = &docs[i];
+
+            if(e->group > group) {
+                renderGroup(r, docs, count - i - 1, e->group);
+            } else {
+                renderDocumentEntry(r, e, DocRenderLineType_Newline);
+            }
         }
     }
 }
@@ -450,6 +463,8 @@ renderGroup(Render *r, Doc *d) {
 static void
 renderDocumentEntry(Render *r, Doc *d, DocRenderLineType lineType) {
     Writer *w = r->writer;
+    setIndent(w, d->nest);
+
     switch(d->type) {
         case DocType_Text: {
             memcpy(w->data + w->size, d->text.data, d->text.size);
@@ -484,23 +499,13 @@ renderDocumentEntry(Render *r, Doc *d, DocRenderLineType lineType) {
             finishLine(w);
             commitIndent(w);
         } break;
-        case DocType_Nest: {
-            pushIndent(w);
-            for(u32 i = 0; i < d->docs.length; i++) {
-                renderDocumentEntry(r, &d->docs.array[i], lineType);
-            }
-            popIndent(w);
-        } break;
-        case DocType_Group: {
-            renderGroup(r, d);
-        } break;
         default: { assert(false); }
     }
 }
 
 static void
-renderDocument(Render *r, Doc *d) {
-    renderGroup(r, d);
+renderDocument(Render *r, Doc *docs, u32 count) {
+    renderGroup(r, docs, count, 0);
 }
 
 static Doc
@@ -1281,17 +1286,14 @@ renderMember(Render *r, ASTNode *member) {
         } break;
         case ASTNodeType_Import: {
             assert(stringMatch(LIT_TO_STR("import"), r->tokens.tokenStrings[member->startToken]));
-            Doc buffer[32] = { 0 };
-            Doc d = { 
-                .type = DocType_Group,
-                .docs.array = buffer,
-            };
+            Doc docs[32] = { 0 };
+            u32 docCount = 0;
             
-            d.docs.array[d.docs.length++] = docToken(member->startToken, SPACE);
+            docs[docCount++] = docToken(member->startToken, SPACE);
 
             if(member->symbols.count > 0) {
                 assert(stringMatch(LIT_TO_STR("{"), r->tokens.tokenStrings[member->startToken + 1]));
-                d.docs.array[d.docs.length++] = docToken(member->startToken + 1, SPACE);
+                docs[docCount++] = docToken(member->startToken + 1, SPACE);
 
                 u32 endingToken = member->startToken + 2;
                 for(u32 i = 0; i < member->symbols.count; i++) {
@@ -1300,32 +1302,32 @@ renderMember(Render *r, ASTNode *member) {
 
                     ConnectType lastConnect = i == member->symbols.count - 1 ? SPACE : COMMA_SPACE;
                     ConnectType connect = alias == INVALID_TOKEN_ID ? lastConnect : SPACE;
-                    d.docs.array[d.docs.length++] = docToken(symbol, connect);
+                    docs[docCount++] = docToken(symbol, connect);
                     if(alias != INVALID_TOKEN_ID) {
                         assert(stringMatch(LIT_TO_STR("as"), r->tokens.tokenStrings[alias - 1]));
-                        d.docs.array[d.docs.length++] = docToken(alias - 1, SPACE);
-                        d.docs.array[d.docs.length++] = docToken(alias, lastConnect);
+                        docs[docCount++] = docToken(alias - 1, SPACE);
+                        docs[docCount++] = docToken(alias, lastConnect);
                     }
                 }
 
                 assert(stringMatch(LIT_TO_STR("}"), r->tokens.tokenStrings[member->pathTokenId - 2]));
                 assert(stringMatch(LIT_TO_STR("from"), r->tokens.tokenStrings[member->pathTokenId - 1]));
-                d.docs.array[d.docs.length++] = docToken(member->pathTokenId - 2, SPACE);
-                d.docs.array[d.docs.length++] = docToken(member->pathTokenId - 1, SPACE);
+                docs[docCount++] = docToken(member->pathTokenId - 2, SPACE);
+                docs[docCount++] = docToken(member->pathTokenId - 1, SPACE);
             }
 
             ConnectType connect = member->unitAliasTokenId != INVALID_TOKEN_ID ? SPACE : SEMICOLON;
-            d.docs.array[d.docs.length++] = docTokenAsString(member->pathTokenId, connect);
+            docs[docCount++] = docTokenAsString(member->pathTokenId, connect);
             if(member->unitAliasTokenId != INVALID_TOKEN_ID) {
                 assert(stringMatch(LIT_TO_STR("as"), r->tokens.tokenStrings[member->unitAliasTokenId - 1]));
-                d.docs.array[d.docs.length++] = docToken(member->unitAliasTokenId - 1, SPACE);
-                d.docs.array[d.docs.length++] = docToken(member->unitAliasTokenId, NONE);
+                docs[docCount++] = docToken(member->unitAliasTokenId - 1, SPACE);
+                docs[docCount++] = docToken(member->unitAliasTokenId, NONE);
 
                 TokenId semicolon = searchForToken(r, member->unitAliasTokenId, TokenType_Semicolon);
-                d.docs.array[d.docs.length++] = docToken(semicolon, NEWLINE);
+                docs[docCount++] = docToken(semicolon, NEWLINE);
             }
 
-            renderDocument(r, &d);
+            renderDocument(r, docs, docCount);
         } break;
         case ASTNodeType_Using: {
             assert(stringMatch(LIT_TO_STR("using"), r->tokens.tokenStrings[member->startToken]));
