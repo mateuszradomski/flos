@@ -491,7 +491,7 @@ renderDocumentWord(Render *r, Word *word, WordRenderLineType lineType) {
         case WordType_Line: {
             switch (lineType) {
                 case WordRenderLineType_Space: {
-                    w->data[w->size++] = ' ';
+                    writeString(r->writer, LIT_TO_STR(" "));
                 } break;
                 case WordRenderLineType_Newline: {
                     finishLine(w);
@@ -1305,14 +1305,14 @@ renderMember(Render *r, ASTNode *member) {
         case ASTNodeType_Import: {
             assert(stringMatch(LIT_TO_STR("import"), r->tokens.tokenStrings[member->startToken]));
             static Word words[512] = { 0 };
-            u32 docCount = 0;
+            u32 wordCount = 0;
             
-            words[docCount++] = wordToken(member->startToken, SPACE);
+            words[wordCount++] = wordToken(member->startToken, SPACE);
 
             if(member->symbols.count > 0) {
                 assert(stringMatch(LIT_TO_STR("{"), r->tokens.tokenStrings[member->startToken + 1]));
-                words[docCount++] = wordToken(member->startToken + 1, NONE);
-                words[docCount++] = wordSpace();
+                words[wordCount++] = wordToken(member->startToken + 1, NONE);
+                words[wordCount++] = wordSpace();
 
                 u32 endingToken = member->startToken + 2;
                 for(u32 i = 0; i < member->symbols.count; i++) {
@@ -1320,36 +1320,36 @@ renderMember(Render *r, ASTNode *member) {
                     TokenId alias = listGetTokenId(&member->symbolAliases, i);
 
                     ConnectType lastConnect = i == member->symbols.count - 1 ? NONE : JUST_COMMA;
-                    ConnectType connect = alias == INVALID_TOKEN_ID ? lastConnect : NONE;
-                    words[docCount++] = wordToken(symbol, connect);
-                    words[docCount++] = wordSpace();
                     if(alias != INVALID_TOKEN_ID) {
+                        words[wordCount++] = wordToken(symbol, SPACE);
                         assert(stringMatch(LIT_TO_STR("as"), r->tokens.tokenStrings[alias - 1]));
-                        words[docCount++] = wordToken(alias - 1, NONE);
-                        words[docCount++] = wordSpace();
-                        words[docCount++] = wordToken(alias, lastConnect);
-                        words[docCount++] = wordSpace();
+                        words[wordCount++] = wordToken(alias - 1, SPACE);
+                        words[wordCount++] = wordToken(alias, lastConnect);
+                        words[wordCount++] = wordSpace();
+                    } else {
+                        words[wordCount++] = wordToken(symbol, lastConnect);
+                        words[wordCount++] = wordSpace();
                     }
                 }
 
                 assert(stringMatch(LIT_TO_STR("}"), r->tokens.tokenStrings[member->pathTokenId - 2]));
                 assert(stringMatch(LIT_TO_STR("from"), r->tokens.tokenStrings[member->pathTokenId - 1]));
-                words[docCount++] = wordToken(member->pathTokenId - 2, SPACE);
-                words[docCount++] = wordToken(member->pathTokenId - 1, SPACE);
+                words[wordCount++] = wordToken(member->pathTokenId - 2, SPACE);
+                words[wordCount++] = wordToken(member->pathTokenId - 1, SPACE);
             }
 
             ConnectType connect = member->unitAliasTokenId != INVALID_TOKEN_ID ? SPACE : JUST_SEMICOLON;
-            words[docCount++] = wordTokenAsString(member->pathTokenId, connect);
+            words[wordCount++] = wordTokenAsString(member->pathTokenId, connect);
             if(member->unitAliasTokenId != INVALID_TOKEN_ID) {
                 assert(stringMatch(LIT_TO_STR("as"), r->tokens.tokenStrings[member->unitAliasTokenId - 1]));
-                words[docCount++] = wordToken(member->unitAliasTokenId - 1, SPACE);
-                words[docCount++] = wordToken(member->unitAliasTokenId, NONE);
+                words[wordCount++] = wordToken(member->unitAliasTokenId - 1, SPACE);
+                words[wordCount++] = wordToken(member->unitAliasTokenId, NONE);
 
                 TokenId semicolon = searchForToken(r, member->unitAliasTokenId, TokenType_Semicolon);
-                words[docCount++] = wordToken(semicolon, NONE);
+                words[wordCount++] = wordToken(semicolon, NONE);
             }
 
-            renderDocument(r, words, docCount);
+            renderDocument(r, words, wordCount);
             finishLine(r->writer);
         } break;
         case ASTNodeType_Using: {
