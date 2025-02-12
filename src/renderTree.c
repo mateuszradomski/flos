@@ -8,10 +8,59 @@ typedef struct Writer {
     u32 lineSize;
 } Writer;
 
+typedef enum ConnectType {
+    NONE,
+    SPACE,
+    COMMA,
+    JUST_COMMA,
+    COMMA_SPACE,
+    COLON_SPACE,
+    SEMICOLON,
+    JUST_SEMICOLON,
+    DOT,
+    NEWLINE,
+} ConnectType;
+
+typedef enum WordType {
+    WordType_None,
+    WordType_Line,
+    WordType_Softline,
+    WordType_Hardline,
+    WordType_Text,
+    WordType_Token,
+    WordType_TokenAsString,
+    WordType_Count,
+} WordType;
+
+typedef struct Word {
+    WordType type;
+    u8 group;
+    u8 nest;
+    union {
+        String text;
+        struct {
+            TokenId id;
+            ConnectType connect;
+        } token;
+    };
+} Word;
+
+typedef enum WordRenderLineType {
+    WordRenderLineType_Space,
+    WordRenderLineType_Newline,
+} WordRenderLineType;
+
+
 typedef struct Render {
     Writer *writer;
     TokenizeResult tokens;
     u8 *sourceBaseAddress;
+
+    Word *words;
+    u32 wordCount;
+    u32 wordCapacity;
+    u8 group;
+    u8 nest;
 } Render;
 
 static void
@@ -46,7 +95,7 @@ finishLine(Writer *w) {
 
 static void
 setIndent(Writer *w, u32 indentCount) {
-    w->indentCount += indentCount;
+    w->indentCount = indentCount;
 }
 
 static void
@@ -115,19 +164,6 @@ preservePresentNewLines(Render *r, ASTNode *node) {
         }
     }
 }
-
-typedef enum ConnectType {
-    NONE,
-    SPACE,
-    COMMA,
-    JUST_COMMA,
-    COMMA_SPACE,
-    COLON_SPACE,
-    SEMICOLON,
-    JUST_SEMICOLON,
-    DOT,
-    NEWLINE,
-} ConnectType;
 
 static void renderExpression(Render *r, ASTNode *node, ConnectType connect);
 static void renderType(Render *r, ASTNode *node, ConnectType connect);
@@ -410,35 +446,6 @@ renderTokenAsString(Render *r, TokenId token, ConnectType connect) {
     renderConnect(r, connect);
 }
 
-typedef enum WordType {
-    WordType_None,
-    WordType_Line,
-    WordType_Softline,
-    WordType_Hardline,
-    WordType_Text,
-    WordType_Token,
-    WordType_TokenAsString,
-    WordType_Count,
-} WordType;
-
-typedef struct Word {
-    WordType type;
-    u8 group;
-    u8 nest;
-    union {
-        String text;
-        struct {
-            TokenId id;
-            ConnectType connect;
-        } token;
-    };
-} Word;
-
-typedef enum WordRenderLineType {
-    WordRenderLineType_Space,
-    WordRenderLineType_Newline,
-} WordRenderLineType;
-
 static void renderDocumentWord(Render *r, Word *word, WordRenderLineType lineType);
 
 static void
@@ -517,8 +524,45 @@ renderDocumentWord(Render *r, Word *word, WordRenderLineType lineType) {
 }
 
 static void
-renderDocument(Render *r, Word *words, u32 count) {
-    renderGroup(r, words, count, 0);
+renderDocument(Render *r) {
+    renderGroup(r, r->words, r->wordCount, 0);
+    r->wordCount = 0;
+}
+
+static void
+pushGroup(Render *r) {
+    r->group += 1;
+}
+
+static void
+popGroup(Render *r) {
+    r->group -= 1;
+}
+
+static void
+pushNest(Render *r) {
+    r->nest += 1;
+}
+
+static void
+popNest(Render *r) {
+    r->nest -= 1;
+}
+
+static void
+popNestWithLastWord(Render *r) {
+    popNest(r);
+    if(r->wordCount > 0) {
+        r->words[r->wordCount - 1].nest -= 1;
+    }
+}
+
+static void
+pushWord(Render *r, Word w) {
+    w.group = r->group;
+    w.nest = r->nest;
+
+    r->words[r->wordCount++] = w;
 }
 
 static Word
@@ -1304,52 +1348,53 @@ renderMember(Render *r, ASTNode *member) {
         } break;
         case ASTNodeType_Import: {
             assert(stringMatch(LIT_TO_STR("import"), r->tokens.tokenStrings[member->startToken]));
-            static Word words[512] = { 0 };
-            u32 wordCount = 0;
             
-            words[wordCount++] = wordToken(member->startToken, SPACE);
+            pushWord(r, wordToken(member->startToken, SPACE));
 
             if(member->symbols.count > 0) {
                 assert(stringMatch(LIT_TO_STR("{"), r->tokens.tokenStrings[member->startToken + 1]));
-                words[wordCount++] = wordToken(member->startToken + 1, NONE);
-                words[wordCount++] = wordSpace();
+                pushWord(r, wordToken(member->startToken + 1, NONE));
+                pushWord(r, wordSpace());
 
+                pushNest(r);
                 u32 endingToken = member->startToken + 2;
                 for(u32 i = 0; i < member->symbols.count; i++) {
                     TokenId symbol = listGetTokenId(&member->symbols, i);
                     TokenId alias = listGetTokenId(&member->symbolAliases, i);
 
-                    ConnectType lastConnect = i == member->symbols.count - 1 ? NONE : JUST_COMMA;
+                    bool isLastElement = i == member->symbols.count - 1;
+                    ConnectType connect = isLastElement ? NONE : JUST_COMMA;
                     if(alias != INVALID_TOKEN_ID) {
-                        words[wordCount++] = wordToken(symbol, SPACE);
+                        pushWord(r, wordToken(symbol, SPACE));
                         assert(stringMatch(LIT_TO_STR("as"), r->tokens.tokenStrings[alias - 1]));
-                        words[wordCount++] = wordToken(alias - 1, SPACE);
-                        words[wordCount++] = wordToken(alias, lastConnect);
-                        words[wordCount++] = wordSpace();
+                        pushWord(r, wordToken(alias - 1, SPACE));
+                        pushWord(r, wordToken(alias, connect));
+                        pushWord(r, wordSpace());
                     } else {
-                        words[wordCount++] = wordToken(symbol, lastConnect);
-                        words[wordCount++] = wordSpace();
+                        pushWord(r, wordToken(symbol, connect));
+                        pushWord(r, wordSpace());
                     }
                 }
+                popNestWithLastWord(r);
 
                 assert(stringMatch(LIT_TO_STR("}"), r->tokens.tokenStrings[member->pathTokenId - 2]));
                 assert(stringMatch(LIT_TO_STR("from"), r->tokens.tokenStrings[member->pathTokenId - 1]));
-                words[wordCount++] = wordToken(member->pathTokenId - 2, SPACE);
-                words[wordCount++] = wordToken(member->pathTokenId - 1, SPACE);
+                pushWord(r, wordToken(member->pathTokenId - 2, SPACE));
+                pushWord(r, wordToken(member->pathTokenId - 1, SPACE));
             }
 
             ConnectType connect = member->unitAliasTokenId != INVALID_TOKEN_ID ? SPACE : JUST_SEMICOLON;
-            words[wordCount++] = wordTokenAsString(member->pathTokenId, connect);
+            pushWord(r, wordTokenAsString(member->pathTokenId, connect));
             if(member->unitAliasTokenId != INVALID_TOKEN_ID) {
                 assert(stringMatch(LIT_TO_STR("as"), r->tokens.tokenStrings[member->unitAliasTokenId - 1]));
-                words[wordCount++] = wordToken(member->unitAliasTokenId - 1, SPACE);
-                words[wordCount++] = wordToken(member->unitAliasTokenId, NONE);
+                pushWord(r, wordToken(member->unitAliasTokenId - 1, SPACE));
+                pushWord(r, wordToken(member->unitAliasTokenId, NONE));
 
                 TokenId semicolon = searchForToken(r, member->unitAliasTokenId, TokenType_Semicolon);
-                words[wordCount++] = wordToken(semicolon, NONE);
+                pushWord(r, wordToken(semicolon, NONE));
             }
 
-            renderDocument(r, words, wordCount);
+            renderDocument(r);
             finishLine(r->writer);
         } break;
         case ASTNodeType_Using: {
@@ -1689,6 +1734,10 @@ renderTree(Arena *arena, ASTNode tree, String originalSource, TokenizeResult tok
         .writer = &writer,
         .tokens = tokens,
         .sourceBaseAddress = originalSource.data,
+
+        .words = arrayPush(arena, Word, 131072),
+        .wordCount = 0,
+        .wordCapacity = 131072,
     };
 
     u32 startOfTokens = tokens.tokenStrings[tree.startToken].data - originalSource.data;
