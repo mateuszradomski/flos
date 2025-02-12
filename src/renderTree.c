@@ -120,6 +120,7 @@ typedef enum ConnectType {
     NONE,
     SPACE,
     COMMA,
+    JUST_COMMA,
     COMMA_SPACE,
     COLON_SPACE,
     SEMICOLON,
@@ -312,6 +313,7 @@ renderConnect(Render *r, ConnectType connect) {
         case NONE: break;
         case SPACE: writeString(r->writer, LIT_TO_STR(" ")); break;
         case COMMA: writeString(r->writer, LIT_TO_STR(",")); finishLine(r->writer); break;
+        case JUST_COMMA: writeString(r->writer, LIT_TO_STR(",")); break;
         case COMMA_SPACE: writeString(r->writer, LIT_TO_STR(", ")); break;
         case COLON_SPACE: writeString(r->writer, LIT_TO_STR(": ")); break;
         case SEMICOLON: writeString(r->writer, LIT_TO_STR(";")); finishLine(r->writer); break;
@@ -343,6 +345,11 @@ renderConnectWithComments(Render *r, TokenId token, ConnectType connect) {
                 renderToken(r, nextToken, NEWLINE);
             } else if(writtenComments == 0) {
                 finishLine(r->writer);
+            }
+        } break;
+        case JUST_COMMA: {
+            if(r->tokens.tokenTypes[nextToken] == TokenType_Comma) {
+                renderToken(r, nextToken, NONE);
             }
         } break;
         case COMMA_SPACE: {
@@ -512,6 +519,11 @@ renderDocumentWord(Render *r, Word *word, WordRenderLineType lineType) {
 static void
 renderDocument(Render *r, Word *words, u32 count) {
     renderGroup(r, words, count, 0);
+}
+
+static Word
+wordSpace() {
+    return (Word) { .type = WordType_Line };
 }
 
 static Word
@@ -1292,27 +1304,31 @@ renderMember(Render *r, ASTNode *member) {
         } break;
         case ASTNodeType_Import: {
             assert(stringMatch(LIT_TO_STR("import"), r->tokens.tokenStrings[member->startToken]));
-            Word words[32] = { 0 };
+            static Word words[512] = { 0 };
             u32 docCount = 0;
             
             words[docCount++] = wordToken(member->startToken, SPACE);
 
             if(member->symbols.count > 0) {
                 assert(stringMatch(LIT_TO_STR("{"), r->tokens.tokenStrings[member->startToken + 1]));
-                words[docCount++] = wordToken(member->startToken + 1, SPACE);
+                words[docCount++] = wordToken(member->startToken + 1, NONE);
+                words[docCount++] = wordSpace();
 
                 u32 endingToken = member->startToken + 2;
                 for(u32 i = 0; i < member->symbols.count; i++) {
                     TokenId symbol = listGetTokenId(&member->symbols, i);
                     TokenId alias = listGetTokenId(&member->symbolAliases, i);
 
-                    ConnectType lastConnect = i == member->symbols.count - 1 ? SPACE : COMMA_SPACE;
-                    ConnectType connect = alias == INVALID_TOKEN_ID ? lastConnect : SPACE;
+                    ConnectType lastConnect = i == member->symbols.count - 1 ? NONE : JUST_COMMA;
+                    ConnectType connect = alias == INVALID_TOKEN_ID ? lastConnect : NONE;
                     words[docCount++] = wordToken(symbol, connect);
+                    words[docCount++] = wordSpace();
                     if(alias != INVALID_TOKEN_ID) {
                         assert(stringMatch(LIT_TO_STR("as"), r->tokens.tokenStrings[alias - 1]));
-                        words[docCount++] = wordToken(alias - 1, SPACE);
+                        words[docCount++] = wordToken(alias - 1, NONE);
+                        words[docCount++] = wordSpace();
                         words[docCount++] = wordToken(alias, lastConnect);
+                        words[docCount++] = wordSpace();
                     }
                 }
 
