@@ -57,7 +57,7 @@ typedef struct Render {
     u8 *sourceBaseAddress;
 
     Word *words;
-    u32 wordCount;
+    s32 wordCount;
     u32 wordCapacity;
     u8 group;
     u8 nest;
@@ -552,9 +552,7 @@ popNest(Render *r) {
 static void
 popNestWithLastWord(Render *r) {
     popNest(r);
-    if(r->wordCount > 0) {
-        r->words[r->wordCount - 1].nest -= 1;
-    }
+    r->words[r->wordCount - 1].nest -= 1;
 }
 
 static void
@@ -1735,9 +1733,10 @@ renderTree(Arena *arena, ASTNode tree, String originalSource, TokenizeResult tok
         .tokens = tokens,
         .sourceBaseAddress = originalSource.data,
 
-        .words = arrayPush(arena, Word, 131072),
+        // NOTE(radomski): This makes read and writes to (-1) possible
+        .words = arrayPush(arena, Word, 131072) + 1,
         .wordCount = 0,
-        .wordCapacity = 131072,
+        .wordCapacity = 131071,
     };
 
     u32 startOfTokens = tokens.tokenStrings[tree.startToken].data - originalSource.data;
