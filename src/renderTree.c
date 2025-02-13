@@ -405,7 +405,7 @@ renderConnectWithComments(Render *r, TokenId token, ConnectType connect) {
         } break;
         case JUST_SEMICOLON: {
             if(r->tokens.tokenTypes[nextToken] == TokenType_Semicolon) {
-                renderToken(r, nextToken, NEWLINE);
+                renderToken(r, nextToken, NONE);
             }
         } break;
         case DOT: writeString(r->writer, LIT_TO_STR(".")); break;
@@ -440,10 +440,11 @@ renderTokenChecked(Render *r, TokenId token, String expected, ConnectType connec
 
 static void
 renderTokenAsString(Render *r, TokenId token, ConnectType connect) {
+    assert(token != INVALID_TOKEN_ID);
     writeString(r->writer, LIT_TO_STR("\""));
-    renderToken(r, token, NONE);
+    writeString(r->writer, getTokenString(r->tokens, token));
     writeString(r->writer, LIT_TO_STR("\""));
-    renderConnect(r, connect);
+    renderConnectWithComments(r, token, connect);
 }
 
 static void renderDocumentWord(Render *r, Word *word, WordRenderLineType lineType);
