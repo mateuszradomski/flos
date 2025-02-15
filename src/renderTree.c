@@ -1058,43 +1058,49 @@ pushTypeDocument(Render *r, ASTNode *node) {
             }
         } break;
         case ASTNodeType_IdentifierPath: {
-            // for(u32 i = 0; i < node->identifierPathNode.identifiers.count; i++) {
-            //     TokenId part = listGetTokenId(&node->identifierPathNode.identifiers, i);
-            //     renderToken(r, part, i == node->identifierPathNode.identifiers.count - 1 ? connect : DOT);
-            // }
-            assert(false);
+            for(u32 i = 0; i < node->identifierPathNode.identifiers.count; i++) {
+                TokenId part = listGetTokenId(&node->identifierPathNode.identifiers, i);
+                pushTokenWord(r, part);
+                if(i != node->identifierPathNode.identifiers.count - 1) {
+                    pushTokenWord(r, part + 1);
+                }
+            }
         } break;
         case ASTNodeType_MappingType: {
-            assert(false);
-            // assert(stringMatch(LIT_TO_STR("mapping"), r->tokens.tokenStrings[node->startToken]));
-            // assert(stringMatch(LIT_TO_STR("("), r->tokens.tokenStrings[node->startToken + 1]));
-            // renderToken(r, node->startToken, NONE);
-            // renderToken(r, node->startToken + 1, NONE);
-            // renderType(r, node->mappingNode.keyType, SPACE);
-            // if(node->mappingNode.keyIdentifier != INVALID_TOKEN_ID) {
-            //     renderToken(r, node->mappingNode.keyIdentifier, SPACE);
-            // }
+            assert(stringMatch(LIT_TO_STR("mapping"), r->tokens.tokenStrings[node->startToken]));
+            assert(stringMatch(LIT_TO_STR("("), r->tokens.tokenStrings[node->startToken + 1]));
+            pushTokenWord(r, node->startToken);
+            pushTokenWord(r, node->startToken + 1);
 
-            // renderTokenChecked(r, node->mappingNode.valueType->startToken - 2, LIT_TO_STR("="), NONE);
-            // renderTokenChecked(r, node->mappingNode.valueType->startToken - 1, LIT_TO_STR(">"), SPACE);
+            pushTypeDocument(r, node->mappingNode.keyType);
+            pushWord(r, wordSpace());
+            if(node->mappingNode.keyIdentifier != INVALID_TOKEN_ID) {
+                pushTokenWord(r, node->mappingNode.keyIdentifier);
+                pushWord(r, wordSpace());
+            }
 
-            // renderType(r, node->mappingNode.valueType, node->mappingNode.valueIdentifier == INVALID_TOKEN_ID ? NONE : SPACE);
-            // if(node->mappingNode.valueIdentifier != INVALID_TOKEN_ID) {
-            //     renderToken(r, node->mappingNode.valueIdentifier, NONE);
-            // }
-            // assert(stringMatch(LIT_TO_STR(")"), r->tokens.tokenStrings[node->endToken]));
-            // renderToken(r, node->endToken, connect);
+                pushTokenWord(r, node->mappingNode.valueType->startToken - 2);
+                pushTokenWord(r, node->mappingNode.valueType->startToken - 1);
+                pushWord(r, wordSpace());
+
+            pushTypeDocument(r, node->mappingNode.valueType);
+            if(node->mappingNode.valueIdentifier != INVALID_TOKEN_ID) {
+                pushWord(r, wordSpace());
+                pushTokenWord(r, node->mappingNode.valueIdentifier);
+            }
+            pushTokenWord(r, node->endToken);
         } break;
         case ASTNodeType_ArrayType: {
-            // renderType(r, node->arrayTypeNode.elementType, NONE);
+            assert(stringMatch(LIT_TO_STR("["), r->tokens.tokenStrings[node->arrayTypeNode.elementType->endToken + 1]));
+            pushTypeDocument(r, node->arrayTypeNode.elementType);
 
-            // assert(stringMatch(LIT_TO_STR("["), r->tokens.tokenStrings[node->arrayTypeNode.elementType->endToken + 1]));
-            // renderToken(r, node->arrayTypeNode.elementType->endToken + 1, NONE);
-            // if(node->arrayTypeNode.lengthExpression != 0x0) {
-            //     renderExpression(r, node->arrayTypeNode.lengthExpression, NONE);
-            // }
-            // assert(stringMatch(LIT_TO_STR("]"), r->tokens.tokenStrings[node->endToken]));
-            // renderToken(r, node->endToken, connect);
+            pushTokenWord(r, node->arrayTypeNode.elementType->endToken + 1);
+            if(node->arrayTypeNode.lengthExpression != 0x0) {
+                assert(false);
+                // renderExpression(r, node->arrayTypeNode.lengthExpression, NONE);
+            }
+            assert(stringMatch(LIT_TO_STR("]"), r->tokens.tokenStrings[node->endToken]));
+            pushTokenWord(r, node->endToken);
         } break;
         case ASTNodeType_FunctionType: {
             // assert(stringMatch(LIT_TO_STR("function"), r->tokens.tokenStrings[node->startToken]));
@@ -1670,42 +1676,62 @@ renderMember(Render *r, ASTNode *member) {
         } break;
         case ASTNodeType_Using: {
             assert(stringMatch(LIT_TO_STR("using"), r->tokens.tokenStrings[member->startToken]));
-            renderToken(r, member->startToken, SPACE);
             ASTNodeUsing *using = &member->usingNode;
+
+            pushTokenWord(r, member->startToken);
+            pushWord(r, wordSpace());
 
             TokenId forToken = INVALID_TOKEN_ID;
             if(using->onLibrary) {
                 assert(using->identifiers.count == 1);
-                renderType(r, &using->identifiers.head->node, SPACE);
+                pushTypeDocument(r, &using->identifiers.head->node);
+                pushWord(r, wordSpace());
                 forToken = using->identifiers.head->node.endToken + 1;
             } else {
-                renderToken(r, using->identifiers.startToken - 1, SPACE);
+                pushTokenWord(r, using->identifiers.startToken - 1);
+                pushWord(r, wordSpace());
+
                 ASTNodeLink *it = using->identifiers.head;
                 for(u32 i = 0; i < using->identifiers.count; i++, it = it->next) {
-                    ConnectType connect = i == using->identifiers.count - 1 ? SPACE : COMMA_SPACE;
-                    u16 operator = listGetU16(&using->operators, i);
-                    renderType(r, &it->node, operator ? SPACE : connect);
+                    pushTypeDocument(r, &it->node);
 
+                    u16 operator = listGetU16(&using->operators, i);
                     if(operator) {
-                        renderToken(r, it->node.endToken + 1, SPACE);
-                        renderString(r, tokenTypeToString(operator), connect);
+                        pushWord(r, wordSpace());
+                        pushTokenWord(r, it->node.endToken + 1);
+                        pushWord(r, wordSpace());
+                        pushWord(r, wordText(tokenTypeToString(operator)));
                     }
+
+                    if(i != using->identifiers.count - 1) {
+                        pushTokenWord(r, it->next->node.startToken - 1);
+                    }
+
+                    pushWord(r, wordSpace());
                 }
-                renderToken(r, using->identifiers.endToken + 1, SPACE);
+                pushTokenWord(r, using->identifiers.endToken + 1);
+                pushWord(r, wordSpace());
                 forToken = using->identifiers.endToken + 2;
             }
 
             if(using->forType != 0x0) {
-                renderToken(r, using->forType->startToken - 1, SPACE);
-                renderType(r, using->forType, using->global != INVALID_TOKEN_ID ? SPACE : SEMICOLON);
+                pushTokenWord(r, using->forType->startToken - 1);
+                pushWord(r, wordSpace());
+                pushTypeDocument(r, using->forType);
             } else {
-                renderToken(r, forToken, SPACE);
-                renderToken(r, forToken + 1, using->global != INVALID_TOKEN_ID ? SPACE : SEMICOLON);
+                pushTokenWord(r, forToken);
+                pushWord(r, wordSpace());
+                pushTokenWord(r, forToken + 1);
             }
 
             if(using->global != INVALID_TOKEN_ID) {
-                renderToken(r, using->global, SEMICOLON);
+                pushWord(r, wordSpace());
+                pushTokenWord(r, using->global);
             }
+
+            pushTokenWord(r, member->endToken);
+            renderDocument(r);
+            finishLine(r->writer);
         } break;
         case ASTNodeType_EnumDefinition: {
             pushTokenWord(r, member->startToken);
