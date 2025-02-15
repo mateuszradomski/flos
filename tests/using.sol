@@ -13,6 +13,13 @@ contract UsingDirectiveTest {
 
     using MyLibrary for MyStruct;
 }
+
+type Fixed18 is int256;
+using Fixed18Lib for Fixed18 global;
+using {plusOne, minusOne} for RestrictedNumber global;
+
+using { add as + } for Fixed18 global;
+using { add as +, sub as - } for Fixed18 global;
 // Above input, below output
 contract UsingDirectiveTest {
     using MyLibrary for address;
@@ -29,3 +36,10 @@ contract UsingDirectiveTest {
 
     using MyLibrary for MyStruct;
 }
+
+type Fixed18 is int256;
+using Fixed18Lib for Fixed18 global;
+using { plusOne, minusOne } for RestrictedNumber global;
+
+using { add as + } for Fixed18 global;
+using { add as +, sub as - } for Fixed18 global;
