@@ -124,5 +124,6 @@ UTEST_F(SolFmtFixture, imports) { utest_fixture->path = "tests/imports.sol"; }
 UTEST_F(SolFmtFixture, blockComments) { utest_fixture->path = "tests/blockComments.sol"; }
 UTEST_F(SolFmtFixture, constructorModifier) { utest_fixture->path = "tests/constructorModifier.sol"; }
 UTEST_F(SolFmtFixture, using) { utest_fixture->path = "tests/using.sol"; }
+UTEST_F(SolFmtFixture, typedefs) { utest_fixture->path = "tests/typedef.sol"; }
 
 UTEST_MAIN();
