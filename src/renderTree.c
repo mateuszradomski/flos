@@ -1599,7 +1599,7 @@ renderMember(Render *r, ASTNode *member) {
                 renderType(r, &using->identifiers.head->node, SPACE);
                 forToken = using->identifiers.head->node.endToken + 1;
             } else {
-                renderTokenChecked(r, using->identifiers.startToken - 1, LIT_TO_STR("{"), SPACE);
+                renderToken(r, using->identifiers.startToken - 1, SPACE);
                 ASTNodeLink *it = using->identifiers.head;
                 for(u32 i = 0; i < using->identifiers.count; i++, it = it->next) {
                     ConnectType connect = i == using->identifiers.count - 1 ? SPACE : COMMA_SPACE;
@@ -1607,24 +1607,24 @@ renderMember(Render *r, ASTNode *member) {
                     renderType(r, &it->node, operator ? SPACE : connect);
 
                     if(operator) {
-                        renderTokenChecked(r, it->node.endToken + 1, LIT_TO_STR("as"), SPACE);
+                        renderToken(r, it->node.endToken + 1, SPACE);
                         renderString(r, tokenTypeToString(operator), connect);
                     }
                 }
-                renderTokenChecked(r, using->identifiers.endToken + 1, LIT_TO_STR("}"), SPACE);
+                renderToken(r, using->identifiers.endToken + 1, SPACE);
                 forToken = using->identifiers.endToken + 2;
             }
 
             if(using->forType != 0x0) {
-                renderTokenChecked(r, using->forType->startToken - 1, LIT_TO_STR("for"), SPACE);
+                renderToken(r, using->forType->startToken - 1, SPACE);
                 renderType(r, using->forType, using->global != INVALID_TOKEN_ID ? SPACE : SEMICOLON);
             } else {
-                renderTokenChecked(r, forToken, LIT_TO_STR("for"), SPACE);
-                renderTokenChecked(r, forToken + 1, LIT_TO_STR("*"), using->global != INVALID_TOKEN_ID ? SPACE : SEMICOLON);
+                renderToken(r, forToken, SPACE);
+                renderToken(r, forToken + 1, using->global != INVALID_TOKEN_ID ? SPACE : SEMICOLON);
             }
 
             if(using->global != INVALID_TOKEN_ID) {
-                renderTokenChecked(r, using->global, LIT_TO_STR("global"), SEMICOLON);
+                renderToken(r, using->global, SEMICOLON);
             }
         } break;
         case ASTNodeType_EnumDefinition: {
