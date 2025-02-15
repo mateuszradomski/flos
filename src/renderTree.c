@@ -23,13 +23,11 @@ typedef enum ConnectType {
 
 typedef enum WordType {
     WordType_None,
+    WordType_Text,
     WordType_Line,
     WordType_Space,
     WordType_Softline,
     WordType_Hardline,
-    WordType_Text,
-    WordType_Token,
-    WordType_TokenAsString,
     WordType_Count,
 } WordType;
 
@@ -436,15 +434,6 @@ renderTokenChecked(Render *r, TokenId token, String expected, ConnectType connec
     renderToken(r, token, connect);
 }
 
-static void
-renderTokenAsString(Render *r, TokenId token, ConnectType connect) {
-    assert(token != INVALID_TOKEN_ID);
-    writeString(r->writer, LIT_TO_STR("\""));
-    writeString(r->writer, getTokenString(r->tokens, token));
-    writeString(r->writer, LIT_TO_STR("\""));
-    renderConnectWithComments(r, token, connect);
-}
-
 static void renderDocumentWord(Render *r, Word *word, WordRenderLineType lineType);
 
 static bool
@@ -519,14 +508,6 @@ renderDocumentWord(Render *r, Word *word, WordRenderLineType lineType) {
     switch(word->type) {
         case WordType_Text: {
             writeString(r->writer, word->text);
-        } break;
-        case WordType_Token: {
-            assert(word->token != INVALID_TOKEN_ID);
-            writeString(r->writer, getTokenString(r->tokens, word->token));
-            renderConnectWithComments(r, word->token, NONE);
-        } break;
-        case WordType_TokenAsString: {
-            renderTokenAsString(r, word->token, NONE);
         } break;
         case WordType_Space: {
             writeString(r->writer, LIT_TO_STR(" "));
@@ -625,22 +606,6 @@ wordLine() {
     return (Word) { .type = WordType_Line };
 }
 
-static Word
-wordToken(TokenId token) {
-    return (Word) {
-        .type = WordType_Token,
-        .token = token,
-    };
-}
-
-static Word
-wordTokenAsString(TokenId token) {
-    return (Word) {
-        .type = WordType_TokenAsString,
-        .token = token,
-    };
-}
-
 static void
 parseCommentsIntoWords(Render *r, u32 startOffset, u32 endOffset) {
     String input = (String) {
@@ -649,37 +614,30 @@ parseCommentsIntoWords(Render *r, u32 startOffset, u32 endOffset) {
     };
 
     if(input.size >= 2) {
-        u32 index = 0;
+        u32 cursor = 0;
+
         while(true) {
             u32 finished = true; 
-            for(u32 i = index; i < input.size - 1; i++) {
-                String comment = (String) { .data = 0x0, .size = 0 };
+            for(u32 i = cursor; i < input.size - 1; i++) {
                 u32 commentStart = i; 
                 u32 commentEnd = i;
-
+                String comment = (String) { .data = 0x0, .size = 0 };
                 u32 commentType = CommentType_None;
-                u32 indexSkipSize = 0;
+
                 if(input.data[i] == '/' && input.data[i + 1] == '/') {
+                    commentType = CommentType_SingleLine;
+
                     u32 newlineIndex = i;
-                    while(newlineIndex < input.size && input.data[newlineIndex] != '\n') {
-                        newlineIndex += 1;
-                    }
-
-                    indexSkipSize += 1;
-                    if(input.data[newlineIndex - 1] == '\r') {
-                        newlineIndex -= 1;
-                        indexSkipSize += 1;
-                    }
-
+                    for(; newlineIndex < input.size && input.data[newlineIndex] != '\n'; newlineIndex += 1) {}
                     comment = (String) {
                         .data = input.data + commentStart,
-                            .size = newlineIndex - commentStart
+                        .size = newlineIndex - commentStart
                     };
                     commentEnd = newlineIndex;
-                    commentType = CommentType_SingleLine;
                 } else if(input.data[i] == '/' && input.data[i + 1] == '*') {
                     bool isStarAligned = true;
                     bool checkStarAlignment = false;
+
                     while(commentEnd < input.size - 1 && (input.data[commentEnd] != '*' || input.data[commentEnd + 1] != '/')) {
                         if(input.data[commentEnd] == '\n') {
                             checkStarAlignment = true;
@@ -697,89 +655,51 @@ parseCommentsIntoWords(Render *r, u32 startOffset, u32 endOffset) {
                     }
                     commentEnd += 2;
 
-                    if(input.data[commentEnd] == '\r') {
-                        indexSkipSize += 1;
-                    }
-
+                    commentType = isStarAligned ? CommentType_StarAligned : CommentType_MultiLine;
                     comment = (String) {
                         .data = input.data + commentStart,
-                            .size = commentEnd - commentStart
+                        .size = commentEnd - commentStart
                     };
-
-                    commentType = isStarAligned ? CommentType_StarAligned : CommentType_MultiLine;
                 }
 
                 if(comment.size > 0) {
-                    u32 preceedingNewlines = 0;
-                    for(u32 j = index; j < commentStart; j++) {
-                        preceedingNewlines += input.data[j] == '\n';
-                    }
+                    assert(commentType != CommentType_None);
 
-                    if(index == 0 && preceedingNewlines >= 2) {
+                    u32 preceedingNewlines = 0;
+                    for(u32 j = cursor; j < commentStart; j++) { preceedingNewlines += input.data[j] == '\n'; }
+
+                    if(cursor == 0 && preceedingNewlines >= 2) {
                         pushWord(r, wordHardline());
                         pushWord(r, wordHardline());
                     } else if(preceedingNewlines > 0) {
                         pushWord(r, wordHardline());
-                    } else if(index == 0) {
+                    } else if(cursor == 0) {
                         pushWord(r, wordSpace());
                     } else if(commentType != CommentType_SingleLine) {
                         pushWord(r, wordSpace());
                     }
 
-                    index = commentEnd + indexSkipSize;
-                    i = index - 1;
-
-                    assert(commentType != CommentType_None);
+                    cursor = commentEnd;
+                    i = cursor - 1;
 
                     // Write comment out
-                    bool startOfLine = r->writer->lineSize == 0;
-                    if(commentType == CommentType_StarAligned && startOfLine) {
-                        String currentWord = {comment.data, 0};
-                        for(u32 i = 0; i < comment.size; i++) {
-                            u8 c = comment.data[i];
-                            if(c == '\n') {
-                                pushWord(r, wordText(currentWord));
-                                pushWord(r, wordHardline());
-                                currentWord.data += currentWord.size + 1;
-                                currentWord.size = 0;
-                            } else if(!(isWhitespace(c) && r->writer->lineSize == 0)) {
-                                if(currentWord.size == 0 && r->writer->lineSize == 0) {
-                                    currentWord.size++;
-                                }
-                                currentWord.size++;
-                            }
-                        }
-                        if(currentWord.size > 0) {
-                            pushWord(r, wordText(currentWord));
-                        }
-                    } else {
-                        String currentWord = {comment.data, 0};
+                    if(commentType == CommentType_SingleLine) {
+                        pushWord(r, wordText(stringTrim(comment)));
+                        pushWord(r, wordHardline());
+                    } else if(commentType == CommentType_StarAligned) {
+                        String line = { .data = comment.data, .size = 0 };
                         for(u32 i = 0; i < comment.size; i++) {
                             if(comment.data[i] == '\n') {
-                                pushWord(r, wordText(currentWord));
+                                pushWord(r, wordText(stringTrim(line)));
                                 pushWord(r, wordHardline());
-                                currentWord.data += currentWord.size + 1;
-                                currentWord.size = 0;
-                            } else if(comment.data[i] != '\r') {
-                                currentWord.size++;
+                                line = (String){ .data = line.data + line.size + 1, .size = 0 };
+                            } else {
+                                line.size += 1;
                             }
                         }
-                        if(currentWord.size > 0) {
-                            pushWord(r, wordText(currentWord));
-                        }
-                    }
 
-                    // Endings
-                    if(commentType == CommentType_SingleLine) {
-                        pushWord(r, wordHardline());
-                    } else {
-                        u8 *head = comment.data + comment.size;
-                        while(isWhitespace(*head)) {
-                            if(*head == '\n') {
-                                pushWord(r, wordHardline());
-                                break;
-                            }
-                            head++;
+                        if(line.size > 0) {
+                            pushWord(r, wordText(stringTrim(line)));
                         }
                     }
 
@@ -793,14 +713,27 @@ parseCommentsIntoWords(Render *r, u32 startOffset, u32 endOffset) {
         }
 
         u32 preceedingNewlines = 0;
-        for(u32 i = index; i < input.size; i++) {
+        for(u32 i = cursor; i < input.size; i++) {
             preceedingNewlines += input.data[i] == '\n';
         }
 
-        if(index != 0 && preceedingNewlines >= 2) {
+        if(cursor != 0 && preceedingNewlines >= 2) {
             finishLine(r->writer);
         } 
     }
+}
+
+static void
+pushTokenWordImpl(Render *r, Word w, TokenId token) {
+    r->words[r->wordCount++] = w;
+
+    TokenId nextToken = token == r->tokens.count - 1 ? token : token + 1; 
+    String next = getTokenString(r->tokens, nextToken);
+    String current = getTokenString(r->tokens, token);
+
+    u32 startOffset = (current.data - r->sourceBaseAddress) + current.size;
+    u32 endOffset = next.data ? next.data - r->sourceBaseAddress : startOffset;
+    parseCommentsIntoWords(r, startOffset, endOffset);
 }
 
 static void
@@ -813,15 +746,26 @@ pushTokenWord(Render *r, TokenId token) {
         .nest = r->nest + r->writer->indentCount,
     };
 
-    r->words[r->wordCount++] = w;
+    pushTokenWordImpl(r, w, token);
+}
 
-    TokenId nextToken = token == r->tokens.count - 1 ? token : token + 1; 
-    String next = getTokenString(r->tokens, nextToken);
-    String current = getTokenString(r->tokens, token);
+static void
+pushTokenAsStringWord(Render *r, TokenId token) {
+    String text = getTokenString(r->tokens, token);
+    assert(text.data[-1] == '"');
+    assert(text.data[text.size] == '"');
+    text.data -= 1;
+    text.size += 2;
 
-    u32 startOffset = (current.data - r->sourceBaseAddress) + current.size;
-    u32 endOffset = next.data ? next.data - r->sourceBaseAddress : startOffset;
-    parseCommentsIntoWords(r, startOffset, endOffset);
+    Word w = {
+        .type = WordType_Text,
+        .text = text,
+        .group = r->group,
+        // TODO(radomski): There should be a single indent counter
+        .nest = r->nest + r->writer->indentCount,
+    };
+
+    pushTokenWordImpl(r, w, token);
 }
 
 static WordType
@@ -1547,15 +1491,6 @@ renderModiferInvocations(Render *r, ASTNodeList *modifiers) {
     }
 }
 
-static TokenId
-searchForToken(Render *r, TokenId starting, TokenType type) {
-    while(r->tokens.tokenTypes[starting] != type) {
-        starting += 1;
-        assert(starting < r->tokens.count);
-    }
-    return starting;
-}
-
 static void
 renderOverrides(Render *r, TokenId overrideToken, ASTNodeListRanged *overrides) {
     if(overrideToken != INVALID_TOKEN_ID) {
@@ -1599,12 +1534,12 @@ renderMember(Render *r, ASTNode *member) {
         case ASTNodeType_Import: {
             assert(stringMatch(LIT_TO_STR("import"), r->tokens.tokenStrings[member->startToken]));
             
-            pushWord(r, wordToken(member->startToken));
+            pushTokenWord(r, member->startToken);
             pushWord(r, wordSpace());
 
             if(member->symbols.count > 0) {
                 assert(stringMatch(LIT_TO_STR("{"), r->tokens.tokenStrings[member->startToken + 1]));
-                pushWord(r, wordToken(member->startToken + 1));
+                pushTokenWord(r, member->startToken + 1);
                 pushWord(r, wordLine());
 
                 pushNest(r);
@@ -1612,20 +1547,20 @@ renderMember(Render *r, ASTNode *member) {
                     TokenId symbol = listGetTokenId(&member->symbols, i);
                     TokenId alias = listGetTokenId(&member->symbolAliases, i);
 
-                    pushWord(r, wordToken(symbol));
+                    pushTokenWord(r, symbol);
                     TokenId lastToken = symbol + 1;
 
                     if(alias != INVALID_TOKEN_ID) {
                         pushWord(r, wordSpace());
-                        pushWord(r, wordToken(alias - 1));
+                        pushTokenWord(r, alias - 1);
                         pushWord(r, wordSpace());
-                        pushWord(r, wordToken(alias));
+                        pushTokenWord(r, alias);
                         lastToken = alias + 1;
                     } 
 
                     bool isLastElement = i == member->symbols.count - 1;
                     if(!isLastElement) {
-                        pushWord(r, wordToken(lastToken));
+                        pushTokenWord(r, lastToken);
                     }
                     pushWord(r, wordLine());
                 }
@@ -1633,23 +1568,23 @@ renderMember(Render *r, ASTNode *member) {
 
                 assert(stringMatch(LIT_TO_STR("}"), r->tokens.tokenStrings[member->pathTokenId - 2]));
                 assert(stringMatch(LIT_TO_STR("from"), r->tokens.tokenStrings[member->pathTokenId - 1]));
-                pushWord(r, wordToken(member->pathTokenId - 2));
+                pushTokenWord(r, member->pathTokenId - 2);
                 pushWord(r, wordSpace());
-                pushWord(r, wordToken(member->pathTokenId - 1));
+                pushTokenWord(r, member->pathTokenId - 1);
                 pushWord(r, wordSpace());
             }
 
-            pushWord(r, wordTokenAsString(member->pathTokenId));
+            pushTokenAsStringWord(r, member->pathTokenId);
             if(member->unitAliasTokenId != INVALID_TOKEN_ID) {
                 assert(stringMatch(LIT_TO_STR("as"), r->tokens.tokenStrings[member->unitAliasTokenId - 1]));
 
                 pushWord(r, wordSpace());
-                pushWord(r, wordToken(member->unitAliasTokenId - 1));
+                pushTokenWord(r, member->unitAliasTokenId - 1);
                 pushWord(r, wordSpace());
-                pushWord(r, wordToken(member->unitAliasTokenId));
+                pushTokenWord(r, member->unitAliasTokenId);
             }
 
-            pushWord(r, wordToken(member->endToken));
+            pushTokenWord(r, member->endToken);
             renderDocument(r);
             finishLine(r->writer);
         } break;
