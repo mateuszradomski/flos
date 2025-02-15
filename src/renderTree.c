@@ -517,31 +517,26 @@ renderDocumentWord(Render *r, Word *word, WordRenderLineType lineType) {
                 case WordRenderLineType_Space: {
                     writeString(r->writer, LIT_TO_STR(" "));
                 } break;
-                case WordRenderLineType_Newline: {
-                    finishLine(w);
-                    commitIndent(w);
-                } break;
+                case WordRenderLineType_Newline: { finishLine(w); } break;
             }
         } break;
         case WordType_Softline: {
             switch (lineType) {
                 case WordRenderLineType_Space: { } break;
-                case WordRenderLineType_Newline: {
-                    finishLine(w);
-                    commitIndent(w);
-                } break;
+                case WordRenderLineType_Newline: { finishLine(w); } break;
             }
         } break;
-        case WordType_Hardline: {
-            finishLine(w);
-            commitIndent(w);
-        } break;
+        case WordType_Hardline: { finishLine(w); } break;
         default: { assert(false); }
     }
 }
 
 static void
 renderDocument(Render *r) {
+    while(r->words[r->wordCount -1].type == WordType_Hardline) {
+        r->wordCount -= 1;
+    }
+
     renderGroup(r, r->words, r->wordCount, 0);
     r->wordCount = 0;
 }
@@ -672,7 +667,7 @@ parseCommentsIntoWords(Render *r, u32 startOffset, u32 endOffset) {
                         pushWord(r, wordHardline());
                         pushWord(r, wordHardline());
                     } else if(preceedingNewlines > 0) {
-                        pushWord(r, wordHardline());
+                        // pushWord(r, wordHardline());
                     } else if(cursor == 0) {
                         pushWord(r, wordSpace());
                     } else if(commentType != CommentType_SingleLine) {
@@ -1045,6 +1040,91 @@ renderType(Render *r, ASTNode *node, ConnectType connect) {
             }
 
             assert(connect == SPACE);
+        } break;
+        default: {
+            assert(0);
+        }
+    }
+}
+
+static void
+pushTypeDocument(Render *r, ASTNode *node) {
+    switch(node->type) {
+        case ASTNodeType_BaseType: {
+            pushTokenWord(r, node->baseTypeNode.typeName);
+            if(node->baseTypeNode.payable) {
+                pushWord(r, wordSpace());
+                pushTokenWord(r, node->endToken);
+            }
+        } break;
+        case ASTNodeType_IdentifierPath: {
+            // for(u32 i = 0; i < node->identifierPathNode.identifiers.count; i++) {
+            //     TokenId part = listGetTokenId(&node->identifierPathNode.identifiers, i);
+            //     renderToken(r, part, i == node->identifierPathNode.identifiers.count - 1 ? connect : DOT);
+            // }
+            assert(false);
+        } break;
+        case ASTNodeType_MappingType: {
+            assert(false);
+            // assert(stringMatch(LIT_TO_STR("mapping"), r->tokens.tokenStrings[node->startToken]));
+            // assert(stringMatch(LIT_TO_STR("("), r->tokens.tokenStrings[node->startToken + 1]));
+            // renderToken(r, node->startToken, NONE);
+            // renderToken(r, node->startToken + 1, NONE);
+            // renderType(r, node->mappingNode.keyType, SPACE);
+            // if(node->mappingNode.keyIdentifier != INVALID_TOKEN_ID) {
+            //     renderToken(r, node->mappingNode.keyIdentifier, SPACE);
+            // }
+
+            // renderTokenChecked(r, node->mappingNode.valueType->startToken - 2, LIT_TO_STR("="), NONE);
+            // renderTokenChecked(r, node->mappingNode.valueType->startToken - 1, LIT_TO_STR(">"), SPACE);
+
+            // renderType(r, node->mappingNode.valueType, node->mappingNode.valueIdentifier == INVALID_TOKEN_ID ? NONE : SPACE);
+            // if(node->mappingNode.valueIdentifier != INVALID_TOKEN_ID) {
+            //     renderToken(r, node->mappingNode.valueIdentifier, NONE);
+            // }
+            // assert(stringMatch(LIT_TO_STR(")"), r->tokens.tokenStrings[node->endToken]));
+            // renderToken(r, node->endToken, connect);
+        } break;
+        case ASTNodeType_ArrayType: {
+            // renderType(r, node->arrayTypeNode.elementType, NONE);
+
+            // assert(stringMatch(LIT_TO_STR("["), r->tokens.tokenStrings[node->arrayTypeNode.elementType->endToken + 1]));
+            // renderToken(r, node->arrayTypeNode.elementType->endToken + 1, NONE);
+            // if(node->arrayTypeNode.lengthExpression != 0x0) {
+            //     renderExpression(r, node->arrayTypeNode.lengthExpression, NONE);
+            // }
+            // assert(stringMatch(LIT_TO_STR("]"), r->tokens.tokenStrings[node->endToken]));
+            // renderToken(r, node->endToken, connect);
+        } break;
+        case ASTNodeType_FunctionType: {
+            // assert(stringMatch(LIT_TO_STR("function"), r->tokens.tokenStrings[node->startToken]));
+            // assert(stringMatch(LIT_TO_STR("("), r->tokens.tokenStrings[node->startToken + 1]));
+
+            // renderToken(r, node->startToken, SPACE);
+            // renderToken(r, node->startToken + 1, NONE);
+            // renderParameters(r, &node->functionTypeNode.parameters, COMMA_SPACE, 0);
+            // if(node->functionTypeNode.parameters.count > 0) {
+            //     renderTokenChecked(r, node->functionTypeNode.parameters.last->node.endToken + 1, LIT_TO_STR(")"), SPACE);
+            // } else {
+            //     renderTokenChecked(r, node->startToken + 2, LIT_TO_STR(")"), SPACE);
+            // }
+
+            // if(node->functionTypeNode.visibility != INVALID_TOKEN_ID) {
+            //     renderToken(r, node->functionTypeNode.visibility, SPACE);
+            // }
+            // if(node->functionTypeNode.stateMutability != INVALID_TOKEN_ID) {
+            //     renderToken(r, node->functionTypeNode.stateMutability, SPACE);
+            // }
+
+            // if(node->functionTypeNode.returnParameters.count > 0) {
+            //     renderTokenChecked(r, node->functionTypeNode.returnParameters.head->node.endToken - 2, LIT_TO_STR("returns"), SPACE);
+            //     renderTokenChecked(r, node->functionTypeNode.returnParameters.head->node.endToken - 1, LIT_TO_STR("("), NONE);
+            //     renderParameters(r, &node->functionTypeNode.returnParameters, COMMA_SPACE, 0);
+            //     renderTokenChecked(r, node->functionTypeNode.returnParameters.last->node.endToken + 1, LIT_TO_STR(")"), SPACE);
+            // }
+
+            // assert(connect == SPACE);
+            assert(false);
         } break;
         default: {
             assert(0);
@@ -1709,14 +1789,19 @@ renderMember(Render *r, ASTNode *member) {
             renderToken(r, member->endToken - 1, SEMICOLON);
         } break;
         case ASTNodeType_Typedef: {
-            assert(stringMatch(LIT_TO_STR("type"), r->tokens.tokenStrings[member->startToken]));
-            assert(stringMatch(LIT_TO_STR("is"), r->tokens.tokenStrings[member->startToken + 2]));
-
-            renderToken(r, member->startToken, SPACE);
             ASTNodeTypedef *typedefNode = &member->typedefNode;
-            renderToken(r, typedefNode->identifier, SPACE);
-            renderToken(r, member->startToken + 2, SPACE);
-            renderType(r, typedefNode->type, SEMICOLON);
+
+            pushTokenWord(r, member->startToken);
+            pushWord(r, wordSpace());
+            pushTokenWord(r, typedefNode->identifier);
+            pushWord(r, wordSpace());
+            pushTokenWord(r, typedefNode->identifier + 1);
+            pushWord(r, wordSpace());
+            pushTypeDocument(r, typedefNode->type);
+            pushTokenWord(r, member->endToken);
+
+            renderDocument(r);
+            finishLine(r->writer);
         } break;
         case ASTNodeType_ConstVariable: {
             ASTNodeConstVariable *constNode = &member->constVariableNode;
