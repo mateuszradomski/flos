@@ -69,8 +69,8 @@ showDifferences(String result, String expected) {
 
     if(!stringMatch(resultLine, expectedLine)) {
       printf("Result does not match expected on the following line:\n");
-      printf("Got:    %.*s\n", (int)resultLine.size, resultLine.data);
-      printf("Wanted: %.*s\n", (int)expectedLine.size, expectedLine.data);
+      printf("Got:    [%.*s]\n", (int)resultLine.size, resultLine.data);
+      printf("Wanted: [%.*s]\n", (int)expectedLine.size, expectedLine.data);
       break;
     }
   }

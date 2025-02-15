@@ -1575,9 +1575,12 @@ static void
 renderMember(Render *r, ASTNode *member) {
     switch(member->type) {
         case ASTNodeType_Pragma: {
+            pushTokenWord(r, member->startToken);
+            pushWord(r, wordSpace());
+            pushTokenWord(r, member->startToken + 1);
+            pushWord(r, wordSpace());
+
             ASTNodePragma *pragma = &member->pragmaNode;
-            renderTokenChecked(r, member->startToken, LIT_TO_STR("pragma"), SPACE);
-            renderToken(r, pragma->major, SPACE);
             TokenId firstTokenId = listGetTokenId(&pragma->following, 0);
             TokenId lastTokenId = listGetTokenId(&pragma->following, pragma->following.count - 1);
             String first = getTokenString(r->tokens, firstTokenId);
@@ -1587,7 +1590,11 @@ renderMember(Render *r, ASTNode *member) {
                 .size = (u32)(last.data - first.data) + last.size,
             };
 
-            renderString(r, string, SEMICOLON);
+            pushWord(r, wordText(string));
+            pushTokenWord(r, member->endToken);
+
+            renderDocument(r);
+            finishLine(r->writer);
         } break;
         case ASTNodeType_Import: {
             assert(stringMatch(LIT_TO_STR("import"), r->tokens.tokenStrings[member->startToken]));
