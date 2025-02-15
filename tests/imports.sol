@@ -21,4 +21,4 @@ import {
     symbol7,
     symbol8
 } from "File2.sol";
-import /*two*/{ /*three*/ symbol1 /*four*/ } /*five*/from /*six*/"File2.sol" /*seven*/;
+import /*two*/ { /*three*/ symbol1 /*four*/ } /*five*/ from /*six*/ "File2.sol" /*seven*/;
