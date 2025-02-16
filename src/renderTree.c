@@ -1199,8 +1199,7 @@ pushTypeDocument(Render *r, ASTNode *node) {
 
             pushTokenWord(r, node->arrayTypeNode.elementType->endToken + 1);
             if(node->arrayTypeNode.lengthExpression != 0x0) {
-                assert(false);
-                // renderExpression(r, node->arrayTypeNode.lengthExpression, NONE);
+                pushExpressionDocument(r, node->arrayTypeNode.lengthExpression);
             }
             assert(stringMatch(LIT_TO_STR("]"), r->tokens.tokenStrings[node->endToken]));
             pushTokenWord(r, node->endToken);
@@ -2239,22 +2238,42 @@ renderMember(Render *r, ASTNode *member) {
         case ASTNodeType_StateVariableDeclaration: {
             ASTNodeConstVariable *decl = &member->constVariableNode;
 
-            renderType(r, decl->type, SPACE);
+            pushGroup(r);
+            pushTypeDocument(r, decl->type);
+            pushWord(r, wordSpace());
+
             if(decl->visibility != INVALID_TOKEN_ID) {
-                renderToken(r, decl->visibility, SPACE);
+                pushTokenWord(r, decl->visibility);
+                pushWord(r, wordSpace());
             }
             if(decl->mutability != INVALID_TOKEN_ID) {
-                renderToken(r, decl->mutability, SPACE);
+                pushTokenWord(r, decl->mutability);
+                pushWord(r, wordSpace());
             }
 
-            renderOverrides(r, decl->override, &decl->overrides);
-            renderToken(r, decl->identifier, decl->expression ? SPACE : SEMICOLON);
+            pushTokenWord(r, decl->identifier);
 
             if(decl->expression) {
                 assert(stringMatch(LIT_TO_STR("="), r->tokens.tokenStrings[decl->identifier + 1]));
-                renderToken(r, decl->identifier + 1, SPACE);
-                renderExpression(r, decl->expression, SEMICOLON);
+                pushWord(r, wordSpace());
+                pushTokenWord(r, decl->identifier + 1);
+                pushWord(r, wordLine());
+
+                pushGroup(r);
+                pushNest(r);
+                pushExpressionDocument(r, decl->expression);
+                popGroup(r);
+                popNest(r);
             }
+
+            pushTokenWord(r, member->endToken);
+
+            trimGroupRight(r); // TODO(radomski): Remove
+
+            popGroup(r);
+            pushWord(r, wordHardline());
+
+            renderDocument(r);
         } break;
         case ASTNodeType_FallbackFunction:
         case ASTNodeType_ReceiveFunction:

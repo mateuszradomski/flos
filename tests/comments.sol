@@ -163,7 +163,6 @@ contract Comments1 {
     bytes32 private _CACHED_DOMAIN_SEPARATOR;
 
     /* solhint-enable var-name-mixedcase */
-
     function() {
         // solhint-disable-previous-line no-empty-blocks
     }
