@@ -51,8 +51,7 @@ contract BreakingChangesV080 {
      * - if options.compiler is greater than or equal to 0.8.0 we format as
      *   1**(2**3).
      */
-    uint a =
-        1 ** 2 ** 3;
+    uint a = 1 ** 2 ** 3;
 
     /**
     * - if options.compiler is undefined or lower than 0.8.0 we enforce the

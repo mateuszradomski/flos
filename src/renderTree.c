@@ -770,12 +770,8 @@ preserveHardlinesIntoDocument(Render *r, ASTNode *node) {
     }
 }
 
-
-
 static void
-pushTokenWordImpl(Render *r, Word w, TokenId token) {
-    r->words[r->wordCount++] = w;
-
+pushCommentsAfterToken(Render *r, TokenId token) {
     TokenId nextToken = token == r->tokens.count - 1 ? token : token + 1; 
     String next = getTokenString(r->tokens, nextToken);
     String current = getTokenString(r->tokens, token);
@@ -786,7 +782,7 @@ pushTokenWordImpl(Render *r, Word w, TokenId token) {
 }
 
 static void
-pushTokenWord(Render *r, TokenId token) {
+pushTokenWordOnly(Render *r, TokenId token) {
     Word w = {
         .type = WordType_Text,
         .text = getTokenString(r->tokens, token),
@@ -795,11 +791,17 @@ pushTokenWord(Render *r, TokenId token) {
         .nest = r->nest + r->writer->indentCount,
     };
 
-    pushTokenWordImpl(r, w, token);
+    r->words[r->wordCount++] = w;
 }
 
 static void
-pushTokenAsStringWord(Render *r, TokenId token) {
+pushTokenWord(Render *r, TokenId token) {
+    pushTokenWordOnly(r, token);
+    pushCommentsAfterToken(r, token);
+}
+
+static void
+pushTokenAsStringWordOnly(Render *r, TokenId token) {
     String text = getTokenString(r->tokens, token);
     assert(text.data[-1] == '"');
     assert(text.data[text.size] == '"');
@@ -814,7 +816,13 @@ pushTokenAsStringWord(Render *r, TokenId token) {
         .nest = r->nest + r->writer->indentCount,
     };
 
-    pushTokenWordImpl(r, w, token);
+    r->words[r->wordCount++] = w;
+}
+
+static void
+pushTokenAsStringWord(Render *r, TokenId token) {
+    pushTokenAsStringWordOnly(r, token);
+    pushCommentsAfterToken(r, token);
 }
 
 static WordType
@@ -1894,8 +1902,11 @@ renderMember(Render *r, ASTNode *member) {
             };
 
             pushWord(r, wordText(string));
-            pushTokenWord(r, member->endToken);
+            pushTokenWordOnly(r, member->endToken);
             popGroup(r);
+
+            pushCommentsAfterToken(r, member->endToken);
+            trimGroupRight(r); // TODO(radomski): Remove
             pushWord(r, wordHardline());
 
             renderDocument(r);
@@ -1954,8 +1965,11 @@ renderMember(Render *r, ASTNode *member) {
                 pushTokenWord(r, member->unitAliasTokenId);
             }
 
-            pushTokenWord(r, member->endToken);
+            pushTokenWordOnly(r, member->endToken);
             popGroup(r);
+
+            pushCommentsAfterToken(r, member->endToken);
+            trimGroupRight(r); // TODO(radomski): Remove
             pushWord(r, wordHardline());
 
             renderDocument(r);
@@ -2016,8 +2030,11 @@ renderMember(Render *r, ASTNode *member) {
                 pushTokenWord(r, using->global);
             }
 
-            pushTokenWord(r, member->endToken);
+            pushTokenWordOnly(r, member->endToken);
             popGroup(r);
+
+            pushCommentsAfterToken(r, member->endToken);
+            trimGroupRight(r); // TODO(radomski): Remove
             pushWord(r, wordHardline());
 
             renderDocument(r);
@@ -2049,8 +2066,11 @@ renderMember(Render *r, ASTNode *member) {
             }
             popNestWithLastWord(r);
 
-            pushTokenWord(r, member->endToken);
+            pushTokenWordOnly(r, member->endToken);
             popGroup(r);
+
+            pushCommentsAfterToken(r, member->endToken);
+            trimGroupRight(r); // TODO(radomski): Remove
             pushWord(r, wordHardline());
 
             renderDocument(r);
@@ -2084,9 +2104,11 @@ renderMember(Render *r, ASTNode *member) {
 
             popNestWithLastWord(r);
 
-            pushTokenWord(r, member->endToken);
-
+            pushTokenWordOnly(r, member->endToken);
             popGroup(r);
+
+            pushCommentsAfterToken(r, member->endToken);
+            trimGroupRight(r); // TODO(radomski): Remove
             pushWord(r, wordHardline());
             renderDocument(r);
         } break;
@@ -2131,10 +2153,11 @@ renderMember(Render *r, ASTNode *member) {
             popNestWithLastWord(r);
 
             pushTokenWord(r, member->endToken - 1);
+            pushTokenWordOnly(r, member->endToken);
             popGroup(r);
-            pushTokenWord(r, member->endToken);
-            trimGroupRight(r); // TODO(radomski): Remove
 
+            pushCommentsAfterToken(r, member->endToken);
+            trimGroupRight(r); // TODO(radomski): Remove
             pushWord(r, wordHardline());
             renderDocument(r);
         } break;
@@ -2177,11 +2200,13 @@ renderMember(Render *r, ASTNode *member) {
             popNestWithLastWord(r);
 
             pushTokenWord(r, member->endToken - 1);
+            pushTokenWordOnly(r, member->endToken);
             popGroup(r);
-            pushTokenWord(r, member->endToken);
-            trimGroupRight(r); // TODO(radomski): Remove
 
+            pushCommentsAfterToken(r, member->endToken);
+            trimGroupRight(r); // TODO(radomski): Remove
             pushWord(r, wordHardline());
+
             renderDocument(r);
 
         } break;
@@ -2196,11 +2221,12 @@ renderMember(Render *r, ASTNode *member) {
             pushTokenWord(r, typedefNode->identifier + 1);
             pushWord(r, wordSpace());
             pushTypeDocument(r, typedefNode->type);
-            pushTokenWord(r, member->endToken);
 
-            trimGroupRight(r); // TODO(radomski): Remove
-
+            pushTokenWordOnly(r, member->endToken);
             popGroup(r);
+
+            pushCommentsAfterToken(r, member->endToken);
+            trimGroupRight(r); // TODO(radomski): Remove
             pushWord(r, wordHardline());
 
             renderDocument(r);
@@ -2226,11 +2252,12 @@ renderMember(Render *r, ASTNode *member) {
             pushExpressionDocument(r, constNode->expression);
             popGroup(r);
             popNest(r);
-            pushTokenWord(r, member->endToken);
 
-            trimGroupRight(r); // TODO(radomski): Remove
-
+            pushTokenWordOnly(r, member->endToken);
             popGroup(r);
+
+            pushCommentsAfterToken(r, member->endToken);
+            trimGroupRight(r); // TODO(radomski): Remove
             pushWord(r, wordHardline());
 
             renderDocument(r);
@@ -2266,11 +2293,11 @@ renderMember(Render *r, ASTNode *member) {
                 popNest(r);
             }
 
-            pushTokenWord(r, member->endToken);
-
-            trimGroupRight(r); // TODO(radomski): Remove
-
+            pushTokenWordOnly(r, member->endToken);
             popGroup(r);
+
+            pushCommentsAfterToken(r, member->endToken);
+            trimGroupRight(r); // TODO(radomski): Remove
             pushWord(r, wordHardline());
 
             renderDocument(r);

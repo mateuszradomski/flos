@@ -7,7 +7,7 @@ uint256 constant veryLongVariableName2 = 200;
 uint256 constant test2 = veryLongVariableName1 * veryLongVariableName2 + 1 + 2 + 3 + 4 + 5 + 6 + 7 + 8 + 9 + 10 + 11 + 12 + 13 + 14 + 15;
 
 // Test case 3: Bitwise operations
-uint256 constant test3 = (1 << 100) | (2 << 50) & (3 << 25) ^ (4 << 12) + (5 << 6) - (6 << 3) * (7 << 1) / (8 << 0);
+uint256 constant test3 = (1 << 100) | (2 << 50) & (3 << 25) ^ (4 << 12) + (5 << 6) - (6 << 3) * (7 << 1) / (8 << 0) ** (9 >>> 3);
 
 // Test case 4: Complex arithmetic expression
 uint256 constant test4 = (1000000000000000000 + 2000000000000000000) * (3000000000000000000 - 4000000000000000000) / (5000000000000000000 % 6000000000000000000);
@@ -29,7 +29,7 @@ uint256 constant test2 =
 
 // Test case 3: Bitwise operations
 uint256 constant test3 =
-    (1 << 100) | (2 << 50) & (3 << 25) ^ (4 << 12) + (5 << 6) - (6 << 3) * (7 << 1) / (8 << 0);
+    (1 << 100) | (2 << 50) & (3 << 25) ^ (4 << 12) + (5 << 6) - (6 << 3) * (7 << 1) / (8 << 0) ** (9 >>> 3);
 
 // Test case 4: Complex arithmetic expression
 uint256 constant test4 =
