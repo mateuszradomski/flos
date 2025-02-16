@@ -1545,7 +1545,8 @@ bytes16 constant _HEX_SYMBOLS = "0123456789abcdef";
 bytes16 constant _SYMBOLS = "0123456789abcdef";
 bytes20 constant PREFIX = hex"3d602d80600a3d3981f3363d3d373d3d3d363d73";
 bytes32 constant CREATE2_PREFIX = keccak256("zksyncCreate2");
-bytes32 constant DIAMOND_STORAGE_POSITION = 0xc8fcad8db84d3cc18b4c41d551ea0ee66dd599cde068d998e57d5e09332c131b; // keccak256("diamond.standard.diamond.storage") - 1;
+bytes32 constant DIAMOND_STORAGE_POSITION =
+    0xc8fcad8db84d3cc18b4c41d551ea0ee66dd599cde068d998e57d5e09332c131b; // keccak256("diamond.standard.diamond.storage") - 1;
 bytes32 constant DIAMOND_STORAGE_POSITION = keccak256("diamond.standard.diamond.storage");
 bytes32 constant UPPER_BIT_MASK = (0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff);
 bytes32 constant IMPLEMENTATION_KEY = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
@@ -1628,7 +1629,8 @@ bytes32 constant CHILD_CHAIN = keccak256("childChain");
 bytes32 constant CREATE2_PREFIX = keccak256("zksyncCreate2");
 bytes32 constant DEPOSIT_MANAGER = keccak256("depositManager");
 bytes32 constant DOMAIN_SEPARATOR_TYPEHASH = 0x47e79534a245952e8b16893a336b85a3d9ea9fa8c573f3d803afb92a79469218;
-bytes32 constant DOMAIN_TYPE_SIGNATURE_HASH = bytes32(0x8b73c3c69bb8fe3d512ecc4cf759cc79239f7b179b0ffacaa9a75d522b39400f);
+bytes32 constant DOMAIN_TYPE_SIGNATURE_HASH =
+    bytes32(0x8b73c3c69bb8fe3d512ecc4cf759cc79239f7b179b0ffacaa9a75d522b39400f);
 bytes32 constant EMPTY_STRING_KECCAK = 0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470;
 bytes32 constant FALLBACK_SENTINEL = 0x00000000000000000000000000000000000000000000000000000000000000FF;
 bytes32 constant KEY_ALL_TOKENS_FROZEN = keccak256("all-tokens-frozen");
@@ -1649,7 +1651,8 @@ bytes32 constant _HASHED_NAME = keccak256("Permit2");
 bytes32 constant _IMPLEMENTATION_SLOT = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
 bytes32 constant _ROLLBACK_SLOT = 0x4910fdfa16fed3260ed0e7147f7cc6da11a60208b5b9406d12a635614ffd9143;
 bytes32 constant _TYPE_HASH = keccak256("EIP712Domain(string name,string version,uint256 chainId)");
-bytes32 constant _TYPE_HASH = keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
+bytes32 constant _TYPE_HASH =
+    keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
 bytes32 constant masterPosition = 0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103;
 bytes32 constant targetPosition = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
 bytes32 constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
@@ -2523,7 +2526,8 @@ uint256 constant FP_SCALING_FACTOR = 10 ** 18;
 uint256 constant INBOX_NUM = 2;
 uint256 constant LEAF_SIZE = 32;
 uint256 constant LOCK_FLAG_ADDRESS = 0x8e94fed44239eb2314ab7a406345e6c5a8f0ccedf3b600de3d004e672c33abf4;
-uint256 constant LOCK_FLAG_ADDRESS = 0x8e94fed44239eb2314ab7a406345e6c5a8f0ccedf3b600de3d004e672c33abf4; // keccak256("ReentrancyGuard") - 1;
+uint256 constant LOCK_FLAG_ADDRESS =
+    0x8e94fed44239eb2314ab7a406345e6c5a8f0ccedf3b600de3d004e672c33abf4; // keccak256("ReentrancyGuard") - 1;
 uint256 constant MAX_CHALLENGE_DEGREE = 40;
 uint256 constant MAX_LEN = 10;
 uint256 constant MAX_UINT256 = 2 ** 256 - 1;
@@ -2790,7 +2794,8 @@ uint256 constant DIVISION_ERROR_CODE = 0x12;
 uint256 constant ENTERED = uint256(int256(-1));
 uint256 constant IDENTIFIER_LEN = 1;
 uint256 constant INDEX_BASE = 10 ** 18;
-uint256 constant LOW_27_BYTES_MASK = 0xffffffffffffffffffffffffffffffffffffffffffffffffffffff; // (1 << _27_BYTES_IN_BITS) - 1;
+uint256 constant LOW_27_BYTES_MASK =
+    0xffffffffffffffffffffffffffffffffffffffffffffffffffffff; // (1 << _27_BYTES_IN_BITS) - 1;
 uint256 constant MIN_BLACKOUT_WINDOW = 3 days;
 uint256 constant NOT_ENTERED = 1;
 uint256 constant PANIC_ERROR_SIGNATURE = 0x4e487b71;
