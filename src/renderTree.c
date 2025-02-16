@@ -822,6 +822,55 @@ getConnectingWordType(Render *r, TokenId t1, TokenId t2) {
     return WordType_Space;
 }
 
+static void pushExpressionDocument(Render *r, ASTNode *node);
+
+static void
+pushCallArgumentListDocument(Render *r, TokenId startingToken, ASTNodeListRanged *expressions, TokenIdList *names) {
+    if(expressions->count == -1) {
+        assert(false);
+        return;
+    }
+
+    pushTokenWord(r, startingToken);
+    if(names->count == 0) {
+        ASTNodeLink *argument = expressions->head;
+        for(u32 i = 0; i < expressions->count; i++, argument = argument->next) {
+            pushExpressionDocument(r, &argument->node);
+            if(i < expressions->count - 1) {
+                // Add comma and space after each argument except the last one
+                pushTokenWord(r, argument->node.endToken + 1);
+                pushWord(r, wordLine());
+            }
+        }
+    } else {
+        pushTokenWord(r, listGetTokenId(names, 0) - 1);
+        pushWord(r, wordSpace());
+        ASTNodeLink *argument = expressions->head;
+        assert(names->count == expressions->count);
+        for(u32 i = 0; i < expressions->count; i++, argument = argument->next) {
+            TokenId literal = listGetTokenId(names, i);
+            pushTokenWord(r, literal);
+            pushTokenWord(r, literal + 1);
+            pushWord(r, wordSpace());
+            pushExpressionDocument(r, &argument->node);
+
+            if(i < expressions->count - 1) {
+                pushTokenWord(r, argument->node.endToken + 1);
+                pushWord(r, wordLine());
+            }
+        }
+        pushTokenWord(r, expressions->last->node.endToken + 1);
+    }
+
+    if(expressions->count > 0) {
+        TokenId token = expressions->last->node.endToken + 1;
+        token += names->count > 0;
+        pushTokenWord(r, token);
+    } else {
+        pushTokenWord(r, startingToken + 1);
+    }
+}
+
 static void
 renderCallArgumentList(Render *r, TokenId startingToken, ASTNodeListRanged *expressions, TokenIdList *names, ConnectType connect) {
     if(expressions->count == -1) {
@@ -1184,6 +1233,180 @@ pushTypeDocument(Render *r, ASTNode *node) {
             // }
 
             // assert(connect == SPACE);
+            assert(false);
+        } break;
+        default: {
+            assert(0);
+        }
+    }
+}
+
+static void
+pushExpressionDocument(Render *r, ASTNode *node) {
+    switch(node->type){
+        case ASTNodeType_NumberLitExpression: {
+            pushTokenWord(r, node->numberLitExpressionNode.value);
+            if(node->numberLitExpressionNode.subdenomination != INVALID_TOKEN_ID) {
+                pushWord(r, wordSpace());
+                pushTokenWord(r, node->numberLitExpressionNode.subdenomination);
+            }
+        } break;
+        case ASTNodeType_HexStringLitExpression:
+        case ASTNodeType_UnicodeStringLitExpression:
+        case ASTNodeType_StringLitExpression: {
+            ASTNodeStringLitExpression *expression = &node->stringLitExpressionNode;
+            // TODO(radomski): Escaping
+
+            if(node->type == ASTNodeType_HexStringLitExpression) {
+                pushWord(r, wordText(LIT_TO_STR("hex")));
+            } else if(node->type == ASTNodeType_UnicodeStringLitExpression) {
+                pushWord(r, wordText(LIT_TO_STR("unicode")));
+            }
+            pushWord(r, wordText(LIT_TO_STR("\"")));
+            for(u32 i = 0; i < expression->values.count; i++) {
+                TokenId literal = listGetTokenId(&expression->values, i);
+                pushTokenWord(r, literal);
+            }
+            pushWord(r, wordText(LIT_TO_STR("\"")));
+        } break;
+        case ASTNodeType_BoolLitExpression: {
+            pushTokenWord(r, node->boolLitExpressionNode.value);
+        } break;
+        case ASTNodeType_IdentifierPath:
+        case ASTNodeType_ArrayType:
+        case ASTNodeType_MappingType: {
+            pushTypeDocument(r, node);
+        } break;
+        case ASTNodeType_IdentifierExpression: {
+            pushTokenWord(r, node->identifierExpressionNode.value);
+        } break;
+        case ASTNodeType_BinaryExpression: {
+            pushExpressionDocument(r, node->binaryExpressionNode.left);
+            pushWord(r, wordSpace());
+
+            // TODO(radomski): Use the token
+            pushWord(r, wordText(tokenTypeToString(node->binaryExpressionNode.operator)));
+            pushWord(r, wordLine());
+
+            pushExpressionDocument(r, node->binaryExpressionNode.right);
+        } break;
+        case ASTNodeType_TupleExpression: {
+            assert(stringMatch(LIT_TO_STR("("), r->tokens.tokenStrings[node->startToken]));
+            assert(stringMatch(LIT_TO_STR(")"), r->tokens.tokenStrings[node->endToken]));
+
+            ASTNodeTupleExpression *tuple = &node->tupleExpressionNode;
+
+            pushTokenWord(r, node->startToken);
+            ASTNodeLink *element = tuple->elements.head;
+            for(u32 i = 0; i < tuple->elements.count; i++, element = element->next) {
+                if(element->node.type != ASTNodeType_None) {
+                    pushExpressionDocument(r, &element->node);
+                }
+
+                if(i < tuple->elements.count - 1) {
+                    assert(stringMatch(LIT_TO_STR(","), r->tokens.tokenStrings[element->node.endToken + 1]));
+                    pushTokenWord(r, element->node.endToken + 1);
+                    pushWord(r, wordLine());
+                }
+            }
+            pushTokenWord(r, node->endToken);
+        } break;
+        case ASTNodeType_UnaryExpression: {
+            pushTokenWord(r, node->startToken);
+            pushExpressionDocument(r, node->unaryExpressionNode.subExpression);
+
+            assert(stringMatch(tokenTypeToString(node->unaryExpressionNode.operator), getTokenString(r->tokens, node->startToken)));
+        } break;
+        case ASTNodeType_UnaryExpressionPostfix: {
+            pushExpressionDocument(r, node->unaryExpressionNode.subExpression);
+            pushTokenWord(r, node->endToken);
+            assert(stringMatch(tokenTypeToString(node->unaryExpressionNode.operator), getTokenString(r->tokens, node->endToken)));
+        } break;
+        case ASTNodeType_NewExpression: {
+            // assert(stringMatch(LIT_TO_STR("new"), r->tokens.tokenStrings[node->startToken]));
+            // renderToken(r, node->startToken, SPACE);
+            // renderType(r, node->newExpressionNode.typeName, connect);
+            assert(false);
+        } break;
+        case ASTNodeType_FunctionCallExpression: {
+            ASTNodeFunctionCallExpression *function = &node->functionCallExpressionNode;
+
+            pushExpressionDocument(r, function->expression);
+            pushCallArgumentListDocument(r, function->expression->endToken + 1, &function->argumentsExpression, &function->argumentsName);
+        } break;
+        case ASTNodeType_BaseType: {
+            pushTokenWord(r, node->baseTypeNode.typeName);
+        } break;
+        case ASTNodeType_MemberAccessExpression: {
+            ASTNodeMemberAccessExpression *member = &node->memberAccessExpressionNode;
+            pushExpressionDocument(r, member->expression);
+            pushTokenWord(r, member->memberName - 1);
+            pushTokenWord(r, member->memberName);
+        } break;
+        case ASTNodeType_ArrayAccessExpression: {
+            ASTNodeArrayAccessExpression *array = &node->arrayAccessExpressionNode;
+            assert(stringMatch(LIT_TO_STR("["), r->tokens.tokenStrings[array->expression->endToken + 1]));
+            assert(stringMatch(LIT_TO_STR("]"), r->tokens.tokenStrings[node->endToken]));
+
+            pushExpressionDocument(r, array->expression);
+            pushTokenWord(r, array->expression->endToken + 1);
+            if(array->indexExpression != 0x0) {
+                pushExpressionDocument(r, array->indexExpression);
+            }
+            pushTokenWord(r, node->endToken);
+        } break;
+        case ASTNodeType_ArraySliceExpression: {
+            // ASTNodeArraySliceExpression *array = &node->arraySliceExpressionNode;
+            // renderExpression(r, array->expression, NONE);
+            // renderTokenChecked(r, array->expression->endToken + 1, LIT_TO_STR("["), NONE);
+            // if(array->leftFenceExpression != 0x0) {
+            //     renderExpression(r, array->leftFenceExpression, NONE);
+            //     renderTokenChecked(r, array->leftFenceExpression->endToken + 1, LIT_TO_STR(":"), NONE);
+            // } else {
+            //     renderTokenChecked(r, array->expression->endToken + 2, LIT_TO_STR(":"), NONE);
+            // }
+            // if(array->rightFenceExpression != 0x0) {
+            //     renderExpression(r, array->rightFenceExpression, NONE);
+            // }
+            // renderTokenChecked(r, node->endToken, LIT_TO_STR("]"), connect);
+            assert(false);
+        } break;
+        case ASTNodeType_InlineArrayExpression: {
+            // ASTNodeInlineArrayExpression *array = &node->inlineArrayExpressionNode;
+
+            // renderTokenChecked(r, node->startToken, LIT_TO_STR("["), NONE);
+            // ASTNodeLink *expression = array->expressions.head;
+            // for(u32 i = 0; i < array->expressions.count; i++, expression = expression->next) {
+            //     ConnectType connect = i == array->expressions.count - 1 ? NONE : COMMA_SPACE;
+            //     renderExpression(r, &expression->node, connect);
+            // }
+            // renderTokenChecked(r, node->endToken, LIT_TO_STR("]"), connect);
+            assert(false);
+        } break;
+        case ASTNodeType_TerneryExpression: {
+            // ASTNodeTerneryExpression *ternery = &node->terneryExpressionNode;
+            // renderExpression(r, ternery->condition, SPACE);
+            // renderTokenChecked(r, ternery->condition->endToken + 1, LIT_TO_STR("?"), SPACE);
+            // renderExpression(r, ternery->trueExpression, SPACE);
+            // renderTokenChecked(r, ternery->trueExpression->endToken + 1, LIT_TO_STR(":"), SPACE);
+            // renderExpression(r, ternery->falseExpression, connect);
+            assert(false);
+        } break;
+        case ASTNodeType_NamedParameterExpression: {
+            // assert(stringMatch(LIT_TO_STR("{"), r->tokens.tokenStrings[named->expression->endToken + 1]));
+            // assert(stringMatch(LIT_TO_STR("}"), r->tokens.tokenStrings[node->endToken]));
+
+            // ASTNodeNamedParametersExpression *named = &node->namedParametersExpressionNode;
+            // renderExpression(r, named->expression, NONE);
+
+            // renderToken(r, named->expression->endToken + 1, SPACE);
+            // ASTNodeLink *expression = named->expressions.head;
+            // for(u32 i = 0; i < named->expressions.count; i++, expression = expression->next) {
+            //     ConnectType connect = i == named->expressions.count - 1 ? SPACE : COMMA_SPACE;
+            //     renderToken(r, listGetTokenId(&named->names, i), COLON_SPACE);
+            //     renderExpression(r, &expression->node, connect);
+            // }
+            // renderToken(r, node->endToken, connect);
             assert(false);
         } break;
         default: {
@@ -1980,11 +2203,35 @@ renderMember(Render *r, ASTNode *member) {
         } break;
         case ASTNodeType_ConstVariable: {
             ASTNodeConstVariable *constNode = &member->constVariableNode;
-            renderType(r, constNode->type, SPACE);
-            renderTokenChecked(r, constNode->identifier - 1, LIT_TO_STR("constant"), SPACE);
-            renderToken(r, constNode->identifier, SPACE);
-            renderTokenChecked(r, constNode->identifier + 1, LIT_TO_STR("="), SPACE);
-            renderExpression(r, constNode->expression, SEMICOLON);
+            assert(stringMatch(LIT_TO_STR("constant"), r->tokens.tokenStrings[constNode->identifier - 1]));
+            assert(stringMatch(LIT_TO_STR("="), r->tokens.tokenStrings[constNode->identifier + 1]));
+
+            //renderType(r, constNode->type, SPACE);
+            //renderToken(r, constNode->identifier - 1, SPACE);
+            //renderToken(r, constNode->identifier, SPACE);
+            //renderToken(r, constNode->identifier + 1, SPACE);
+            //renderExpression(r, constNode->expression, SEMICOLON);
+
+            pushGroup(r);
+            pushTypeDocument(r, constNode->type);
+            pushWord(r, wordSpace());
+
+            pushTokenWord(r, constNode->identifier - 1);
+            pushWord(r, wordSpace());
+            pushTokenWord(r, constNode->identifier);
+            pushWord(r, wordSpace());
+            pushTokenWord(r, constNode->identifier + 1);
+            pushWord(r, wordSpace());
+
+            pushExpressionDocument(r, constNode->expression);
+            pushTokenWord(r, member->endToken);
+
+            trimGroupRight(r); // TODO(radomski): Remove
+
+            popGroup(r);
+            pushWord(r, wordHardline());
+
+            renderDocument(r);
         } break;
         case ASTNodeType_StateVariableDeclaration: {
             ASTNodeConstVariable *decl = &member->constVariableNode;
