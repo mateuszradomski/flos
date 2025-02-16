@@ -1296,7 +1296,10 @@ pushExpressionDocument(Render *r, ASTNode *node) {
 
             ASTNodeTupleExpression *tuple = &node->tupleExpressionNode;
 
+            pushGroup(r);
+
             pushTokenWord(r, node->startToken);
+            pushNest(r);
             ASTNodeLink *element = tuple->elements.head;
             for(u32 i = 0; i < tuple->elements.count; i++, element = element->next) {
                 if(element->node.type != ASTNodeType_None) {
@@ -1309,7 +1312,9 @@ pushExpressionDocument(Render *r, ASTNode *node) {
                     pushWord(r, wordLine());
                 }
             }
+            popNest(r);
             pushTokenWord(r, node->endToken);
+            popGroup(r);
         } break;
         case ASTNodeType_UnaryExpression: {
             pushTokenWord(r, node->startToken);
@@ -2221,9 +2226,11 @@ renderMember(Render *r, ASTNode *member) {
             pushTokenWord(r, constNode->identifier);
             pushWord(r, wordSpace());
             pushTokenWord(r, constNode->identifier + 1);
-            pushWord(r, wordSpace());
+            pushWord(r, wordLine());
 
+            pushNest(r);
             pushExpressionDocument(r, constNode->expression);
+            popNest(r);
             pushTokenWord(r, member->endToken);
 
             trimGroupRight(r); // TODO(radomski): Remove
