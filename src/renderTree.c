@@ -481,15 +481,16 @@ renderGroup(Render *r, Word *words, s32 count, u32 group) {
 
     // Try fitting everything on one line
     u32 checkpoint = w->lineSize;
+    u32 writtenCheckpoint = w->size;
     u32 processed = processGroupWords(r, words, count, group, WordRenderLineType_Space);
 
     // If it fits, we're done
-    if (w->lineSize <= 120) {
+    if (w->size - writtenCheckpoint <= 120 - checkpoint) {
         return processed;
     }
 
     // Rollback and try with newlines
-    w->size -= (w->lineSize - checkpoint);
+    w->size = writtenCheckpoint;
     w->lineSize = checkpoint;
     
     return processGroupWords(r, words, count, group, WordRenderLineType_Newline);
@@ -666,14 +667,14 @@ parseCommentsIntoWords(Render *r, u32 startOffset, u32 endOffset) {
                         pushWord(r, wordHardline());
                         pushWord(r, wordHardline());
                     } else if(preceedingNewlines > 0) {
-                        // pushWord(r, wordHardline());
+                        pushWord(r, wordHardline());
                     } else if(cursor == 0) {
                         pushWord(r, wordSpace());
                     } else if(commentType != CommentType_SingleLine) {
                         pushWord(r, wordSpace());
                     }
 
-                    cursor = commentEnd;
+                    cursor = commentEnd + 1;
                     i = cursor - 1;
 
                     // Write comment out
@@ -712,8 +713,7 @@ parseCommentsIntoWords(Render *r, u32 startOffset, u32 endOffset) {
         }
 
         if(cursor != 0 && preceedingNewlines >= 2) {
-            assert(false);
-            finishLine(r->writer);
+            pushWord(r, wordHardline());
         } 
     }
 }
@@ -1904,9 +1904,10 @@ renderMember(Render *r, ASTNode *member) {
             popNestWithLastWord(r);
 
             pushTokenWord(r, member->endToken - 1);
-            pushTokenWord(r, member->endToken);
-
             popGroup(r);
+            pushTokenWord(r, member->endToken);
+            trimGroupRight(r); // TODO(radomski): Remove
+
             pushWord(r, wordHardline());
             renderDocument(r);
         } break;
@@ -1914,24 +1915,48 @@ renderMember(Render *r, ASTNode *member) {
             assert(stringMatch(LIT_TO_STR("event"), r->tokens.tokenStrings[member->startToken]));
             assert(stringMatch(LIT_TO_STR("("), r->tokens.tokenStrings[member->startToken + 2]));
 
-            renderToken(r, member->startToken, SPACE);
             ASTNodeEvent *event = &member->eventNode;
-            renderToken(r, event->identifier, NONE);
-            renderToken(r, member->startToken + 2, NONE);
+            pushGroup(r);
 
-            pushIndent(r->writer);
-            renderParameters(r, &member->eventNode.parameters, COMMA_SPACE, 0);
-            popIndent(r->writer);
+            pushTokenWord(r, member->startToken);
+            pushWord(r, wordSpace());
+            pushTokenWord(r, event->identifier);
+            pushTokenWord(r, member->startToken + 2);
 
-            u32 startToken = member->startToken + 3;
-            if(member->eventNode.parameters.count > 0) {
-                startToken = member->eventNode.parameters.last->node.endToken + 1;
+            pushNest(r);
+            pushWord(r, wordSoftline());
+            ASTNodeLink *it = member->errorNode.parameters.head;
+            for(u32 i = 0; i < member->errorNode.parameters.count; i++, it = it->next) {
+                ASTNodeVariableDeclaration *decl = &it->node.variableDeclarationNode;
+
+                pushTypeDocument(r, decl->type);
+
+                if(decl->dataLocation != INVALID_TOKEN_ID) {
+                    pushWord(r, wordSpace());
+                    pushTokenWord(r, decl->dataLocation);
+                }
+
+                if(decl->name != INVALID_TOKEN_ID) {
+                    pushWord(r, wordSpace());
+                    pushTokenWord(r, decl->name);
+                }
+
+                if(i != member->errorNode.parameters.count - 1) {
+                    pushTokenWord(r, it->next->node.variableDeclarationNode.type->startToken - 1);
+                    pushWord(r, wordLine());
+                }
             }
+            pushWord(r, wordSoftline());
+            popNestWithLastWord(r);
 
-            for(u32 token = startToken; token < member->endToken - 1; token++) {
-                renderToken(r, token, SPACE);
-            }
-            renderToken(r, member->endToken - 1, SEMICOLON);
+            pushTokenWord(r, member->endToken - 1);
+            popGroup(r);
+            pushTokenWord(r, member->endToken);
+            trimGroupRight(r); // TODO(radomski): Remove
+
+            pushWord(r, wordHardline());
+            renderDocument(r);
+
         } break;
         case ASTNodeType_Typedef: {
             ASTNodeTypedef *typedefNode = &member->typedefNode;

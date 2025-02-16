@@ -96,7 +96,7 @@ UTEST_F_TEARDOWN(SolFmtFixture) {
     ASSERT_TRUE(stringMatch(result, data.output));
 
     String result2 = stringTrim(format(&arena, result));
-    ASSERT_TRUE(stringMatch(result2, result));
+    ASSERT_TRUE_MSG(stringMatch(result2, result), "Formatting is not stable");
     arenaDestroy(&arena);
 }
 
