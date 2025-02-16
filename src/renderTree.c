@@ -2222,8 +2222,10 @@ renderMember(Render *r, ASTNode *member) {
             pushTokenWord(r, constNode->identifier + 1);
             pushWord(r, wordLine());
 
+            pushGroup(r);
             pushNest(r);
             pushExpressionDocument(r, constNode->expression);
+            popGroup(r);
             popNest(r);
             pushTokenWord(r, member->endToken);
 
