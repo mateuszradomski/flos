@@ -2211,12 +2211,6 @@ renderMember(Render *r, ASTNode *member) {
             assert(stringMatch(LIT_TO_STR("constant"), r->tokens.tokenStrings[constNode->identifier - 1]));
             assert(stringMatch(LIT_TO_STR("="), r->tokens.tokenStrings[constNode->identifier + 1]));
 
-            //renderType(r, constNode->type, SPACE);
-            //renderToken(r, constNode->identifier - 1, SPACE);
-            //renderToken(r, constNode->identifier, SPACE);
-            //renderToken(r, constNode->identifier + 1, SPACE);
-            //renderExpression(r, constNode->expression, SEMICOLON);
-
             pushGroup(r);
             pushTypeDocument(r, constNode->type);
             pushWord(r, wordSpace());
