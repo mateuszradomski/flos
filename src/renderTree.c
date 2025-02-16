@@ -712,10 +712,65 @@ parseCommentsIntoWords(Render *r, u32 startOffset, u32 endOffset) {
         }
 
         if(cursor != 0 && preceedingNewlines >= 2) {
+            assert(false);
             finishLine(r->writer);
         } 
     }
 }
+
+static void
+preserveHardlinesIntoDocument(Render *r, ASTNode *node) {
+    u32 tokenIndex = node->startToken;
+
+    u32 previousTokenIndex = tokenIndex == 0 ? 0 : tokenIndex - 1;
+    String previousToken = r->tokens.tokenStrings[previousTokenIndex];
+    String token = r->tokens.tokenStrings[tokenIndex];
+
+    String inBetween = {};
+    inBetween.data = previousToken.data + previousToken.size;
+    inBetween.size = token.data >= inBetween.data ? token.data - inBetween.data : 0;
+
+    for(u32 i = 0; inBetween.size > 0 && i < inBetween.size - 1; i++) {
+        if(inBetween.data[i] == '/' && inBetween.data[i + 1] == '/') {
+            return;
+        } else if(inBetween.data[i] == '/' && inBetween.data[i + 1] == '*') {
+            return;
+        }
+    }
+
+    u32 newlines = 0;
+    for(u32 i = 0; i < inBetween.size; i++) {
+        // TODO(radomski): I don't think that this is necessary
+        if(inBetween.data[i] == '/') {
+            assert(false);
+            if(i + 1 < inBetween.size) {
+                u32 isLineComment = inBetween.data[i + 1] == '/';
+                u32 isMultilineComment = inBetween.data[i + 1] == '*';
+                assert(isLineComment || isMultilineComment);
+                i += 2;
+
+                if(isLineComment) {
+                    for(; i < inBetween.size && inBetween.data[i] != '\n'; i++) { }
+                }
+
+                for(; i < inBetween.size - 1; i++) {
+                    if(inBetween.data[i] == '*' && inBetween.data[i + 1] == '/') {
+                        i += 2;
+                        break;
+                    }
+                }
+            }
+        }
+
+        newlines += inBetween.data[i] == '\n';
+        if(newlines == 2) {
+            pushWord(r, wordHardline());
+            return;
+        }
+    }
+}
+
+
 
 static void
 pushTokenWordImpl(Render *r, Word w, TokenId token) {
@@ -1774,17 +1829,39 @@ renderMember(Render *r, ASTNode *member) {
             renderDocument(r);
         } break;
         case ASTNodeType_Struct: {
-            renderToken(r, member->startToken, SPACE);
-            renderToken(r, member->structNode.nameTokenId, SPACE);
-            renderToken(r, member->startToken + 2, member->values.count > 0 ? NEWLINE : SPACE);
-
-            pushIndent(r->writer);
-            renderParameters(r, &member->structNode.members, SEMICOLON, 1);
-            popIndent(r->writer);
-
             assert(stringMatch(LIT_TO_STR("{"), r->tokens.tokenStrings[member->startToken + 2]));
             assert(stringMatch(LIT_TO_STR("}"), r->tokens.tokenStrings[member->endToken]));
-            renderToken(r, member->endToken, NEWLINE);
+
+            pushGroup(r);
+
+            pushTokenWord(r, member->startToken);
+            pushWord(r, wordSpace());
+            pushTokenWord(r, member->structNode.nameTokenId);
+            pushWord(r, wordSpace());
+            pushTokenWord(r, member->startToken + 2);
+            pushNest(r);
+            pushWord(r, wordLine());
+
+            ASTNodeListRanged *list = &member->structNode.members;
+            ASTNodeLink *it = list->head;
+            for(u32 i = 0; i < list->count; i++, it = it->next) {
+                ASTNodeVariableDeclaration *decl = &it->node.variableDeclarationNode;
+                preserveHardlinesIntoDocument(r, &it->node);
+
+                pushTypeDocument(r, decl->type);
+                pushWord(r, wordSpace());
+                pushTokenWord(r, decl->name);
+                pushTokenWord(r, decl->name + 1);
+                pushWord(r, wordHardline());
+            }
+
+            popNestWithLastWord(r);
+
+            pushTokenWord(r, member->endToken);
+
+            popGroup(r);
+            pushWord(r, wordHardline());
+            renderDocument(r);
         } break;
         case ASTNodeType_Error: {
             assert(stringMatch(LIT_TO_STR("error"), r->tokens.tokenStrings[member->startToken]));
