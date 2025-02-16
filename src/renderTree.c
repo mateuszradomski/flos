@@ -443,61 +443,56 @@ hasHardline(Word *words, u32 count, u32 group) {
         if (word->group < group) {
             break;
         }
-        if (word->type == WordType_Hardline) {
+        if (word->group == group && word->type == WordType_Hardline) {
             return true;
         }
-        // TODO(radomski): What to do if a subgroup has a newline?
-        // if (word->group > group) {
-        //     if (hasHardline(words + i, count - i, word->group)) {
-        //         return true;
-        //     }
-        // }
     }
     return false;
 }
 
-static void
+static u32 renderGroup(Render *r, Word *words, s32 count, u32 group);
+static u32 processGroupWords(Render *r, Word *words, s32 count, u32 group, WordRenderLineType lineType) {
+    u32 processed = 0;
+    for (u32 i = 0; i < (u32)count && words[i].group >= group;) {
+        Word *word = &words[i];
+        if (word->group > group) {
+            u32 sub_processed = renderGroup(r, words + i, count - i, word->group);
+            i += sub_processed;
+            processed += sub_processed;
+        } else {
+            renderDocumentWord(r, word, lineType);
+            i++;
+            processed++;
+        }
+    }
+    return processed;
+}
+
+static u32
 renderGroup(Render *r, Word *words, s32 count, u32 group) {
+    if (count <= 0) return 0;
+
     Writer *w = r->writer;
 
+    // Early exit for hardline groups
     if (hasHardline(words, count, group)) {
-        for (u32 i = 0; i < count && words[i].group >= group; i++) {
-            Word *word = &words[i];
-            if (word->group > group) {
-                renderGroup(r, words + i, count - i - 1, word->group);
-            } else {
-                renderDocumentWord(r, word, WordRenderLineType_Newline);
-            }
-        }
-        return;
+        return processGroupWords(r, words, count, group, WordRenderLineType_Newline);
     }
 
+    // Try fitting everything on one line
     u32 checkpoint = w->lineSize;
-    for(u32 i = 0; i < count && words[i].group >= group; i++) {
-        Word *word = &words[i];
+    u32 processed = processGroupWords(r, words, count, group, WordRenderLineType_Space);
 
-        if(word->group > group) {
-            renderGroup(r, words + i, count - i - 1, word->group);
-        } else {
-            renderDocumentWord(r, word, WordRenderLineType_Space);
-        }
+    // If it fits, we're done
+    if (w->lineSize <= 120) {
+        return processed;
     }
 
-    if(w->lineSize > 120) {
-        u32 diff = w->lineSize - checkpoint;
-        w->size -= diff;
-        w->lineSize -= diff;
-
-        for(u32 i = 0; i < count && words[i].group >= group; i++) {
-            Word *word = &words[i];
-
-            if(word->group > group) {
-                renderGroup(r, words + i, count - i - 1, word->group);
-            } else {
-                renderDocumentWord(r, word, WordRenderLineType_Newline);
-            }
-        }
-    }
+    // Rollback and try with newlines
+    w->size -= (w->lineSize - checkpoint);
+    w->lineSize = checkpoint;
+    
+    return processGroupWords(r, words, count, group, WordRenderLineType_Newline);
 }
 
 static void
@@ -533,12 +528,16 @@ renderDocumentWord(Render *r, Word *word, WordRenderLineType lineType) {
 
 static void
 renderDocument(Render *r) {
-    while(r->words[r->wordCount -1].type == WordType_Hardline) {
-        r->wordCount -= 1;
-    }
-
     renderGroup(r, r->words, r->wordCount, 0);
     r->wordCount = 0;
+}
+
+// TODO(radomski): This shouldn't really exist, I don't know how to handle this case yet
+static void
+trimGroupRight(Render *r) {
+    while(r->words[r->wordCount - 1].group == r->group && r->words[r->wordCount - 1].type == WordType_Hardline) {
+        r->wordCount -= 1;
+    }
 }
 
 static void
@@ -1596,6 +1595,7 @@ static void
 renderMember(Render *r, ASTNode *member) {
     switch(member->type) {
         case ASTNodeType_Pragma: {
+            pushGroup(r);
             pushTokenWord(r, member->startToken);
             pushWord(r, wordSpace());
             pushTokenWord(r, member->startToken + 1);
@@ -1613,13 +1613,15 @@ renderMember(Render *r, ASTNode *member) {
 
             pushWord(r, wordText(string));
             pushTokenWord(r, member->endToken);
+            popGroup(r);
+            pushWord(r, wordHardline());
 
             renderDocument(r);
-            finishLine(r->writer);
         } break;
         case ASTNodeType_Import: {
             assert(stringMatch(LIT_TO_STR("import"), r->tokens.tokenStrings[member->startToken]));
             
+            pushGroup(r);
             pushTokenWord(r, member->startToken);
             pushWord(r, wordSpace());
 
@@ -1671,13 +1673,16 @@ renderMember(Render *r, ASTNode *member) {
             }
 
             pushTokenWord(r, member->endToken);
+            popGroup(r);
+            pushWord(r, wordHardline());
+
             renderDocument(r);
-            finishLine(r->writer);
         } break;
         case ASTNodeType_Using: {
             assert(stringMatch(LIT_TO_STR("using"), r->tokens.tokenStrings[member->startToken]));
             ASTNodeUsing *using = &member->usingNode;
 
+            pushGroup(r);
             pushTokenWord(r, member->startToken);
             pushWord(r, wordSpace());
 
@@ -1730,10 +1735,13 @@ renderMember(Render *r, ASTNode *member) {
             }
 
             pushTokenWord(r, member->endToken);
+            popGroup(r);
+            pushWord(r, wordHardline());
+
             renderDocument(r);
-            finishLine(r->writer);
         } break;
         case ASTNodeType_EnumDefinition: {
+            pushGroup(r);
             pushTokenWord(r, member->startToken);
             pushWord(r, wordSpace());
             pushTokenWord(r, member->nameTokenId);
@@ -1760,9 +1768,10 @@ renderMember(Render *r, ASTNode *member) {
             popNestWithLastWord(r);
 
             pushTokenWord(r, member->endToken);
+            popGroup(r);
+            pushWord(r, wordHardline());
 
             renderDocument(r);
-            finishLine(r->writer);
         } break;
         case ASTNodeType_Struct: {
             renderToken(r, member->startToken, SPACE);
@@ -1817,6 +1826,7 @@ renderMember(Render *r, ASTNode *member) {
         case ASTNodeType_Typedef: {
             ASTNodeTypedef *typedefNode = &member->typedefNode;
 
+            pushGroup(r);
             pushTokenWord(r, member->startToken);
             pushWord(r, wordSpace());
             pushTokenWord(r, typedefNode->identifier);
@@ -1826,8 +1836,12 @@ renderMember(Render *r, ASTNode *member) {
             pushTypeDocument(r, typedefNode->type);
             pushTokenWord(r, member->endToken);
 
+            trimGroupRight(r); // TODO(radomski): Remove
+
+            popGroup(r);
+            pushWord(r, wordHardline());
+
             renderDocument(r);
-            finishLine(r->writer);
         } break;
         case ASTNodeType_ConstVariable: {
             ASTNodeConstVariable *constNode = &member->constVariableNode;
