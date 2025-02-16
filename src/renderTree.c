@@ -1865,25 +1865,58 @@ renderMember(Render *r, ASTNode *member) {
         } break;
         case ASTNodeType_Error: {
             assert(stringMatch(LIT_TO_STR("error"), r->tokens.tokenStrings[member->startToken]));
-            renderToken(r, member->startToken, SPACE);
-            ASTNodeEvent *event = &member->eventNode;
-            renderToken(r, event->identifier, NONE);
-            assert(stringMatch(LIT_TO_STR("("), r->tokens.tokenStrings[member->startToken + 2]));
-            renderToken(r, member->startToken + 2, NONE);
-
-            pushIndent(r->writer);
-            renderParameters(r, &member->errorNode.parameters, COMMA_SPACE, 0);
-            popIndent(r->writer);
-
             assert(stringMatch(LIT_TO_STR(")"), r->tokens.tokenStrings[member->endToken - 1]));
-            renderToken(r, member->endToken - 1, SEMICOLON);
+            assert(stringMatch(LIT_TO_STR("("), r->tokens.tokenStrings[member->startToken + 2]));
+
+            ASTNodeEvent *event = &member->eventNode;
+
+            pushGroup(r);
+
+            pushTokenWord(r, member->startToken);
+            pushWord(r, wordSpace());
+            pushTokenWord(r, event->identifier);
+            pushTokenWord(r, member->startToken + 2);
+
+            pushNest(r);
+            pushWord(r, wordSoftline());
+            ASTNodeLink *it = member->errorNode.parameters.head;
+            for(u32 i = 0; i < member->errorNode.parameters.count; i++, it = it->next) {
+                ASTNodeVariableDeclaration *decl = &it->node.variableDeclarationNode;
+
+                pushTypeDocument(r, decl->type);
+
+                if(decl->dataLocation != INVALID_TOKEN_ID) {
+                    pushWord(r, wordSpace());
+                    pushTokenWord(r, decl->dataLocation);
+                }
+
+                if(decl->name != INVALID_TOKEN_ID) {
+                    pushWord(r, wordSpace());
+                    pushTokenWord(r, decl->name);
+                }
+
+                if(i != member->errorNode.parameters.count - 1) {
+                    pushTokenWord(r, it->next->node.variableDeclarationNode.type->startToken - 1);
+                    pushWord(r, wordLine());
+                }
+            }
+            pushWord(r, wordSoftline());
+            popNestWithLastWord(r);
+
+            pushTokenWord(r, member->endToken - 1);
+            pushTokenWord(r, member->endToken);
+
+            popGroup(r);
+            pushWord(r, wordHardline());
+            renderDocument(r);
         } break;
         case ASTNodeType_Event: {
             assert(stringMatch(LIT_TO_STR("event"), r->tokens.tokenStrings[member->startToken]));
+            assert(stringMatch(LIT_TO_STR("("), r->tokens.tokenStrings[member->startToken + 2]));
+
             renderToken(r, member->startToken, SPACE);
             ASTNodeEvent *event = &member->eventNode;
             renderToken(r, event->identifier, NONE);
-            assert(stringMatch(LIT_TO_STR("("), r->tokens.tokenStrings[member->startToken + 2]));
             renderToken(r, member->startToken + 2, NONE);
 
             pushIndent(r->writer);
