@@ -127,5 +127,6 @@ UTEST_F(SolFmtFixture, using) { utest_fixture->path = "tests/using.sol"; }
 UTEST_F(SolFmtFixture, typedefs) { utest_fixture->path = "tests/typedef.sol"; }
 UTEST_F(SolFmtFixture, constVar) { utest_fixture->path = "tests/constVar.sol"; }
 UTEST_F(SolFmtFixture, constVarBreaking) { utest_fixture->path = "tests/constVarBreaking.sol"; }
+UTEST_F(SolFmtFixture, arrays) { utest_fixture->path = "tests/arrays.sol"; }
 
 UTEST_MAIN();

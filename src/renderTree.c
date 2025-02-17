@@ -1490,6 +1490,14 @@ pushExpressionDocument(Render *r, ASTNode *node) {
     }
 }
 
+static Word
+expressionLinkWord(Render *r, ASTNode *node) {
+    switch(node->type){
+        case ASTNodeType_InlineArrayExpression: return wordSpace();
+        default: return wordLine();
+    }
+}
+
 static void
 renderVariableDeclaration(Render *r, ASTNode *node, ConnectType connect) {
     ASTNodeVariableDeclaration *decl = &node->variableDeclarationNode;
@@ -2308,7 +2316,7 @@ renderMember(Render *r, ASTNode *member) {
             pushTokenWord(r, constNode->identifier);
             pushWord(r, wordSpace());
             pushTokenWord(r, constNode->identifier + 1);
-            pushWord(r, wordLine());
+            pushWord(r, expressionLinkWord(r, constNode->expression));
 
             pushGroup(r);
             pushNest(r);
@@ -2347,7 +2355,7 @@ renderMember(Render *r, ASTNode *member) {
                 assert(stringMatch(LIT_TO_STR("="), r->tokens.tokenStrings[decl->identifier + 1]));
                 pushWord(r, wordSpace());
                 pushTokenWord(r, decl->identifier + 1);
-                pushWord(r, wordLine());
+                pushWord(r, expressionLinkWord(r, decl->expression));
 
                 pushGroup(r);
                 pushExpressionDocument(r, decl->expression);
