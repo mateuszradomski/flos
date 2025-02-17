@@ -131,5 +131,6 @@ UTEST_F(SolFmtFixture, arrays) { utest_fixture->path = "tests/arrays.sol"; }
 UTEST_F(SolFmtFixture, inbox) { utest_fixture->path = "tests/inbox.sol"; }
 UTEST_F(SolFmtFixture, libraries) { utest_fixture->path = "tests/libraries.sol"; }
 UTEST_F(SolFmtFixture, ownable) { utest_fixture->path = "tests/ownable.sol"; }
+UTEST_F(SolFmtFixture, styleGuideMappings) { utest_fixture->path = "tests/styleGuideMappings.sol"; }
 
 UTEST_MAIN();
