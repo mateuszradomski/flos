@@ -450,13 +450,67 @@ hasHardline(Word *words, u32 count, u32 group) {
     return false;
 }
 
+static bool
+fits(Render *r, Word *words, s32 count, u32 group, u32 remainingWidth) {
+    u32 width = 0;
+    for (u32 i = 0; i < count && words[i].group >= group; i++) {
+        Word *word = &words[i];
+        if (word->group < group) {
+            break;
+        }
+
+        if (word->group > group) {
+            u32 nested_start_width = width;
+            if (!fits(r, words + i, count - i, group + 1, remainingWidth - width)) {
+                return false;
+            }
+            // Calculate minimum width taken by nested group
+            u32 nested_min_width = 0;
+            u32 nested_group_words = 0;
+            for (u32 j = i; j < count && words[j].group > group; ++j) {
+                if (words[j].type == WordType_Text) {
+                    nested_min_width += words[j].text.size;
+                } else if (words[j].type == WordType_Space || words[j].type == WordType_Line) {
+                    nested_min_width += 1;
+                }
+                nested_group_words++;
+            }
+            width += nested_min_width;
+            if (width > remainingWidth) {
+                return false;
+            }
+            i += nested_group_words - 1;
+            continue;
+        }
+
+        switch (word->type) {
+            case WordType_Text: {
+                width += word->text.size;
+            } break;
+            case WordType_Space:
+            case WordType_Line:
+            {
+                width += 1;
+            } break;
+            case WordType_Hardline: {
+                return false;
+            } break;
+            default: break;
+        }
+        if (width > remainingWidth) {
+            return false;
+        }
+    }
+    return true;
+}
+
 static u32 renderGroup(Render *r, Word *words, s32 count, u32 group);
 static u32 processGroupWords(Render *r, Word *words, s32 count, u32 group, WordRenderLineType lineType) {
     u32 processed = 0;
     for (u32 i = 0; i < (u32)count && words[i].group >= group;) {
         Word *word = &words[i];
         if (word->group > group) {
-            u32 sub_processed = renderGroup(r, words + i, count - i, word->group);
+            u32 sub_processed = renderGroup(r, words + i, count - i, group + 1);
             i += sub_processed;
             processed += sub_processed;
         } else {
@@ -480,18 +534,16 @@ renderGroup(Render *r, Word *words, s32 count, u32 group) {
     }
 
     // Try fitting everything on one line
-    u32 checkpoint = w->lineSize;
-    u32 writtenCheckpoint = w->size;
-    u32 processed = processGroupWords(r, words, count, group, WordRenderLineType_Space);
+    u32 baseLineSize = w->lineSize;
+    u32 baseWritten = w->size;
 
-    // If it fits, we're done
-    if (w->size - writtenCheckpoint <= 120 - checkpoint) {
-        return processed;
+    u32 remainingWidth = 120 - w->lineSize;
+    if (fits(r, words, count, group, remainingWidth)) {
+        return processGroupWords(r, words, count, group, WordRenderLineType_Space);
     }
 
-    // Rollback and try with newlines
-    w->size = writtenCheckpoint;
-    w->lineSize = checkpoint;
+    w->size = baseWritten;
+    w->lineSize = baseLineSize;
     
     return processGroupWords(r, words, count, group, WordRenderLineType_Newline);
 }
@@ -1304,7 +1356,6 @@ pushExpressionDocument(Render *r, ASTNode *node) {
             ASTNodeTupleExpression *tuple = &node->tupleExpressionNode;
 
             pushGroup(r);
-
             pushTokenWord(r, node->startToken);
             pushNest(r);
             ASTNodeLink *element = tuple->elements.head;
@@ -1384,16 +1435,28 @@ pushExpressionDocument(Render *r, ASTNode *node) {
             assert(false);
         } break;
         case ASTNodeType_InlineArrayExpression: {
-            // ASTNodeInlineArrayExpression *array = &node->inlineArrayExpressionNode;
+            ASTNodeInlineArrayExpression *array = &node->inlineArrayExpressionNode;
+            assert(stringMatch(LIT_TO_STR("["), r->tokens.tokenStrings[node->startToken]));
+            assert(stringMatch(LIT_TO_STR("]"), r->tokens.tokenStrings[node->endToken]));
 
-            // renderTokenChecked(r, node->startToken, LIT_TO_STR("["), NONE);
-            // ASTNodeLink *expression = array->expressions.head;
-            // for(u32 i = 0; i < array->expressions.count; i++, expression = expression->next) {
-            //     ConnectType connect = i == array->expressions.count - 1 ? NONE : COMMA_SPACE;
-            //     renderExpression(r, &expression->node, connect);
-            // }
-            // renderTokenChecked(r, node->endToken, LIT_TO_STR("]"), connect);
-            assert(false);
+            pushGroup(r);
+            pushTokenWord(r, node->startToken);
+            pushWord(r, wordSoftline());
+            pushNest(r);
+
+            ASTNodeLink *expression = array->expressions.head;
+            for(u32 i = 0; i < array->expressions.count; i++, expression = expression->next) {
+                pushExpressionDocument(r, &expression->node);
+                if(i < array->expressions.count - 1) {
+                    assert(stringMatch(LIT_TO_STR(","), r->tokens.tokenStrings[expression->node.endToken + 1]));
+                    pushTokenWord(r, expression->node.endToken + 1);
+                }
+                pushWord(r, wordLine());
+            }
+
+            popNest(r);
+            pushTokenWord(r, node->endToken);
+            popGroup(r);
         } break;
         case ASTNodeType_TerneryExpression: {
             // ASTNodeTerneryExpression *ternery = &node->terneryExpressionNode;
@@ -2287,10 +2350,8 @@ renderMember(Render *r, ASTNode *member) {
                 pushWord(r, wordLine());
 
                 pushGroup(r);
-                pushNest(r);
                 pushExpressionDocument(r, decl->expression);
                 popGroup(r);
-                popNest(r);
             }
 
             pushTokenWordOnly(r, member->endToken);
