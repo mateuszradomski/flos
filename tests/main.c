@@ -1,10 +1,155 @@
 #include "utest.h"
 #include "format.c"
 
+#include <sys/ioctl.h>
+#include <unistd.h>
+
+#define ANSI_RED   "\x1b[31m"
+#define ANSI_GREEN "\x1b[32m"
+#define ANSI_RESET "\x1b[0m"
+
+typedef unsigned long long u64;
+
+static u64
+consoleWidth() {
+    struct winsize w;
+    ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
+    return w.ws_col;
+}
+
 typedef struct TestData {
   String input;
   String output;
 } TestData;
+
+typedef struct DiffIterator {
+    String *leftLines;
+    u32 leftLineCount;
+    String *rightLines;
+    u32 rightLineCount;
+    String *commonLines;
+    u32 commonLineCount;
+
+    u32 i, j, commonLineIndex;
+} DiffIterator;
+
+typedef struct DiffResult {
+    String left;
+    String right;
+} DiffResult;
+
+static bool
+validDiff(DiffResult r) {
+    return r.left.data != 0x0 || r.right.data != 0x0;
+}
+
+static u64
+flatIndex(u64 x, u64 y, u64 width) {
+    return y * width + x;
+}
+
+static DiffIterator
+diffStrings(Arena *arena, String before, String after) {
+    u32 leftLineCount = 0;
+    for(u64 i = 0; i < before.size; i++) {
+        leftLineCount += before.data[i] == '\n';
+    }
+
+    u32 rightLineCount = 0;
+    for(u64 i = 0; i < after.size; i++) {
+        rightLineCount += after.data[i] == '\n';
+    }
+
+    u16 *distances = arrayPush(arena, u16, (rightLineCount + 1) * (leftLineCount + 1));
+    String *leftLines = arrayPush(arena, String, leftLineCount);
+    String *rightLines = arrayPush(arena, String, rightLineCount);
+
+    u32 dWidth = leftLineCount + 1;
+    distances[flatIndex(0, 0, dWidth)] = 0;
+    distances[flatIndex(0, 1, dWidth)] = 0;
+    distances[flatIndex(1, 0, dWidth)] = 0;
+
+    SplitIterator leftLineIt = stringSplit(before, '\n');
+    for(u32 i = 0; i < leftLineCount; i++) {
+        String leftLine = stringNextInSplit(&leftLineIt);
+        assert(leftLine.data != 0x0);
+        leftLines[i] = leftLine;
+
+        SplitIterator rightLineIt = stringSplit(after, '\n');
+        for(u32 j = 0; j < rightLineCount; j++) {
+            String rightLine = stringNextInSplit(&rightLineIt);
+            assert(rightLine.data != 0x0);
+            rightLines[j] = rightLine;
+
+            u32 value = 0;
+            if(stringMatch(rightLine, leftLine)) {
+                value = 1 + distances[flatIndex(i, j, dWidth)];
+            } else {
+                value = MAX(distances[flatIndex(i + 1, j, dWidth)], distances[flatIndex(i, j + 1, dWidth)]);
+            }
+            distances[flatIndex(i + 1, j + 1, dWidth)] = value;
+        }
+    }
+
+    s32 index = distances[flatIndex(leftLineCount, rightLineCount, dWidth)];
+    u32 commonLineCount = index + 1;
+    String *commonLines = arrayPush(arena, String, commonLineCount);
+    for(u32 i = 0; i < index; i++) {
+        commonLines[i] = LIT_TO_STR("");
+    }
+
+    s32 i = leftLineCount;
+    s32 j = rightLineCount;
+    while(i > 0 && j > 0) {
+        if(stringMatch(leftLines[i - 1], rightLines[j - 1])) {
+            commonLines[--index] = leftLines[--i];
+            j -= 1;
+        } else if(distances[flatIndex(i - 1, j, dWidth)] > distances[flatIndex(i, j - 1, dWidth)]) {
+            i -= 1;
+        } else {
+            j -= 1;
+        }
+    }
+
+    return (DiffIterator){
+        .leftLines = leftLines,
+        .leftLineCount = leftLineCount,
+        .rightLines = rightLines,
+        .rightLineCount = rightLineCount,
+        .commonLines = commonLines,
+        .commonLineCount = commonLineCount,
+    };
+}
+
+static DiffResult
+diffNext(DiffIterator *it) {
+    DiffResult result = {};
+
+    for(; it->commonLineIndex < it->commonLineCount && !validDiff(result); it->commonLineIndex++) {
+        String commonLine = it->commonLines[it->commonLineIndex];
+
+        while(it->i < it->leftLineCount && !stringMatch(it->leftLines[it->i], commonLine)) {
+            String removedLine = it->leftLines[it->i++];
+
+            result.left.data = result.left.data == 0x0 ? removedLine.data : result.left.data;
+            result.left.size += removedLine.size + 1;
+        }
+
+        while(it->j < it->rightLineCount && !stringMatch(it->rightLines[it->j], commonLine)) {
+            String addedLine = it->rightLines[it->j++];
+
+            result.right.data = result.right.data == 0x0 ? addedLine.data : result.right.data;
+            result.right.size += addedLine.size + 1;
+        }
+
+        if(it->i < it->leftLineCount && it->j < it->rightLineCount) {
+            it->i++;
+            it->j++;
+        }
+    }
+
+    return result;
+}
 
 static TestData
 readTestInput(Arena *arena, char *path) {
@@ -45,39 +190,43 @@ readTestInput(Arena *arena, char *path) {
 }
 
 static void
-showDifferences(String result, String expected) {
-  SplitIterator resultIterator = stringSplit(result, '\n');
-  SplitIterator expectedIterator = stringSplit(expected, '\n');
+showDifferences(Arena *arena, String result, String expected) {
+    DiffIterator diffIt = diffStrings(arena, expected, result);
 
-  while(true) {
-    String resultLine = stringNextInSplit(&resultIterator);
-    String expectedLine = stringNextInSplit(&expectedIterator);
+    u32 width = consoleWidth();
+    u32 oddWidth = width % 2 == 1;
+    u32 dividerChars = 4 - oddWidth; 
+    u32 charsInPanel = (width - dividerChars) / 2;
 
-    if(resultLine.data == 0 && expectedLine.data == 0) {
-      break;
+    DiffResult diffResult = { 0 };
+    bool leading = false;
+    while(validDiff(diffResult = diffNext(&diffIt))) {
+        if(!leading) {
+            leading = true;
+            for(u32 i = 0; i < width; i++) { printf("-"); }
+        }
+
+        SplitIterator leftIt = stringSplit(diffResult.left, '\n');
+        SplitIterator rightIt = stringSplit(diffResult.right, '\n');
+        String left;
+        String right;
+
+        while((left = stringNextInSplit(&leftIt)).data != 0x0 | (right = stringNextInSplit(&rightIt)).data != 0x0) {
+            printf("[");
+            u32 stringSize = MIN(charsInPanel, left.size);
+            printf(ANSI_RED "%.*s" ANSI_RESET, stringSize, left.data);
+            for(u32 i = 0; i < charsInPanel - stringSize; i++) { printf(" "); }
+
+            printf((oddWidth ? "|" : "]["));
+
+            stringSize = MIN(charsInPanel, right.size);
+            printf(ANSI_GREEN "%.*s" ANSI_RESET, stringSize, right.data);
+            for(u32 i = 0; i < charsInPanel - stringSize; i++) { printf(" "); }
+            printf("]\n");
+        }
+
+        for(u32 i = 0; i < width; i++) { printf("-"); }
     }
-
-    if(resultLine.data == 0 && expectedLine.data != 0) {
-      printf("Result is shorter than expected\n");
-      break;
-    }
-
-    if(resultLine.data != 0 && expectedLine.data == 0) {
-      printf("Result is longer than expected\n");
-      break;
-    }
-
-    if(!stringMatch(resultLine, expectedLine)) {
-      printf("Result does not match expected on the following line:\n");
-      printf("Got:    [%.*s]\n", (int)resultLine.size, resultLine.data);
-      printf("Wanted: [%.*s]\n", (int)expectedLine.size, expectedLine.data);
-      break;
-    }
-  }
-}
-
-static void
-testGivenFile(char *path) {
 }
 
 struct SolFmtFixture{
@@ -92,7 +241,7 @@ UTEST_F_TEARDOWN(SolFmtFixture) {
 
     String result = stringTrim(format(&arena, data.input));
 
-    showDifferences(result, data.output);
+    showDifferences(&arena, result, data.output);
     ASSERT_TRUE(stringMatch(result, data.output));
 
     String result2 = stringTrim(format(&arena, result));
