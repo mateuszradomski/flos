@@ -614,6 +614,11 @@ popNest(Render *r) {
 }
 
 static void
+addNest(Render *r, s32 nest) {
+    r->nest += nest;
+}
+
+static void
 popNestWithLastWord(Render *r) {
     popNest(r);
     r->words[r->wordCount - 1].nest -= 1;
@@ -1495,10 +1500,18 @@ pushExpressionDocument(Render *r, ASTNode *node) {
 }
 
 static Word
-expressionLinkWord(Render *r, ASTNode *node) {
+expressionLinkWord(ASTNode *node) {
     switch(node->type){
         case ASTNodeType_InlineArrayExpression: return wordSpace();
         default: return wordLine();
+    }
+}
+
+static s32
+expressionNest(ASTNode *node) {
+    switch(node->type){
+        case ASTNodeType_InlineArrayExpression: return 0;
+        default: return 1;
     }
 }
 
@@ -2320,13 +2333,13 @@ renderMember(Render *r, ASTNode *member) {
             pushTokenWord(r, constNode->identifier);
             pushWord(r, wordSpace());
             pushTokenWord(r, constNode->identifier + 1);
-            pushWord(r, expressionLinkWord(r, constNode->expression));
+            pushWord(r, expressionLinkWord(constNode->expression));
 
             pushGroup(r);
-            pushNest(r);
+            addNest(r, expressionNest(constNode->expression));
             pushExpressionDocument(r, constNode->expression);
             popGroup(r);
-            popNest(r);
+            addNest(r, -expressionNest(constNode->expression));
 
             pushTokenWordOnly(r, member->endToken);
             popGroup(r);
@@ -2359,11 +2372,13 @@ renderMember(Render *r, ASTNode *member) {
                 assert(stringMatch(LIT_TO_STR("="), r->tokens.tokenStrings[decl->identifier + 1]));
                 pushWord(r, wordSpace());
                 pushTokenWord(r, decl->identifier + 1);
-                pushWord(r, expressionLinkWord(r, decl->expression));
+                pushWord(r, expressionLinkWord(decl->expression));
 
                 pushGroup(r);
+                addNest(r, expressionNest(decl->expression));
                 pushExpressionDocument(r, decl->expression);
                 popGroup(r);
+                addNest(r, -expressionNest(decl->expression));
             }
 
             pushTokenWordOnly(r, member->endToken);
