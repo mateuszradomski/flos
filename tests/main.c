@@ -191,6 +191,10 @@ readTestInput(Arena *arena, char *path) {
 
 static void
 showDifferences(Arena *arena, String result, String expected) {
+    if(stringMatch(result, expected)) {
+        return;
+    }
+
     DiffIterator diffIt = diffStrings(arena, expected, result);
 
     u32 width = consoleWidth();
