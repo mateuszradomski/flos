@@ -735,8 +735,11 @@ parseCommentsIntoWords(Render *r, u32 startOffset, u32 endOffset) {
                         pushWord(r, wordHardline());
                     } else if(commentType == CommentType_StarAligned) {
                         String line = { .data = comment.data, .size = 0 };
+                        u32 lineCount = 0;
                         for(u32 i = 0; i < comment.size; i++) {
                             if(comment.data[i] == '\n') {
+                                lineCount += 1;
+                                if(lineCount > 1) { pushWord(r, wordSpace()); }
                                 pushWord(r, wordText(stringTrim(line)));
                                 pushWord(r, wordHardline());
                                 line = (String){ .data = line.data + line.size + 1, .size = 0 };
@@ -746,6 +749,7 @@ parseCommentsIntoWords(Render *r, u32 startOffset, u32 endOffset) {
                         }
 
                         if(line.size > 0) {
+                            if(lineCount > 1) { pushWord(r, wordSpace()); }
                             pushWord(r, wordText(stringTrim(line)));
                         }
                     }
