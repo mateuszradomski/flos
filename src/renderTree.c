@@ -2393,8 +2393,9 @@ renderMember(Render *r, ASTNode *member) {
         case ASTNodeType_FallbackFunction:
         case ASTNodeType_ReceiveFunction:
         case ASTNodeType_FunctionDefinition: {
-            TokenId openParenToken = member->startToken + 1;
             ASTNodeFunctionDefinition *function = &member->functionDefinitionNode;
+
+            TokenId openParenToken = member->startToken + 1;
             if(member->type == ASTNodeType_FallbackFunction) {
                 assert(stringMatch(LIT_TO_STR("fallback"), r->tokens.tokenStrings[member->startToken]));
                 renderToken(r, member->startToken, SPACE);
@@ -2412,13 +2413,16 @@ renderMember(Render *r, ASTNode *member) {
                 }
             }
 
-            renderTokenChecked(r, openParenToken, LIT_TO_STR("("), NONE);
-            renderParameters(r, &member->functionDefinitionNode.parameters, COMMA_SPACE, 0);
-            if(member->functionDefinitionNode.parameters.count > 0) {
-                renderTokenChecked(r, member->functionDefinitionNode.parameters.last->node.endToken + 1, LIT_TO_STR(")"), SPACE);
-            } else {
-                renderTokenChecked(r, openParenToken + 1, LIT_TO_STR(")"), SPACE);
-            }
+            u32 closeParenToken = function->parameters.count > 0
+                ? function->parameters.last->node.endToken + 1
+                : openParenToken + 1;
+
+            renderToken(r, openParenToken, NONE);
+            renderParameters(r, &function->parameters, COMMA_SPACE, 0);
+            renderToken(r, closeParenToken, SPACE);
+
+            assert(stringMatch(LIT_TO_STR("("), r->tokens.tokenStrings[openParenToken]));
+            assert(stringMatch(LIT_TO_STR(")"), r->tokens.tokenStrings[closeParenToken]));
 
             if(function->visibility != INVALID_TOKEN_ID) {
                 renderToken(r, function->visibility, SPACE);
@@ -2433,10 +2437,14 @@ renderMember(Render *r, ASTNode *member) {
 
             renderOverrides(r, function->override, function->overrides);
             if(function->returnParameters) {
-                renderTokenChecked(r, function->returnParameters->startToken - 2, LIT_TO_STR("returns"), SPACE);
-                renderTokenChecked(r, function->returnParameters->startToken - 1, LIT_TO_STR("("), NONE);
+                assert(stringMatch(LIT_TO_STR("returns"), r->tokens.tokenStrings[function->returnParameters->startToken - 2]));
+                assert(stringMatch(LIT_TO_STR("("), r->tokens.tokenStrings[function->returnParameters->startToken - 1]));
+                assert(stringMatch(LIT_TO_STR(")"), r->tokens.tokenStrings[function->returnParameters->endToken + 1]));
+
+                renderToken(r, function->returnParameters->startToken - 2, SPACE);
+                renderToken(r, function->returnParameters->startToken - 1, NONE);
                 renderParameters(r, function->returnParameters, COMMA_SPACE, 0);
-                renderTokenChecked(r, function->returnParameters->endToken + 1, LIT_TO_STR(")"), SPACE);
+                renderToken(r, function->returnParameters->endToken + 1, SPACE);
             }
 
             renderModiferInvocations(r, function->modifiers);
