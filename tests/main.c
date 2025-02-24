@@ -7,6 +7,7 @@
 #define ANSI_RED   "\x1b[31m"
 #define ANSI_GREEN "\x1b[32m"
 #define ANSI_RESET "\x1b[0m"
+#define ANSI_GREY  "\x1b[90m"
 
 typedef unsigned long long u64;
 
@@ -34,6 +35,8 @@ typedef struct DiffIterator {
 } DiffIterator;
 
 typedef struct DiffResult {
+    String commonPrevious;
+    String commonNext;
     String left;
     String right;
 } DiffResult;
@@ -127,6 +130,7 @@ diffNext(DiffIterator *it) {
 
     for(; it->commonLineIndex < it->commonLineCount && !validDiff(result); it->commonLineIndex++) {
         String commonLine = it->commonLines[it->commonLineIndex];
+        result.commonNext = commonLine;
 
         while(it->i < it->leftLineCount && !stringMatch(it->leftLines[it->i], commonLine)) {
             String removedLine = it->leftLines[it->i++];
@@ -210,6 +214,10 @@ showDifferences(Arena *arena, String result, String expected) {
             for(u32 i = 0; i < width; i++) { printf("-"); }
         }
 
+        if(diffResult.commonPrevious.size > 0) {
+            printf(ANSI_GREY "%.*s\n" ANSI_RESET, (int)diffResult.commonPrevious.size, diffResult.commonPrevious.data);
+        }
+
         SplitIterator leftIt = stringSplit(diffResult.left, '\n');
         SplitIterator rightIt = stringSplit(diffResult.right, '\n');
         String left;
@@ -227,6 +235,10 @@ showDifferences(Arena *arena, String result, String expected) {
             printf(ANSI_GREEN "%.*s" ANSI_RESET, stringSize, right.data);
             for(u32 i = 0; i < charsInPanel - stringSize; i++) { printf(" "); }
             printf("]\n");
+        }
+
+        if(diffResult.commonNext.size > 0) {
+            printf(ANSI_GREY "%.*s\n" ANSI_RESET, (int)diffResult.commonNext.size, diffResult.commonNext.data);
         }
 
         for(u32 i = 0; i < width; i++) { printf("-"); }

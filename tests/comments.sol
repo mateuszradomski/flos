@@ -179,7 +179,7 @@ contract Comments2 {
 contract Comments3 is Interface1, Interface2, Interface3, Interface4, Interface5, Interface6 {
     // solhint-disable-previous-line no-empty-blocks
     function someFunction() { } /*1*/ /*2
-  */
+    */
 }
 
 contract Comments4 is Interface1, Interface2, Interface3, Interface4, Interface5, Interface6 {
@@ -202,7 +202,7 @@ contract Comments8 {
     function someFunction() {
         if(something) { }
         /* comment
-         * comment */
+        * comment */
         else { }
     }
 }
@@ -221,7 +221,7 @@ interface Comments10 {
     // the first value
     // the second value
     // the lats value
-    ) /* comment outside the parameters */external;
+    ) /* comment outside the parameters */ external;
 
     function someOtherFunction( /* checking for Block comment */) external;
 }
@@ -237,11 +237,14 @@ contract Comments11 {
 
 contract Comments12 {
     function f() public {
-        purchaseData[0] = DomainPurchaseData({
-        /* test */prices: _rootPrices,
-        // test2
-        subdomainMintingEnabled: /* test3 */_rootPrices.short > 0, allowSubdomainsToMint: true, // test4
-        wasAllowedToSubdomainMintOnCreation: true});
+        purchaseData[0] =
+        DomainPurchaseData({
+            /* test */ prices: _rootPrices,
+            // test2
+            subdomainMintingEnabled: /* test3 */ _rootPrices.short > 0,
+            allowSubdomainsToMint: true, // test4
+            wasAllowedToSubdomainMintOnCreation: true
+        });
     }
 }
 
@@ -263,7 +266,7 @@ contract Comments13 {
     param1 // comment 11
     // comment 12
     ) // comment 13
-        { }
+    { }
 }
 
 contract Comments14 {

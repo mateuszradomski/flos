@@ -45,7 +45,8 @@ contract CounterTest is Test {
 
     /**
      * @dev See {IERC165-supportsInterface}.
-     */function test_Increment() public {
+     */
+    function test_Increment() public {
         counter.increment();
         assertEq(counter.number(), 1);
     }
