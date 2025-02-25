@@ -2364,6 +2364,7 @@ pushMemberDocument(Render *r, ASTNode *member) {
             ASTNodeContractDefinition *contract = &member->contractDefinitionNode;
 
             pushGroup(r);
+            pushGroup(r);
             pushTokenWord(r, member->startToken);
             switch(member->type) {
                 case ASTNodeType_LibraryDefinition: {
@@ -2386,10 +2387,14 @@ pushMemberDocument(Render *r, ASTNode *member) {
 
             pushTokenWord(r, contract->name);
             pushWord(r, wordSpace());
+            popGroup(r);
+
             if(contract->baseContracts.count > 0) {
+                pushGroup(r);
+                pushNest(r);
                 assert(stringMatch(LIT_TO_STR("is"), r->tokens.tokenStrings[contract->name + 1]));
                 pushTokenWord(r, contract->name + 1);
-                pushWord(r, wordSpace());
+                pushWord(r, wordLine());
 
                 ASTNodeLink *baseContract = contract->baseContracts.head;
                 for(u32 i = 0; i < contract->baseContracts.count; i++, baseContract = baseContract->next) {
@@ -2398,18 +2403,21 @@ pushMemberDocument(Render *r, ASTNode *member) {
                         assert(stringMatch(LIT_TO_STR(","), r->tokens.tokenStrings[baseContract->node.endToken + 1]));
                         pushTokenWord(r, baseContract->node.endToken + 1);
                     }
-                    pushWord(r, wordSpace());
+                    pushWord(r, wordLine());
                 }
+                popNest(r);
+                popGroup(r);
             }
 
-            pushNest(r);
-
+            pushGroup(r);
             u32 openParenToken = contract->elements.count > 0
                 ? contract->elements.head->node.startToken - 1
                 : member->endToken - 1;
 
             assert(stringMatch(LIT_TO_STR("{"), r->tokens.tokenStrings[openParenToken]));
-            pushTokenWord(r, openParenToken);
+            pushTokenWordOnly(r, openParenToken);
+            pushNest(r);
+            pushCommentsAfterToken(r, openParenToken);
             pushWord(r, wordLine());
 
             ASTNodeLink *element = contract->elements.head;
@@ -2419,12 +2427,12 @@ pushMemberDocument(Render *r, ASTNode *member) {
                 }
                 pushMemberDocument(r, &element->node);
             }
-
             popNest(r);
-            popGroup(r);
 
             assert(stringMatch(LIT_TO_STR("}"), r->tokens.tokenStrings[member->endToken]));
             pushTokenWord(r, member->endToken);
+            popGroup(r);
+            popGroup(r);
             pushWord(r, wordHardline());
         } break;
         default: {

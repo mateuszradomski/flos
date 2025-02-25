@@ -308,5 +308,6 @@ UTEST_F(SolFmtFixture, styleGuideMappings) { utest_fixture->path = "tests/styleG
 UTEST_F(SolFmtFixture, binaryOperators) { utest_fixture->path = "tests/binaryOperators.sol"; }
 UTEST_F(SolFmtFixture, conditional) { utest_fixture->path = "tests/conditional.sol"; }
 UTEST_F(SolFmtFixture, constructors) { utest_fixture->path = "tests/constructors.sol"; }
+UTEST_F(SolFmtFixture, contractDefinition) { utest_fixture->path = "tests/contractDefinition.sol"; }
 
 UTEST_MAIN();
