@@ -197,6 +197,14 @@ static void
 showDifferences(Arena *arena, String result, String expected) {
     if(stringMatch(result, expected)) {
         return;
+    } else {
+        FILE *resultFile = fopen("result.sol", "wb");
+        fwrite(result.data, 1, result.size, resultFile);
+        fclose(resultFile);
+
+        FILE *expectedFile = fopen("expected.sol", "wb");
+        fwrite(expected.data, 1, expected.size, expectedFile);
+        fclose(expectedFile);
     }
 
     DiffIterator diffIt = diffStrings(arena, expected, result);
@@ -299,5 +307,6 @@ UTEST_F(SolFmtFixture, ownable) { utest_fixture->path = "tests/ownable.sol"; }
 UTEST_F(SolFmtFixture, styleGuideMappings) { utest_fixture->path = "tests/styleGuideMappings.sol"; }
 UTEST_F(SolFmtFixture, binaryOperators) { utest_fixture->path = "tests/binaryOperators.sol"; }
 UTEST_F(SolFmtFixture, conditional) { utest_fixture->path = "tests/conditional.sol"; }
+UTEST_F(SolFmtFixture, constructors) { utest_fixture->path = "tests/constructors.sol"; }
 
 UTEST_MAIN();
