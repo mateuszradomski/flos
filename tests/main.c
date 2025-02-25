@@ -309,5 +309,6 @@ UTEST_F(SolFmtFixture, binaryOperators) { utest_fixture->path = "tests/binaryOpe
 UTEST_F(SolFmtFixture, conditional) { utest_fixture->path = "tests/conditional.sol"; }
 UTEST_F(SolFmtFixture, constructors) { utest_fixture->path = "tests/constructors.sol"; }
 UTEST_F(SolFmtFixture, contractDefinition) { utest_fixture->path = "tests/contractDefinition.sol"; }
+UTEST_F(SolFmtFixture, etc) { utest_fixture->path = "tests/etc.sol"; }
 
 UTEST_MAIN();

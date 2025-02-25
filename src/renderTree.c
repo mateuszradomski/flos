@@ -840,6 +840,8 @@ pushCallArgumentListDocument(Render *r, TokenId startingToken, ASTNodeListRanged
     }
 }
 
+static void pushParametersDocument(Render *r, ASTNodeListRanged *parameters);
+
 static void
 pushTypeDocument(Render *r, ASTNode *node) {
     switch(node->type) {
@@ -895,34 +897,42 @@ pushTypeDocument(Render *r, ASTNode *node) {
             pushTokenWord(r, node->endToken);
         } break;
         case ASTNodeType_FunctionType: {
-            // assert(stringMatch(LIT_TO_STR("function"), r->tokens.tokenStrings[node->startToken]));
-            // assert(stringMatch(LIT_TO_STR("("), r->tokens.tokenStrings[node->startToken + 1]));
+            assert(stringMatch(LIT_TO_STR("function"), r->tokens.tokenStrings[node->startToken]));
+            assert(stringMatch(LIT_TO_STR("("), r->tokens.tokenStrings[node->startToken + 1]));
 
-            // renderToken(r, node->startToken, SPACE);
-            // renderToken(r, node->startToken + 1, NONE);
-            // renderParameters(r, &node->functionTypeNode.parameters, COMMA_SPACE, 0);
-            // if(node->functionTypeNode.parameters.count > 0) {
-            //     renderTokenChecked(r, node->functionTypeNode.parameters.last->node.endToken + 1, LIT_TO_STR(")"), SPACE);
-            // } else {
-            //     renderTokenChecked(r, node->startToken + 2, LIT_TO_STR(")"), SPACE);
-            // }
+            pushTokenWord(r, node->startToken);
+            pushTokenWord(r, node->startToken + 1);
+            pushParametersDocument(r, &node->functionTypeNode.parameters);
+            if(node->functionTypeNode.parameters.count > 0) {
+                assert(stringMatch(LIT_TO_STR(")"), r->tokens.tokenStrings[node->functionTypeNode.parameters.last->node.endToken + 1]));
+                pushTokenWord(r, node->functionTypeNode.parameters.last->node.endToken + 1);
+            } else {
+                assert(stringMatch(LIT_TO_STR(")"), r->tokens.tokenStrings[node->startToken + 2]));
+                pushTokenWord(r, node->startToken + 2);
+            }
 
-            // if(node->functionTypeNode.visibility != INVALID_TOKEN_ID) {
-            //     renderToken(r, node->functionTypeNode.visibility, SPACE);
-            // }
-            // if(node->functionTypeNode.stateMutability != INVALID_TOKEN_ID) {
-            //     renderToken(r, node->functionTypeNode.stateMutability, SPACE);
-            // }
+            if(node->functionTypeNode.visibility != INVALID_TOKEN_ID) {
+                pushWord(r, wordSpace());
+                pushTokenWord(r, node->functionTypeNode.visibility);
+            }
+            if(node->functionTypeNode.stateMutability != INVALID_TOKEN_ID) {
+                pushWord(r, wordSpace());
+                pushTokenWord(r, node->functionTypeNode.stateMutability);
+            }
 
-            // if(node->functionTypeNode.returnParameters.count > 0) {
-            //     renderTokenChecked(r, node->functionTypeNode.returnParameters.head->node.endToken - 2, LIT_TO_STR("returns"), SPACE);
-            //     renderTokenChecked(r, node->functionTypeNode.returnParameters.head->node.endToken - 1, LIT_TO_STR("("), NONE);
-            //     renderParameters(r, &node->functionTypeNode.returnParameters, COMMA_SPACE, 0);
-            //     renderTokenChecked(r, node->functionTypeNode.returnParameters.last->node.endToken + 1, LIT_TO_STR(")"), SPACE);
-            // }
+            if(node->functionTypeNode.returnParameters.count > 0) {
+                pushWord(r, wordLine());
+                assert(stringMatch(LIT_TO_STR("returns"), r->tokens.tokenStrings[node->functionTypeNode.returnParameters.head->node.endToken - 2]));
+                assert(stringMatch(LIT_TO_STR("("), r->tokens.tokenStrings[node->functionTypeNode.returnParameters.head->node.endToken - 1]));
+                assert(stringMatch(LIT_TO_STR(")"), r->tokens.tokenStrings[node->functionTypeNode.returnParameters.last->node.endToken + 1]));
 
-            // assert(connect == SPACE);
-            assert(false);
+                pushTokenWord(r, node->functionTypeNode.returnParameters.head->node.endToken - 2);
+                pushTokenWord(r, node->functionTypeNode.returnParameters.head->node.endToken - 1);
+                pushParametersDocument(r, &node->functionTypeNode.returnParameters);
+                pushTokenWord(r, node->functionTypeNode.returnParameters.last->node.endToken + 1);
+            }
+
+            // assert(false);
         } break;
         default: {
             assert(0);
@@ -1294,6 +1304,7 @@ pushStatementDocument(Render *r, ASTNode *node) {
             pushWord(r, wordSpace());
             popGroup(r);
 
+            ASTNode *lastStatement = node->ifStatementNode.trueStatement;
             pushStatementDocument(r, node->ifStatementNode.trueStatement);
             if(node->ifStatementNode.falseStatement) {
                 // TODO(radomski): I don't like this, because it's another
@@ -1306,8 +1317,12 @@ pushStatementDocument(Render *r, ASTNode *node) {
                 pushTokenWord(r, node->ifStatementNode.falseStatement->startToken - 1);
                 pushWord(r, wordSpace());
                 pushStatementDocument(r, node->ifStatementNode.falseStatement);
+                lastStatement = node->ifStatementNode.falseStatement;
             }
-            pushWord(r, wordHardline());
+
+            if(lastStatement->type == ASTNodeType_BlockStatement) {
+                pushWord(r, wordHardline());
+            }
         } break;
         case ASTNodeType_VariableDeclarationStatement: {
             ASTNodeVariableDeclarationStatement *statement = &node->variableDeclarationStatementNode;
@@ -1395,20 +1410,17 @@ pushStatementDocument(Render *r, ASTNode *node) {
             pushGroup(r);
             pushNest(r);
             pushTokenWord(r, node->startToken + 1);
+            pushGroup(r);
             pushWord(r, wordSoftline());
             
             if(statement->variableStatement != 0x0) {
-                pushGroup(r);
                 pushStatementDocument(r, statement->variableStatement);
-                popGroup(r);
+                r->words[r->wordCount - 1].type = WordType_Line;
             }
 
             if(statement->conditionExpression != 0x0) {
-                // TODO(radomski): This is a hack to make the condition expression
-                pushGroup(r);
                 pushGroup(r);
                 pushExpressionDocument(r, statement->conditionExpression);
-                popGroup(r);
                 popGroup(r);
             }
 
@@ -1424,13 +1436,16 @@ pushStatementDocument(Render *r, ASTNode *node) {
             pushWord(r, wordSoftline());
             
             popNest(r);
+            popGroup(r);
             pushTokenWord(r, statement->body->startToken - 1);
             popGroup(r);
 
             pushWord(r, wordSpace());
             pushStatementDocument(r, statement->body);
 
-            pushWord(r, wordHardline());
+            if(statement->body->type == ASTNodeType_BlockStatement) {
+                pushWord(r, wordHardline());
+            }
         } break;
         case ASTNodeType_RevertStatement: {
             assert(stringMatch(LIT_TO_STR("revert"), r->tokens.tokenStrings[node->startToken]));
@@ -1990,7 +2005,9 @@ pushMemberDocument(Render *r, ASTNode *member) {
                 ASTNodeVariableDeclaration *decl = &it->node.variableDeclarationNode;
                 preserveHardlinesIntoDocument(r, &it->node);
 
+                pushGroup(r);
                 pushTypeDocument(r, decl->type);
+                popGroup(r);
                 pushWord(r, wordSpace());
                 pushTokenWord(r, decl->name);
                 pushTokenWord(r, decl->name + 1);
