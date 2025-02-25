@@ -2473,7 +2473,79 @@ pushParametersDocument(Render *r, ASTNodeListRanged *list) {
             pushWord(r, wordLine());
         }
     }
+}
 
+static void
+pushModifierInvocations(Render *r, ASTNodeList *modifiers) {
+    if(modifiers && modifiers->count > 0) {
+        pushWord(r, wordSpace());
+
+        ASTNodeLink *it = modifiers->head;
+        for(u32 i = 0; i < modifiers->count; i++, it = it->next) {
+            ASTNodeModifierInvocation *invocation = &it->node.modifierInvocationNode;
+            pushTypeDocument(r, invocation->identifier);
+            if(invocation->argumentsExpression.count != -1) {
+                // TODO(radomski): Implement
+                ASTNodeListRanged *expressions = &invocation->argumentsExpression;
+                TokenIdList *names = &invocation->argumentsName;
+
+                assert(expressions->count != -1);
+                TokenId startingToken = invocation->identifier->endToken + 1;
+
+                assert(stringMatch(LIT_TO_STR("("), r->tokens.tokenStrings[startingToken]));
+                pushTokenWord(r, startingToken);
+
+                if(names->count == 0) {
+                    ASTNodeLink *argument = expressions->head;
+                    for(u32 i = 0; i < expressions->count; i++, argument = argument->next) {
+                        pushExpressionDocument(r, &argument->node);
+                        if(i != expressions->count - 1) {
+                            assert(stringMatch(LIT_TO_STR(","), r->tokens.tokenStrings[argument->node.endToken + 1]));
+                            pushTokenWord(r, argument->node.endToken + 1);
+                            pushWord(r, wordSpace());
+                        }
+                    }
+                } else {
+                    ASTNodeLink *argument = expressions->head;
+                    assert(names->count == expressions->count);
+                    assert(stringMatch(LIT_TO_STR("{"), r->tokens.tokenStrings[listGetTokenId(names, 0) - 1]));
+                    assert(stringMatch(LIT_TO_STR("}"), r->tokens.tokenStrings[expressions->last->node.endToken + 1]));
+
+                    pushTokenWord(r, listGetTokenId(names, 0) - 1);
+                    pushWord(r, wordSpace());
+                    for(u32 i = 0; i < expressions->count; i++, argument = argument->next) {
+                        TokenId literal = listGetTokenId(names, i);
+                        assert(stringMatch(LIT_TO_STR(":"), r->tokens.tokenStrings[literal - 1]));
+
+                        pushTokenWord(r, literal);
+                        pushTokenWord(r, literal + 1);
+                        pushWord(r, wordSpace());
+                        pushExpressionDocument(r, &argument->node);
+                        if(i != expressions->count - 1) {
+                            assert(stringMatch(LIT_TO_STR(","), r->tokens.tokenStrings[argument->node.endToken + 1]));
+                            pushTokenWord(r, argument->node.endToken + 1);
+                            pushWord(r, wordSpace());
+                        }
+                    }
+                    pushTokenWord(r, expressions->last->node.endToken + 1);
+                }
+
+                if(expressions->count > 0) {
+                    TokenId token = expressions->last->node.endToken + 1;
+                    token += names->count > 0;
+                    assert(stringMatch(LIT_TO_STR(")"), r->tokens.tokenStrings[token]));
+                    pushTokenWord(r, token);
+                } else {
+                    assert(stringMatch(LIT_TO_STR(")"), r->tokens.tokenStrings[startingToken + 1]));
+                    pushTokenWord(r, startingToken + 1);
+                }
+            }
+
+            if(i != modifiers->count - 1) {
+                pushWord(r, wordSpace());
+            }
+        }
+    }
 }
 
 static void
@@ -2953,76 +3025,7 @@ renderMember(Render *r, ASTNode *member) {
                 pushTokenWord(r, function->returnParameters->endToken + 1);
             }
 
-            // renderModiferInvocations(r, function->modifiers);
-            if(function->modifiers && function->modifiers->count > 0) {
-                pushWord(r, wordSpace());
-
-                ASTNodeLink *it = function->modifiers->head;
-                for(u32 i = 0; i < function->modifiers->count; i++, it = it->next) {
-                    ASTNodeModifierInvocation *invocation = &it->node.modifierInvocationNode;
-                    pushTypeDocument(r, invocation->identifier);
-                    if(invocation->argumentsExpression.count != -1) {
-                        // TODO(radomski): Implement
-                        ASTNodeListRanged *expressions = &invocation->argumentsExpression;
-                        TokenIdList *names = &invocation->argumentsName;
-
-                        assert(expressions->count != -1);
-                        TokenId startingToken = invocation->identifier->endToken + 1;
-
-                        assert(stringMatch(LIT_TO_STR("("), r->tokens.tokenStrings[startingToken]));
-                        pushTokenWord(r, startingToken);
-
-                        if(names->count == 0) {
-                            ASTNodeLink *argument = expressions->head;
-                            for(u32 i = 0; i < expressions->count; i++, argument = argument->next) {
-                                pushExpressionDocument(r, &argument->node);
-                                if(i != expressions->count - 1) {
-                                    assert(stringMatch(LIT_TO_STR(","), r->tokens.tokenStrings[argument->node.endToken + 1]));
-                                    pushTokenWord(r, argument->node.endToken + 1);
-                                    pushWord(r, wordSpace());
-                                }
-                            }
-                        } else {
-                            ASTNodeLink *argument = expressions->head;
-                            assert(names->count == expressions->count);
-                            assert(stringMatch(LIT_TO_STR("{"), r->tokens.tokenStrings[listGetTokenId(names, 0) - 1]));
-                            assert(stringMatch(LIT_TO_STR("}"), r->tokens.tokenStrings[expressions->last->node.endToken + 1]));
-
-                            pushTokenWord(r, listGetTokenId(names, 0) - 1);
-                            pushWord(r, wordSpace());
-                            for(u32 i = 0; i < expressions->count; i++, argument = argument->next) {
-                                TokenId literal = listGetTokenId(names, i);
-                                assert(stringMatch(LIT_TO_STR(":"), r->tokens.tokenStrings[literal - 1]));
-
-                                pushTokenWord(r, literal);
-                                pushTokenWord(r, literal + 1);
-                                pushWord(r, wordSpace());
-                                pushExpressionDocument(r, &argument->node);
-                                if(i != expressions->count - 1) {
-                                    assert(stringMatch(LIT_TO_STR(","), r->tokens.tokenStrings[argument->node.endToken + 1]));
-                                    pushTokenWord(r, argument->node.endToken + 1);
-                                    pushWord(r, wordSpace());
-                                }
-                            }
-                            pushTokenWord(r, expressions->last->node.endToken + 1);
-                        }
-
-                        if(expressions->count > 0) {
-                            TokenId token = expressions->last->node.endToken + 1;
-                            token += names->count > 0;
-                            assert(stringMatch(LIT_TO_STR(")"), r->tokens.tokenStrings[token]));
-                            pushTokenWord(r, token);
-                        } else {
-                            assert(stringMatch(LIT_TO_STR(")"), r->tokens.tokenStrings[startingToken + 1]));
-                            pushTokenWord(r, startingToken + 1);
-                        }
-                    }
-
-                    if(i != function->modifiers->count - 1) {
-                        pushWord(r, wordSpace());
-                    }
-                }
-            }
+            pushModifierInvocations(r, function->modifiers);
 
             popGroup(r);
             if(function->body != 0x0) {
@@ -3039,34 +3042,55 @@ renderMember(Render *r, ASTNode *member) {
             renderDocument(r);
         } break;
         case ASTNodeType_ConstructorDefinition: {
-            assert(stringMatch(LIT_TO_STR("constructor"), r->tokens.tokenStrings[member->startToken]));
-            renderToken(r, member->startToken, NONE);
             ASTNodeConstructorDefinition *constructor = &member->constructorDefinitionNode;
+            assert(stringMatch(LIT_TO_STR("constructor"), r->tokens.tokenStrings[member->startToken]));
 
-            assert(stringMatch(LIT_TO_STR("("), r->tokens.tokenStrings[member->startToken + 1]));
-            renderToken(r, member->startToken + 1, NONE);
-            renderParameters(r, &constructor->parameters, COMMA_SPACE, 0);
-            if(constructor->parameters.count > 0) {
-                renderTokenChecked(r, constructor->parameters.last->node.endToken + 1, LIT_TO_STR(")"), SPACE);
-            } else {
-                renderTokenChecked(r, member->startToken + 2, LIT_TO_STR(")"), SPACE);
-            }
+            pushGroup(r);
+            pushTokenWord(r, member->startToken);
 
-            renderModiferInvocations(r, &constructor->modifiers);
+            TokenId openParenToken = member->startToken + 1;
+            TokenId closeParenToken = constructor->parameters.count > 0
+                ? constructor->parameters.last->node.endToken + 1
+                : openParenToken + 1;
+
+            pushTokenWord(r, openParenToken);
+            pushParametersDocument(r, &constructor->parameters);
+            pushTokenWord(r, closeParenToken);
+
+            assert(stringMatch(LIT_TO_STR("("), r->tokens.tokenStrings[openParenToken]));
+            assert(stringMatch(LIT_TO_STR(")"), r->tokens.tokenStrings[closeParenToken]));
+
+            pushModifierInvocations(r, &constructor->modifiers);
 
             if(constructor->visibility != INVALID_TOKEN_ID) {
-                renderToken(r, constructor->visibility, SPACE);
-            }
-            if(constructor->stateMutability != INVALID_TOKEN_ID) {
-                renderToken(r, constructor->stateMutability, SPACE);
+                pushWord(r, wordSpace());
+                pushTokenWord(r, constructor->visibility);
             }
 
-            renderStatement(r, constructor->body, NEWLINE);
+            if(constructor->stateMutability != INVALID_TOKEN_ID) {
+                pushWord(r, wordSpace());
+                pushTokenWord(r, constructor->stateMutability);
+            }
+
+            popGroup(r);
+            if(constructor->body != 0x0) {
+                pushWord(r, wordSpace());
+                pushStatementDocument(r, constructor->body);
+                pushWord(r, wordHardline());
+            } else {
+                pushTokenWordOnly(r, member->endToken);
+
+                pushCommentsAfterToken(r, member->endToken);
+                pushWord(r, wordHardline());
+            }
+
+            renderDocument(r);
         } break;
         case ASTNodeType_ModifierDefinition: {
             assert(stringMatch(LIT_TO_STR("modifier"), r->tokens.tokenStrings[member->startToken]));
-            renderToken(r, member->startToken, SPACE);
             ASTNodeFunctionDefinition *function = &member->functionDefinitionNode;
+
+            renderToken(r, member->startToken, SPACE);
             renderToken(r, function->name, function->parameters.count != -1 ? NONE : SPACE);
 
             if(function->parameters.count != -1) {
