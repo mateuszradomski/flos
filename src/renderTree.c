@@ -1089,15 +1089,24 @@ pushExpressionDocument(Render *r, ASTNode *node) {
         } break;
         case ASTNodeType_TerneryExpression: {
             ASTNodeTerneryExpression *ternery = &node->terneryExpressionNode;
+            assert(stringMatch(LIT_TO_STR("?"), r->tokens.tokenStrings[ternery->condition->endToken + 1]));
+
+            pushGroup(r);
             pushExpressionDocument(r, ternery->condition);
-            pushWord(r, wordSpace());
+            popGroup(r);
+
+            pushNest(r);
+            pushWord(r, wordLine());
             pushTokenWord(r, ternery->condition->endToken + 1);
             pushWord(r, wordSpace());
+
             pushExpressionDocument(r, ternery->trueExpression);
-            pushWord(r, wordSpace());
+            pushWord(r, wordLine());
             pushTokenWord(r, ternery->trueExpression->endToken + 1);
             pushWord(r, wordSpace());
             pushExpressionDocument(r, ternery->falseExpression);
+
+            popNest(r);
         } break;
         case ASTNodeType_NamedParameterExpression: {
             // assert(stringMatch(LIT_TO_STR("{"), r->tokens.tokenStrings[named->expression->endToken + 1]));
