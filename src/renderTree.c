@@ -514,7 +514,6 @@ debugDocumentEnabled() {
 static void
 debugPrintDocument(Word *words, u32 count, u32 group) {
     u32 index = 0;
-    printf("count: %d\n", count);
     printf("G%2d:", group);
 
     for(u32 i = 0; i < count; i++) {
@@ -3087,34 +3086,46 @@ renderMember(Render *r, ASTNode *member) {
             renderDocument(r);
         } break;
         case ASTNodeType_ModifierDefinition: {
+            ASTNodeFunctionDefinition *modifier = &member->functionDefinitionNode;
             assert(stringMatch(LIT_TO_STR("modifier"), r->tokens.tokenStrings[member->startToken]));
-            ASTNodeFunctionDefinition *function = &member->functionDefinitionNode;
 
-            renderToken(r, member->startToken, SPACE);
-            renderToken(r, function->name, function->parameters.count != -1 ? NONE : SPACE);
+            pushGroup(r);
+            pushTokenWord(r, member->startToken);
+            pushWord(r, wordSpace());
+            pushTokenWord(r, modifier->name);
 
-            if(function->parameters.count != -1) {
-                assert(stringMatch(LIT_TO_STR("("), r->tokens.tokenStrings[function->name + 1]));
-                renderToken(r, function->name + 1, NONE);
-                renderParameters(r, &function->parameters, COMMA_SPACE, 0);
-                if(function->parameters.count > 0) {
-                    renderTokenChecked(r, function->parameters.last->node.endToken + 1, LIT_TO_STR(")"), SPACE);
-                } else {
-                    renderTokenChecked(r, function->name + 2, LIT_TO_STR(")"), SPACE);
-                }
+            if(modifier->parameters.count != -1) {
+                TokenId openParenToken = modifier->name + 1;
+                TokenId closeParenToken = modifier->parameters.count > 0
+                    ? modifier->parameters.last->node.endToken + 1
+                    : openParenToken + 1;
+
+                assert(stringMatch(LIT_TO_STR("("), r->tokens.tokenStrings[openParenToken]));
+                assert(stringMatch(LIT_TO_STR(")"), r->tokens.tokenStrings[closeParenToken]));
+
+                pushTokenWord(r, openParenToken);
+                pushParametersDocument(r, &modifier->parameters);
+                pushTokenWord(r, closeParenToken);
             }
 
-            if(function->virtual != INVALID_TOKEN_ID) {
-                renderToken(r, function->virtual, SPACE);
+            if(modifier->virtual != INVALID_TOKEN_ID) {
+                pushWord(r, wordSpace());
+                pushTokenWord(r, modifier->virtual);
             }
 
-            renderOverrides(r, function->override, function->overrides);
-            if(function->body != 0x0) {
-                renderStatement(r, function->body, NEWLINE);
+            popGroup(r);
+            if(modifier->body != 0x0) {
+                pushWord(r, wordSpace());
+                pushStatementDocument(r, modifier->body);
+                pushWord(r, wordHardline());
             } else {
-                popBytes(r->writer, 1);
-                renderConnect(r, SEMICOLON);
+                pushTokenWordOnly(r, member->endToken);
+
+                pushCommentsAfterToken(r, member->endToken);
+                pushWord(r, wordHardline());
             }
+
+            renderDocument(r);
         } break;
         case ASTNodeType_LibraryDefinition:
         case ASTNodeType_ContractDefinition:
