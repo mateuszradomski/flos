@@ -163,6 +163,7 @@ contract Comments1 {
     bytes32 private _CACHED_DOMAIN_SEPARATOR;
 
     /* solhint-enable var-name-mixedcase */
+
     function() {
         // solhint-disable-previous-line no-empty-blocks
     }
@@ -186,7 +187,7 @@ contract Comments4 is Interface1, Interface2, Interface3, Interface4, Interface5
     // solhint-disable-previous-line no-empty-blocks
 }
 
-contract Comments5 /*nice name*/{
+contract Comments5 /*nice name*/ {
     // solhint-disable-previous-line no-empty-blocks
 }
 

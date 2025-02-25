@@ -866,6 +866,26 @@ pushCommentsAfterToken(Render *r, TokenId token) {
                             if(lineCount > 1) { pushWord(r, wordSpace()); }
                             pushWord(r, wordText(stringTrim(line)));
                         }
+
+                        u8 *head = comment.data + comment.size;
+                        while(isWhitespace(*head)) {
+                            if(*head == '\n') {
+                                pushWord(r, wordHardline());
+                                break;
+                            }
+                            head++;
+                        }
+                    } else {
+                        pushWord(r, wordText(stringTrim(comment)));
+
+                        u8 *head = comment.data + comment.size;
+                        while(isWhitespace(*head)) {
+                            if(*head == '\n') {
+                                pushWord(r, wordHardline());
+                                break;
+                            }
+                            head++;
+                        }
                     }
 
                     finished = false;
@@ -882,7 +902,7 @@ pushCommentsAfterToken(Render *r, TokenId token) {
             preceedingNewlines += input.data[i] == '\n';
         }
 
-        if(cursor != 0 && preceedingNewlines >= 1) {
+        if(cursor != 0 && preceedingNewlines >= 2) {
             pushWord(r, wordHardline());
         } 
     }
@@ -2090,11 +2110,12 @@ renderParameters(Render *r, ASTNodeListRanged *list, ConnectType connect, u32 co
 }
 
 static void
-renderInheritanceSpecifier(Render *r, ASTNode *node, ConnectType connect) {
+pushInheritanceSpecifierDocument(Render *r, ASTNode *node) {
     ASTNodeInheritanceSpecifier *inheritance = &node->inheritanceSpecifierNode;
-    renderType(r, inheritance->identifier, inheritance->argumentsExpression.count > 0 ? NONE : connect);
+    pushTypeDocument(r, inheritance->identifier);
     if(inheritance->argumentsExpression.count > 0) {
-        renderCallArgumentList(r, inheritance->identifier->endToken + 1, &inheritance->argumentsExpression, &inheritance->argumentsName, connect);
+        pushCallArgumentListDocument(r, inheritance->identifier->endToken + 1,
+                                     &inheritance->argumentsExpression, &inheritance->argumentsName);
     }
 }
 
@@ -2225,7 +2246,7 @@ pushModifierInvocations(Render *r, ASTNodeList *modifiers) {
 }
 
 static void
-renderMember(Render *r, ASTNode *member) {
+pushMemberDocument(Render *r, ASTNode *member) {
     switch(member->type) {
         case ASTNodeType_Pragma: {
             pushGroup(r);
@@ -2250,8 +2271,6 @@ renderMember(Render *r, ASTNode *member) {
 
             pushCommentsAfterToken(r, member->endToken);
             pushWord(r, wordHardline());
-
-            renderDocument(r);
         } break;
         case ASTNodeType_Import: {
             assert(stringMatch(LIT_TO_STR("import"), r->tokens.tokenStrings[member->startToken]));
@@ -2312,8 +2331,6 @@ renderMember(Render *r, ASTNode *member) {
 
             pushCommentsAfterToken(r, member->endToken);
             pushWord(r, wordHardline());
-
-            renderDocument(r);
         } break;
         case ASTNodeType_Using: {
             assert(stringMatch(LIT_TO_STR("using"), r->tokens.tokenStrings[member->startToken]));
@@ -2376,8 +2393,6 @@ renderMember(Render *r, ASTNode *member) {
 
             pushCommentsAfterToken(r, member->endToken);
             pushWord(r, wordHardline());
-
-            renderDocument(r);
         } break;
         case ASTNodeType_EnumDefinition: {
             pushGroup(r);
@@ -2411,8 +2426,6 @@ renderMember(Render *r, ASTNode *member) {
 
             pushCommentsAfterToken(r, member->endToken);
             pushWord(r, wordHardline());
-
-            renderDocument(r);
         } break;
         case ASTNodeType_Struct: {
             assert(stringMatch(LIT_TO_STR("{"), r->tokens.tokenStrings[member->startToken + 2]));
@@ -2448,7 +2461,6 @@ renderMember(Render *r, ASTNode *member) {
 
             pushCommentsAfterToken(r, member->endToken);
             pushWord(r, wordHardline());
-            renderDocument(r);
         } break;
         case ASTNodeType_Error: {
             assert(stringMatch(LIT_TO_STR("error"), r->tokens.tokenStrings[member->startToken]));
@@ -2496,7 +2508,6 @@ renderMember(Render *r, ASTNode *member) {
 
             pushCommentsAfterToken(r, member->endToken);
             pushWord(r, wordHardline());
-            renderDocument(r);
         } break;
         case ASTNodeType_Event: {
             assert(stringMatch(LIT_TO_STR("event"), r->tokens.tokenStrings[member->startToken]));
@@ -2542,9 +2553,6 @@ renderMember(Render *r, ASTNode *member) {
 
             pushCommentsAfterToken(r, member->endToken);
             pushWord(r, wordHardline());
-
-            renderDocument(r);
-
         } break;
         case ASTNodeType_Typedef: {
             ASTNodeTypedef *typedefNode = &member->typedefNode;
@@ -2563,8 +2571,6 @@ renderMember(Render *r, ASTNode *member) {
 
             pushCommentsAfterToken(r, member->endToken);
             pushWord(r, wordHardline());
-
-            renderDocument(r);
         } break;
         case ASTNodeType_ConstVariable: {
             ASTNodeConstVariable *constNode = &member->constVariableNode;
@@ -2593,8 +2599,6 @@ renderMember(Render *r, ASTNode *member) {
 
             pushCommentsAfterToken(r, member->endToken);
             pushWord(r, wordHardline());
-
-            renderDocument(r);
         } break;
         case ASTNodeType_StateVariableDeclaration: {
             ASTNodeConstVariable *decl = &member->constVariableNode;
@@ -2632,8 +2636,6 @@ renderMember(Render *r, ASTNode *member) {
 
             pushCommentsAfterToken(r, member->endToken);
             pushWord(r, wordHardline());
-
-            renderDocument(r);
         } break;
         case ASTNodeType_FallbackFunction:
         case ASTNodeType_ReceiveFunction:
@@ -2714,8 +2716,6 @@ renderMember(Render *r, ASTNode *member) {
                 pushCommentsAfterToken(r, member->endToken);
                 pushWord(r, wordHardline());
             }
-
-            renderDocument(r);
         } break;
         case ASTNodeType_ConstructorDefinition: {
             ASTNodeConstructorDefinition *constructor = &member->constructorDefinitionNode;
@@ -2759,8 +2759,6 @@ renderMember(Render *r, ASTNode *member) {
                 pushCommentsAfterToken(r, member->endToken);
                 pushWord(r, wordHardline());
             }
-
-            renderDocument(r);
         } break;
         case ASTNodeType_ModifierDefinition: {
             ASTNodeFunctionDefinition *modifier = &member->functionDefinitionNode;
@@ -2801,62 +2799,76 @@ renderMember(Render *r, ASTNode *member) {
                 pushCommentsAfterToken(r, member->endToken);
                 pushWord(r, wordHardline());
             }
-
-            renderDocument(r);
         } break;
         case ASTNodeType_LibraryDefinition:
         case ASTNodeType_ContractDefinition:
         case ASTNodeType_InterfaceDefinition:
         case ASTNodeType_AbstractContractDefinition: {
+            ASTNodeContractDefinition *contract = &member->contractDefinitionNode;
+
+            pushGroup(r);
+            pushTokenWord(r, member->startToken);
             switch(member->type) {
                 case ASTNodeType_LibraryDefinition: {
                     assert(stringMatch(LIT_TO_STR("library"), r->tokens.tokenStrings[member->startToken]));
-                    renderToken(r, member->startToken, SPACE);
                 } break;
                 case ASTNodeType_InterfaceDefinition: {
                     assert(stringMatch(LIT_TO_STR("interface"), r->tokens.tokenStrings[member->startToken]));
-                    renderToken(r, member->startToken, SPACE);
                 } break;
                 case ASTNodeType_ContractDefinition: {
                     assert(stringMatch(LIT_TO_STR("contract"), r->tokens.tokenStrings[member->startToken]));
-                    renderToken(r, member->startToken, SPACE);
                 } break;
                 case ASTNodeType_AbstractContractDefinition: {
                     assert(stringMatch(LIT_TO_STR("abstract"), r->tokens.tokenStrings[member->startToken]));
                     assert(stringMatch(LIT_TO_STR("contract"), r->tokens.tokenStrings[member->startToken + 1]));
-                    renderToken(r, member->startToken, SPACE);
-                    renderToken(r, member->startToken + 1, SPACE);
+                    pushWord(r, wordSpace());
+                    pushTokenWord(r, member->startToken);
                 }
             }
-            ASTNodeContractDefinition *contract = &member->contractDefinitionNode;
+            pushWord(r, wordSpace());
 
-            renderToken(r, contract->name, SPACE);
+            pushTokenWord(r, contract->name);
+            pushWord(r, wordSpace());
             if(contract->baseContracts.count > 0) {
                 assert(stringMatch(LIT_TO_STR("is"), r->tokens.tokenStrings[contract->name + 1]));
-                renderToken(r, contract->name + 1, SPACE);
-            }
-            ASTNodeLink *baseContract = contract->baseContracts.head;
-            for(u32 i = 0; i < contract->baseContracts.count; i++, baseContract = baseContract->next) {
-                ConnectType connect = i == contract->baseContracts.count - 1 ? SPACE : COMMA_SPACE;
-                renderInheritanceSpecifier(r, &baseContract->node, connect);
+                pushTokenWord(r, contract->name + 1);
+                pushWord(r, wordSpace());
+
+                ASTNodeLink *baseContract = contract->baseContracts.head;
+                for(u32 i = 0; i < contract->baseContracts.count; i++, baseContract = baseContract->next) {
+                    pushInheritanceSpecifierDocument(r, &baseContract->node);
+                    if(i != contract->baseContracts.count - 1) {
+                        assert(stringMatch(LIT_TO_STR(","), r->tokens.tokenStrings[baseContract->node.endToken + 1]));
+                        pushTokenWord(r, baseContract->node.endToken + 1);
+                    }
+                    pushWord(r, wordSpace());
+                }
             }
 
-            pushIndent(r->writer);
-            u32 openParenToken = contract->elements.count > 0 ? contract->elements.head->node.startToken - 1 : member->endToken - 1;
+            pushNest(r);
+
+            u32 openParenToken = contract->elements.count > 0
+                ? contract->elements.head->node.startToken - 1
+                : member->endToken - 1;
+
             assert(stringMatch(LIT_TO_STR("{"), r->tokens.tokenStrings[openParenToken]));
-            renderToken(r, openParenToken, contract->elements.count > 0 ? NEWLINE : SPACE);
+            pushTokenWord(r, openParenToken);
+            pushWord(r, wordLine());
 
             ASTNodeLink *element = contract->elements.head;
             for(u32 i = 0; i < contract->elements.count; i++, element = element->next) {
                 if(i > 0) {
-                    preservePresentNewLines(r, &element->node);
+                    preserveHardlinesIntoDocument(r, &element->node);
                 }
-                renderMember(r, &element->node);
+                pushMemberDocument(r, &element->node);
             }
 
-            popIndent(r->writer);
+            popNest(r);
+            popGroup(r);
+
             assert(stringMatch(LIT_TO_STR("}"), r->tokens.tokenStrings[member->endToken]));
-            renderToken(r, member->endToken, NEWLINE);
+            pushTokenWord(r, member->endToken);
+            pushWord(r, wordHardline());
         } break;
         default: {
             assert(0);
@@ -2868,9 +2880,10 @@ static void
 renderSourceUnit(Render *r, ASTNode *tree) {
     ASTNodeLink *child = tree->children.head;
     for(u32 i = 0; i < tree->children.count; i++, child = child->next) {
-        preservePresentNewLines(r, &child->node);
-        renderMember(r, &child->node);
+        preserveHardlinesIntoDocument(r, &child->node);
+        pushMemberDocument(r, &child->node);
     }
+    renderDocument(r);
 }
 
 static String
