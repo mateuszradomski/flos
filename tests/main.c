@@ -297,5 +297,6 @@ UTEST_F(SolFmtFixture, inbox) { utest_fixture->path = "tests/inbox.sol"; }
 UTEST_F(SolFmtFixture, libraries) { utest_fixture->path = "tests/libraries.sol"; }
 UTEST_F(SolFmtFixture, ownable) { utest_fixture->path = "tests/ownable.sol"; }
 UTEST_F(SolFmtFixture, styleGuideMappings) { utest_fixture->path = "tests/styleGuideMappings.sol"; }
+UTEST_F(SolFmtFixture, binaryOperators) { utest_fixture->path = "tests/binaryOperators.sol"; }
 
 UTEST_MAIN();

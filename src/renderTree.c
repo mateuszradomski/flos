@@ -1088,13 +1088,16 @@ pushExpressionDocument(Render *r, ASTNode *node) {
             popGroup(r);
         } break;
         case ASTNodeType_TerneryExpression: {
-            // ASTNodeTerneryExpression *ternery = &node->terneryExpressionNode;
-            // renderExpression(r, ternery->condition, SPACE);
-            // renderTokenChecked(r, ternery->condition->endToken + 1, LIT_TO_STR("?"), SPACE);
-            // renderExpression(r, ternery->trueExpression, SPACE);
-            // renderTokenChecked(r, ternery->trueExpression->endToken + 1, LIT_TO_STR(":"), SPACE);
-            // renderExpression(r, ternery->falseExpression, connect);
-            assert(false);
+            ASTNodeTerneryExpression *ternery = &node->terneryExpressionNode;
+            pushExpressionDocument(r, ternery->condition);
+            pushWord(r, wordSpace());
+            pushTokenWord(r, ternery->condition->endToken + 1);
+            pushWord(r, wordSpace());
+            pushExpressionDocument(r, ternery->trueExpression);
+            pushWord(r, wordSpace());
+            pushTokenWord(r, ternery->trueExpression->endToken + 1);
+            pushWord(r, wordSpace());
+            pushExpressionDocument(r, ternery->falseExpression);
         } break;
         case ASTNodeType_NamedParameterExpression: {
             // assert(stringMatch(LIT_TO_STR("{"), r->tokens.tokenStrings[named->expression->endToken + 1]));
@@ -1364,24 +1367,50 @@ pushStatementDocument(Render *r, ASTNode *node) {
             pushWord(r, wordHardline());
         } break;
         case ASTNodeType_ForStatement: {
-            //ASTNodeForStatement *statement = &node->forStatementNode;
-            //renderTokenChecked(r, node->startToken, LIT_TO_STR("for"), NONE);
-            //renderTokenChecked(r, node->startToken + 1, LIT_TO_STR("("), NONE);
-            //
-            //if(statement->variableStatement != 0x0) {
-            //renderStatement(r, statement->variableStatement, NONE);
-            //}
-            //if(statement->conditionExpression != 0x0) {
-            //renderExpression(r, statement->conditionExpression, NONE);
-            //}
-            //renderCString(r, ";", SPACE);
-            //if(statement->incrementExpression != 0x0) {
-            //renderExpression(r, statement->incrementExpression, NONE);
-            //}
-            //
-            //renderTokenChecked(r, statement->body->startToken - 1, LIT_TO_STR(")"), SPACE);
-            //renderStatement(r, statement->body, NEWLINE);
-            assert(false);
+            ASTNodeForStatement *statement = &node->forStatementNode;
+            assert(stringMatch(LIT_TO_STR("for"), r->tokens.tokenStrings[node->startToken]));
+            assert(stringMatch(LIT_TO_STR("("), r->tokens.tokenStrings[node->startToken + 1]));
+
+            pushTokenWord(r, node->startToken);
+            pushGroup(r);
+            pushNest(r);
+            pushTokenWord(r, node->startToken + 1);
+            pushWord(r, wordSoftline());
+            
+            if(statement->variableStatement != 0x0) {
+                pushGroup(r);
+                pushStatementDocument(r, statement->variableStatement);
+                popGroup(r);
+            }
+
+            if(statement->conditionExpression != 0x0) {
+                // TODO(radomski): This is a hack to make the condition expression
+                pushGroup(r);
+                pushGroup(r);
+                pushExpressionDocument(r, statement->conditionExpression);
+                popGroup(r);
+                popGroup(r);
+            }
+
+            pushWord(r, wordText(LIT_TO_STR(";")));
+            pushWord(r, wordLine());
+
+            if(statement->incrementExpression != 0x0) {
+                pushGroup(r);
+                pushExpressionDocument(r, statement->incrementExpression);
+                popGroup(r);
+            }
+
+            pushWord(r, wordSoftline());
+            
+            popNest(r);
+            pushTokenWord(r, statement->body->startToken - 1);
+            popGroup(r);
+
+            pushWord(r, wordSpace());
+            pushStatementDocument(r, statement->body);
+
+            pushWord(r, wordHardline());
         } break;
         case ASTNodeType_RevertStatement: {
             assert(stringMatch(LIT_TO_STR("revert"), r->tokens.tokenStrings[node->startToken]));
