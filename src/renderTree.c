@@ -1415,19 +1415,22 @@ pushStatementDocument(Render *r, ASTNode *node) {
             
             if(statement->variableStatement != 0x0) {
                 pushStatementDocument(r, statement->variableStatement);
-                r->words[r->wordCount - 1].type = WordType_Line;
+                r->wordCount -= 1;
+            } else {
+                pushWord(r, wordText(LIT_TO_STR(";")));
             }
 
             if(statement->conditionExpression != 0x0) {
+                pushWord(r, wordLine());
                 pushGroup(r);
                 pushExpressionDocument(r, statement->conditionExpression);
                 popGroup(r);
             }
 
             pushWord(r, wordText(LIT_TO_STR(";")));
-            pushWord(r, wordLine());
 
             if(statement->incrementExpression != 0x0) {
+                pushWord(r, wordLine());
                 pushGroup(r);
                 pushExpressionDocument(r, statement->incrementExpression);
                 popGroup(r);
