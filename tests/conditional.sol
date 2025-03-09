@@ -41,6 +41,7 @@ contract Conditional {
     // function foo() {
     //     address contextAddress = veryVeryVeryVeryVeryVeryVeryVeryVeryLongAddress_ == address(0) ? msg.sender : currentContextAddress_;
     // }
+
     function bar() {
         uint a = true ? 0 : 1;
     }

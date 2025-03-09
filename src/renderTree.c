@@ -543,38 +543,15 @@ preserveHardlinesIntoDocument(Render *r, ASTNode *node) {
     inBetween.data = previousToken.data + previousToken.size;
     inBetween.size = token.data >= inBetween.data ? token.data - inBetween.data : 0;
 
+    // TODO(radomski): This shouln't be here
     for(u32 i = 0; inBetween.size > 0 && i < inBetween.size - 1; i++) {
-        if(inBetween.data[i] == '/' && inBetween.data[i + 1] == '/') {
-            return;
-        } else if(inBetween.data[i] == '/' && inBetween.data[i + 1] == '*') {
+        if(inBetween.data[i] == '/' && inBetween.data[i + 1] == '*') {
             return;
         }
     }
 
     u32 newlines = 0;
-    for(u32 i = 0; i < inBetween.size; i++) {
-        // TODO(radomski): I don't think that this is necessary
-        if(inBetween.data[i] == '/') {
-            assert(false);
-            if(i + 1 < inBetween.size) {
-                u32 isLineComment = inBetween.data[i + 1] == '/';
-                u32 isMultilineComment = inBetween.data[i + 1] == '*';
-                assert(isLineComment || isMultilineComment);
-                i += 2;
-
-                if(isLineComment) {
-                    for(; i < inBetween.size && inBetween.data[i] != '\n'; i++) { }
-                }
-
-                for(; i < inBetween.size - 1; i++) {
-                    if(inBetween.data[i] == '*' && inBetween.data[i + 1] == '/') {
-                        i += 2;
-                        break;
-                    }
-                }
-            }
-        }
-
+    for(s32 i = inBetween.size - 1; i >= 0 && isWhitespace(inBetween.data[i]); i--) {
         newlines += inBetween.data[i] == '\n';
         if(newlines == 2) {
             pushWord(r, wordHardline());
