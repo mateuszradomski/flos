@@ -311,5 +311,6 @@ UTEST_F(SolFmtFixture, constructors) { utest_fixture->path = "tests/constructors
 UTEST_F(SolFmtFixture, contractDefinition) { utest_fixture->path = "tests/contractDefinition.sol"; }
 UTEST_F(SolFmtFixture, etc) { utest_fixture->path = "tests/etc.sol"; }
 UTEST_F(SolFmtFixture, forStatement) { utest_fixture->path = "tests/forStatement.sol"; }
+UTEST_F(SolFmtFixture, functionDefinitions) { utest_fixture->path = "tests/functionDefinitions.sol"; }
 
 UTEST_MAIN();

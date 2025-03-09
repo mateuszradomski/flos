@@ -222,6 +222,7 @@ interface Comments10 {
     // the first value
     // the second value
     // the lats value
+
     ) /* comment outside the parameters */ external;
 
     function someOtherFunction( /* checking for Block comment */) external;
@@ -251,22 +252,22 @@ contract Comments12 {
 
 contract Comments13 {
     function commentInModifierInvocation() external
-    // comment 1
-    modifier1 // comment 2
-    (
-    // comment 3
-    ) // comment 4
-    // comment 5
-    modifier2 // comment 6
-    (
-    /* comment 7 */
-    ) // comment 8
-    modifier3 // comment 9
-    (
-    // comment 10
-    param1 // comment 11
-    // comment 12
-    ) // comment 13
+        // comment 1
+        modifier1 // comment 2
+        (
+        // comment 3
+        ) // comment 4
+        // comment 5
+        modifier2 // comment 6
+        (
+        /* comment 7 */
+        ) // comment 8
+        modifier3 // comment 9
+        (
+        // comment 10
+        param1 // comment 11
+        // comment 12
+        ) // comment 13
     { }
 }
 

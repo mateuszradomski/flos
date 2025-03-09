@@ -901,8 +901,14 @@ pushTypeDocument(Render *r, ASTNode *node) {
             assert(stringMatch(LIT_TO_STR("("), r->tokens.tokenStrings[node->startToken + 1]));
 
             pushTokenWord(r, node->startToken);
+
+            pushGroup(r);
             pushTokenWord(r, node->startToken + 1);
+            pushWord(r, wordSoftline());
+            pushNest(r);
             pushParametersDocument(r, &node->functionTypeNode.parameters);
+            popNest(r);
+
             if(node->functionTypeNode.parameters.count > 0) {
                 assert(stringMatch(LIT_TO_STR(")"), r->tokens.tokenStrings[node->functionTypeNode.parameters.last->node.endToken + 1]));
                 pushTokenWord(r, node->functionTypeNode.parameters.last->node.endToken + 1);
@@ -910,6 +916,7 @@ pushTypeDocument(Render *r, ASTNode *node) {
                 assert(stringMatch(LIT_TO_STR(")"), r->tokens.tokenStrings[node->startToken + 2]));
                 pushTokenWord(r, node->startToken + 2);
             }
+            popGroup(r);
 
             if(node->functionTypeNode.visibility != INVALID_TOKEN_ID) {
                 pushWord(r, wordSpace());
@@ -926,10 +933,14 @@ pushTypeDocument(Render *r, ASTNode *node) {
                 assert(stringMatch(LIT_TO_STR("("), r->tokens.tokenStrings[node->functionTypeNode.returnParameters.head->node.endToken - 1]));
                 assert(stringMatch(LIT_TO_STR(")"), r->tokens.tokenStrings[node->functionTypeNode.returnParameters.last->node.endToken + 1]));
 
+                pushGroup(r);
                 pushTokenWord(r, node->functionTypeNode.returnParameters.head->node.endToken - 2);
                 pushTokenWord(r, node->functionTypeNode.returnParameters.head->node.endToken - 1);
+                pushNest(r);
                 pushParametersDocument(r, &node->functionTypeNode.returnParameters);
+                popNest(r);
                 pushTokenWord(r, node->functionTypeNode.returnParameters.last->node.endToken + 1);
+                popGroup(r);
             }
 
             // assert(false);
@@ -1692,6 +1703,7 @@ pushInheritanceSpecifierDocument(Render *r, ASTNode *node) {
 static void
 pushOverridesDocument(Render *r, TokenId overrideToken, ASTNodeListRanged *overrides) {
     if(overrideToken != INVALID_TOKEN_ID) {
+        pushWord(r, wordLine());
         assert(stringMatch(LIT_TO_STR("override"), r->tokens.tokenStrings[overrideToken]));
         pushTokenWord(r, overrideToken);
         if(overrides->count > 0) {
@@ -2210,11 +2222,9 @@ pushMemberDocument(Render *r, ASTNode *member) {
             if(member->type == ASTNodeType_FallbackFunction) {
                 assert(stringMatch(LIT_TO_STR("fallback"), r->tokens.tokenStrings[member->startToken]));
                 pushTokenWord(r, member->startToken);
-                pushWord(r, wordSpace());
             } else if(member->type == ASTNodeType_ReceiveFunction) {
                 assert(stringMatch(LIT_TO_STR("receive"), r->tokens.tokenStrings[member->startToken]));
                 pushTokenWord(r, member->startToken);
-                pushWord(r, wordSpace());
             } else {
                 assert(stringMatch(LIT_TO_STR("function"), r->tokens.tokenStrings[member->startToken]));
                 pushTokenWord(r, member->startToken);
@@ -2230,13 +2240,21 @@ pushMemberDocument(Render *r, ASTNode *member) {
                 ? function->parameters.last->node.endToken + 1
                 : openParenToken + 1;
 
+            pushGroup(r);
             pushTokenWord(r, openParenToken);
+            pushWord(r, wordSoftline());
+            pushNest(r);
             pushParametersDocument(r, &function->parameters);
+            popNest(r);
+            pushWord(r, wordSoftline());
             pushTokenWord(r, closeParenToken);
+            popGroup(r);
 
             assert(stringMatch(LIT_TO_STR("("), r->tokens.tokenStrings[openParenToken]));
             assert(stringMatch(LIT_TO_STR(")"), r->tokens.tokenStrings[closeParenToken]));
 
+            pushGroup(r);
+            pushNest(r);
             if(function->visibility != INVALID_TOKEN_ID) {
                 pushWord(r, wordSpace());
                 pushTokenWord(r, function->visibility);
@@ -2253,31 +2271,41 @@ pushMemberDocument(Render *r, ASTNode *member) {
 
             pushOverridesDocument(r, function->override, function->overrides);
 
+            if(function->modifiers && function->modifiers->count > 0) {
+                pushWord(r, wordLine());
+                pushModifierInvocations(r, function->modifiers);
+            }
+
             if(function->returnParameters) {
                 assert(stringMatch(LIT_TO_STR("returns"), r->tokens.tokenStrings[function->returnParameters->startToken - 2]));
                 assert(stringMatch(LIT_TO_STR("("), r->tokens.tokenStrings[function->returnParameters->startToken - 1]));
                 assert(stringMatch(LIT_TO_STR(")"), r->tokens.tokenStrings[function->returnParameters->endToken + 1]));
 
-                pushWord(r, wordSpace());
+                pushWord(r, wordLine());
+                pushGroup(r);
                 pushTokenWord(r, function->returnParameters->startToken - 2);
                 pushWord(r, wordSpace());
                 pushTokenWord(r, function->returnParameters->startToken - 1);
+                pushWord(r, wordSoftline());
+                pushNest(r);
                 pushParametersDocument(r, function->returnParameters);
+                popNest(r);
+                pushWord(r, wordSoftline());
                 pushTokenWord(r, function->returnParameters->endToken + 1);
+                popGroup(r);
             }
 
-            if(function->modifiers && function->modifiers->count > 0) {
-                pushWord(r, wordSpace());
-                pushModifierInvocations(r, function->modifiers);
-            }
+            popNest(r);
 
             if(function->body != 0x0) {
                 pushWord(r, wordLine());
+                popGroup(r);
                 popGroup(r);
                 pushStatementDocument(r, function->body);
                 pushWord(r, wordHardline());
             } else {
                 pushTokenWordOnly(r, member->endToken);
+                popGroup(r);
                 popGroup(r);
 
                 pushCommentsAfterToken(r, member->endToken);
@@ -2400,7 +2428,7 @@ pushMemberDocument(Render *r, ASTNode *member) {
                     assert(stringMatch(LIT_TO_STR("abstract"), r->tokens.tokenStrings[member->startToken]));
                     assert(stringMatch(LIT_TO_STR("contract"), r->tokens.tokenStrings[member->startToken + 1]));
                     pushWord(r, wordSpace());
-                    pushTokenWord(r, member->startToken);
+                    pushTokenWord(r, member->startToken + 1);
                 }
             }
             pushWord(r, wordSpace());
