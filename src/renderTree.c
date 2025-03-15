@@ -1273,6 +1273,7 @@ pushStatementDocument(Render *r, ASTNode *node) {
                 if(i != 0) { preserveHardlinesIntoDocument(r, &statement->node); }
 
                 pushStatementDocument(r, &statement->node);
+                pushWord(r, wordHardline());
             }
 
             popNest(r);
@@ -1299,8 +1300,6 @@ pushStatementDocument(Render *r, ASTNode *node) {
             }
             pushTokenWord(r, node->endToken);
             popGroup(r);
-
-            pushWord(r, wordHardline());
         } break;
         case ASTNodeType_ExpressionStatement: {
             if(node->expressionStatementNode.expression != 0x0) {
@@ -1310,7 +1309,6 @@ pushStatementDocument(Render *r, ASTNode *node) {
                 pushTokenWordOnly(r, node->endToken);
 
                 pushCommentsAfterToken(r, node->endToken);
-                pushWord(r, wordHardline());
             }
         } break;
         case ASTNodeType_IfStatement: {
@@ -1318,7 +1316,6 @@ pushStatementDocument(Render *r, ASTNode *node) {
             assert(stringMatch(LIT_TO_STR("("), r->tokens.tokenStrings[node->startToken + 1]));
             assert(stringMatch(LIT_TO_STR(")"), r->tokens.tokenStrings[node->ifStatementNode.conditionExpression->endToken + 1]));
             
-            pushGroup(r);
             pushTokenWord(r, node->startToken);
 
             pushGroup(r);
@@ -1328,26 +1325,16 @@ pushStatementDocument(Render *r, ASTNode *node) {
             popGroup(r);
 
             pushWord(r, wordSpace());
-            popGroup(r);
 
             ASTNode *lastStatement = node->ifStatementNode.trueStatement;
             pushStatementDocument(r, node->ifStatementNode.trueStatement);
             if(node->ifStatementNode.falseStatement) {
-                // TODO(radomski): I don't like this, because it's another
-                // solution that requies looking forward instead of
-                // consolidating whitespace. Maybe there is a better solution.
-                if(node->ifStatementNode.trueStatement->type == ASTNodeType_BlockStatement) {
-                    pushWord(r, wordSpace());
-                }
+                pushWord(r, wordSpace());
 
                 pushTokenWord(r, node->ifStatementNode.falseStatement->startToken - 1);
                 pushWord(r, wordSpace());
                 pushStatementDocument(r, node->ifStatementNode.falseStatement);
                 lastStatement = node->ifStatementNode.falseStatement;
-            }
-
-            if(lastStatement->type == ASTNodeType_BlockStatement) {
-                pushWord(r, wordHardline());
             }
         } break;
         case ASTNodeType_VariableDeclarationStatement: {
@@ -1376,7 +1363,6 @@ pushStatementDocument(Render *r, ASTNode *node) {
 
             pushTokenWord(r, node->endToken);
             popGroup(r);
-            pushWord(r, wordHardline());
         } break;
         case ASTNodeType_VariableDeclarationTupleStatement: {
             ASTNodeVariableDeclarationTupleStatement *statement = &node->variableDeclarationTupleStatementNode;
@@ -1424,8 +1410,6 @@ pushStatementDocument(Render *r, ASTNode *node) {
             pushTokenWord(r, node->endToken);
             popNest(r);
             popGroup(r);
-
-            pushWord(r, wordHardline());
         } break;
         case ASTNodeType_DoWhileStatement: {
             ASTNodeWhileStatement *statement = &node->whileStatementNode;
@@ -1440,10 +1424,6 @@ pushStatementDocument(Render *r, ASTNode *node) {
             pushWord(r, wordSpace());
 
             pushStatementDocument(r, statement->body);
-            // TODO(radomski): Hack, look at WhileStatement and fix it
-            if(statement->body->type != ASTNodeType_BlockStatement) {
-                r->wordCount -= 1;
-            }
             pushWord(r, wordSpace());
 
             pushGroup(r);
@@ -1455,8 +1435,6 @@ pushStatementDocument(Render *r, ASTNode *node) {
 
             pushTokenWord(r, node->endToken);
             popGroup(r);
-
-            pushWord(r, wordHardline());
         } break;
         case ASTNodeType_WhileStatement: {
             ASTNodeWhileStatement *statement = &node->whileStatementNode;
@@ -1478,11 +1456,6 @@ pushStatementDocument(Render *r, ASTNode *node) {
             popGroup(r);
 
             pushStatementDocument(r, statement->body);
-            // TODO(radomski): This feels stupid, probably should be a way to
-            // achieve this a different way 
-            if(statement->body->type == ASTNodeType_BlockStatement) {
-                pushWord(r, wordHardline());
-            }
         } break;
         case ASTNodeType_ForStatement: {
             ASTNodeForStatement *statement = &node->forStatementNode;
@@ -1498,7 +1471,6 @@ pushStatementDocument(Render *r, ASTNode *node) {
             
             if(statement->variableStatement != 0x0) {
                 pushStatementDocument(r, statement->variableStatement);
-                r->wordCount -= 1;
             } else {
                 pushWord(r, wordText(LIT_TO_STR(";")));
             }
@@ -1528,10 +1500,6 @@ pushStatementDocument(Render *r, ASTNode *node) {
 
             pushWord(r, wordSpace());
             pushStatementDocument(r, statement->body);
-
-            if(statement->body->type == ASTNodeType_BlockStatement) {
-                pushWord(r, wordHardline());
-            }
         } break;
         case ASTNodeType_RevertStatement: {
             assert(stringMatch(LIT_TO_STR("revert"), r->tokens.tokenStrings[node->startToken]));
@@ -1543,8 +1511,6 @@ pushStatementDocument(Render *r, ASTNode *node) {
             pushExpressionDocument(r, statement->expression);
             pushTokenWord(r, node->endToken);
             popGroup(r);
-
-            pushWord(r, wordHardline());
         } break;
         case ASTNodeType_EmitStatement: {
             assert(stringMatch(LIT_TO_STR("emit"), r->tokens.tokenStrings[node->startToken]));
@@ -1558,7 +1524,6 @@ pushStatementDocument(Render *r, ASTNode *node) {
             popGroup(r);
 
             pushCommentsAfterToken(r, node->endToken);
-            pushWord(r, wordHardline());
         } break;
         case ASTNodeType_TryStatement: {
             ASTNodeTryStatement *statement = &node->tryStatementNode;
@@ -1599,8 +1564,6 @@ pushStatementDocument(Render *r, ASTNode *node) {
                 }
                 pushStatementDocument(r, catch->body);
             }
-
-            pushWord(r, wordHardline());
         } break;
         case ASTNodeType_BreakStatement: {
             //renderTokenChecked(r, node->startToken, LIT_TO_STR("break"), SEMICOLON);

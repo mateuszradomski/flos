@@ -78,9 +78,7 @@ contract Contract {
     }
 
     function ifBlockInOneLine(uint a) returns (uint b) {
-        if(a < 0) b = 0x67;
-        else if(a == 0) b = 0x12;
-        else b = 0x78;
+        if(a < 0) b = 0x67; else if(a == 0) b = 0x12; else b = 0x78;
     }
 
     function forWithoutBlock() {
@@ -92,8 +90,7 @@ contract Contract {
     function fun(uint256 a) returns (uint) {
         if(something) foo();
         // comment
-        else if(somethingElse) bar();
-        else whatever();
+        else if(somethingElse) bar(); else whatever();
         return;
     }
 }
