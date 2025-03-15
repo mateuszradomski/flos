@@ -319,5 +319,6 @@ UTEST_F(SolFmtFixture, memberAccess) { utest_fixture->path = "tests/memberAccess
 UTEST_F(SolFmtFixture, nameValueExpression) { utest_fixture->path = "tests/nameValueExpression.sol"; }
 UTEST_F(SolFmtFixture, sampleCrowdSale) { utest_fixture->path = "tests/sampleCrowdSale.sol"; }
 UTEST_F(SolFmtFixture, splittableCommodity) { utest_fixture->path = "tests/splittableCommodity.sol"; }
+UTEST_F(SolFmtFixture, stateVariableDeclarations) { utest_fixture->path = "tests/stateVariableDeclarations.sol"; }
 
 UTEST_MAIN();
