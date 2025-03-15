@@ -1291,11 +1291,11 @@ pushStatementDocument(Render *r, ASTNode *node) {
             pushCommentsAfterToken(r, node->endToken);
         } break;
         case ASTNodeType_UncheckedBlockStatement: {
-            //ASTNodeUncheckedBlockStatement *unchecked = &node->uncheckedBlockStatementNode;
-            //assert(stringMatch(LIT_TO_STR("unchecked"), r->tokens.tokenStrings[node->startToken]));
-            //renderToken(r, node->startToken, SPACE);
-            //renderStatement(r, unchecked->block, NEWLINE);
-            assert(false);
+            ASTNodeUncheckedBlockStatement *unchecked = &node->uncheckedBlockStatementNode;
+            assert(stringMatch(LIT_TO_STR("unchecked"), r->tokens.tokenStrings[node->startToken]));
+            pushTokenWord(r, node->startToken);
+            pushWord(r, wordSpace());
+            pushStatementDocument(r, unchecked->block);
         } break;
         case ASTNodeType_ReturnStatement: {
             assert(stringMatch(LIT_TO_STR("return"), r->tokens.tokenStrings[node->startToken]));
@@ -1332,12 +1332,16 @@ pushStatementDocument(Render *r, ASTNode *node) {
             pushTokenWord(r, node->ifStatementNode.conditionExpression->endToken + 1);
             popGroup(r);
 
-            pushWord(r, wordSpace());
-
             ASTNode *lastStatement = node->ifStatementNode.trueStatement;
+            bool trueStatementIsBlock = node->ifStatementNode.trueStatement->type == ASTNodeType_BlockStatement;
+
+            if(!trueStatementIsBlock) { pushGroup(r); pushNest(r); }
+            pushWord(r, trueStatementIsBlock ? wordSpace() : wordLine());
             pushStatementDocument(r, node->ifStatementNode.trueStatement);
+            if(!trueStatementIsBlock) { popNest(r); popGroup(r); }
+
             if(node->ifStatementNode.falseStatement) {
-                pushWord(r, wordSpace());
+                pushWord(r, trueStatementIsBlock ? wordSpace() : wordHardline());
 
                 pushTokenWord(r, node->ifStatementNode.falseStatement->startToken - 1);
                 pushWord(r, wordSpace());

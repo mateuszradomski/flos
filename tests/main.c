@@ -326,5 +326,6 @@ UTEST_F(SolFmtFixture, tryCatch) { utest_fixture->path = "tests/tryCatch.sol"; }
 UTEST_F(SolFmtFixture, binaryOperationGroup) { utest_fixture->path = "tests/binaryOperationGroup.sol"; }
 UTEST_F(SolFmtFixture, experimentalTerneries) { utest_fixture->path = "tests/experimentalTerneries.sol"; }
 UTEST_F(SolFmtFixture, functionCalls) { utest_fixture->path = "tests/functionCalls.sol"; }
+UTEST_F(SolFmtFixture, ifStatements) { utest_fixture->path = "tests/ifStatements.sol"; }
 
 UTEST_MAIN();

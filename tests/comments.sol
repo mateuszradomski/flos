@@ -212,7 +212,8 @@ contract Comments9 {
     function someFunction() {
         if(something)
         // a comment
-        f(); else { }
+            f();
+        else { }
     }
 }
 
