@@ -316,5 +316,6 @@ UTEST_F(SolFmtFixture, functionDefinitions_v0_5_0) { utest_fixture->path = "test
 UTEST_F(SolFmtFixture, indexOf) { utest_fixture->path = "tests/indexOf.sol"; }
 UTEST_F(SolFmtFixture, inheritanceSpecifier) { utest_fixture->path = "tests/inheritanceSpecifier.sol"; }
 UTEST_F(SolFmtFixture, memberAccess) { utest_fixture->path = "tests/memberAccess.sol"; }
+UTEST_F(SolFmtFixture, nameValueExpression) { utest_fixture->path = "tests/nameValueExpression.sol"; }
 
 UTEST_MAIN();

@@ -1034,10 +1034,10 @@ pushExpressionDocument(Render *r, ASTNode *node) {
             assert(stringMatch(tokenTypeToString(node->unaryExpressionNode.operator), getTokenString(r->tokens, node->endToken)));
         } break;
         case ASTNodeType_NewExpression: {
-            // assert(stringMatch(LIT_TO_STR("new"), r->tokens.tokenStrings[node->startToken]));
-            // renderToken(r, node->startToken, SPACE);
-            // renderType(r, node->newExpressionNode.typeName, connect);
-            assert(false);
+            assert(stringMatch(LIT_TO_STR("new"), r->tokens.tokenStrings[node->startToken]));
+            pushTokenWord(r, node->startToken);
+            pushWord(r, wordSpace());
+            pushTypeDocument(r, node->newExpressionNode.typeName);
         } break;
         case ASTNodeType_FunctionCallExpression: {
             ASTNodeFunctionCallExpression *function = &node->functionCallExpressionNode;
@@ -1142,13 +1142,14 @@ pushExpressionDocument(Render *r, ASTNode *node) {
         case ASTNodeType_NamedParameterExpression: {
             ASTNodeNamedParametersExpression *named = &node->namedParametersExpressionNode;
 
-
             pushExpressionDocument(r, named->expression);
 
             assert(stringMatch(LIT_TO_STR("{"), r->tokens.tokenStrings[named->expression->endToken + 1]));
             assert(stringMatch(LIT_TO_STR("}"), r->tokens.tokenStrings[node->endToken]));
 
+            pushGroup(r);
             pushTokenWord(r, named->expression->endToken + 1);
+            pushNest(r);
             pushWord(r, wordLine());
             ASTNodeLink *expression = named->expressions.head;
             for(u32 i = 0; i < named->expressions.count; i++, expression = expression->next) {
@@ -1157,7 +1158,15 @@ pushExpressionDocument(Render *r, ASTNode *node) {
                 pushTokenWord(r, listGetTokenId(&named->names, i) + 1);
                 pushWord(r, wordSpace());
                 pushExpressionDocument(r, &expression->node);
+
+                if(i < named->expressions.count - 1) {
+                    assert(stringMatch(LIT_TO_STR(","), r->tokens.tokenStrings[expression->node.endToken + 1]));
+                    pushTokenWord(r, expression->node.endToken + 1);
+                    pushWord(r, wordLine());
+                }
             }
+            popNest(r);
+            popGroup(r);
             pushWord(r, wordLine());
             pushTokenWord(r, node->endToken);
         } break;
