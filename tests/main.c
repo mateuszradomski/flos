@@ -321,5 +321,6 @@ UTEST_F(SolFmtFixture, sampleCrowdSale) { utest_fixture->path = "tests/sampleCro
 UTEST_F(SolFmtFixture, splittableCommodity) { utest_fixture->path = "tests/splittableCommodity.sol"; }
 UTEST_F(SolFmtFixture, stateVariableDeclarations) { utest_fixture->path = "tests/stateVariableDeclarations.sol"; }
 UTEST_F(SolFmtFixture, tuples) { utest_fixture->path = "tests/tuples.sol"; }
+UTEST_F(SolFmtFixture, whileStatements) { utest_fixture->path = "tests/whileStatements.sol"; }
 
 UTEST_MAIN();
