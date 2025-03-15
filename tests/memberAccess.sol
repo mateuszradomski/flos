@@ -100,7 +100,7 @@ contract MemberAccessIsEndOfChainCases {
         // break if is an NameValueList
         a.b{value: c.d}();
         // break if is an TryStatement
-        // try a.b() {} catch {} TODO(radomski): Uncomment
+        try a.b() {} catch {}
         // break if is an ReturnStatement
         return b.c;
     }
@@ -193,7 +193,7 @@ contract MemberAccessIsEndOfChainCases {
         // break if is an NameValueList
         a.b{ value: c.d }();
         // break if is an TryStatement
-        // try a.b() {} catch {} TODO(radomski): Uncomment
+        try a.b() { } catch { }
         // break if is an ReturnStatement
         return b.c;
     }

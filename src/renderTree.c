@@ -1493,35 +1493,46 @@ pushStatementDocument(Render *r, ASTNode *node) {
             pushWord(r, wordHardline());
         } break;
         case ASTNodeType_TryStatement: {
-            //ASTNodeTryStatement *statement = &node->tryStatementNode;
-            //renderTokenChecked(r, node->startToken, LIT_TO_STR("try"), SPACE);
-            //
-            //renderExpression(r, statement->expression, SPACE);
+            ASTNodeTryStatement *statement = &node->tryStatementNode;
+            assert(stringMatch(LIT_TO_STR("try"), r->tokens.tokenStrings[node->startToken]));
+            pushTokenWord(r, node->startToken);
+
+            pushWord(r, wordSpace());
+            pushExpressionDocument(r, statement->expression);
+            pushWord(r, wordSpace());
+
             //renderTokenChecked(r, statement->expression->endToken + 1, LIT_TO_STR("returns"), SPACE);
             //renderTokenChecked(r, statement->expression->endToken + 2, LIT_TO_STR("("), NONE);
             //renderParameters(r, &statement->returnParameters, COMMA_SPACE, 0);
             //renderTokenChecked(r, statement->body->startToken - 1, LIT_TO_STR(")"), SPACE);
-            //renderStatement(r, statement->body, statement->catches.count > 0 ? SPACE : NEWLINE);
-            //
-            //ASTNodeLink *catchLink = statement->catches.head;
-            //for(u32 i = 0; i < statement->catches.count; i++, catchLink = catchLink->next) {
-            //renderTokenChecked(r, catchLink->node.startToken, LIT_TO_STR("catch"), SPACE);
-            //ASTNodeCatchStatement *catch = &catchLink->node.catchStatementNode;
-            //
-            //u32 openParenToken = catchLink->node.startToken + 1;
-            //if(catch->identifier != INVALID_TOKEN_ID) {
-            //renderToken(r, catch->identifier, NONE);
-            //openParenToken = catch->identifier + 1;
-            //}
-            //
-            //if(catch->parameters.count != -1) {
-            //renderTokenChecked(r, openParenToken, LIT_TO_STR("("), NONE);
-            //renderParameters(r, &catch->parameters, COMMA_SPACE, 0);
-            //renderTokenChecked(r, catch->body->startToken - 1, LIT_TO_STR(")"), SPACE);
-            //}
-            //renderStatement(r, catch->body, i == statement->catches.count - 1 ? NEWLINE : SPACE);
-            //}
-            assert(false);
+
+            pushStatementDocument(r, statement->body);
+
+            ASTNodeLink *catchLink = statement->catches.head;
+            for(u32 i = 0; i < statement->catches.count; i++, catchLink = catchLink->next) {
+                pushWord(r, wordSpace());
+                ASTNodeCatchStatement *catch = &catchLink->node.catchStatementNode;
+                assert(stringMatch(LIT_TO_STR("catch"), r->tokens.tokenStrings[catchLink->node.startToken]));
+
+                pushTokenWord(r, catchLink->node.startToken);
+                pushWord(r, wordSpace());
+
+                u32 openParenToken = catchLink->node.startToken + 1;
+                if(catch->identifier != INVALID_TOKEN_ID) {
+                    pushTokenWord(r, catch->identifier);
+                    openParenToken = catch->identifier + 1;
+                }
+            
+                if(catch->parameters.count != -1) {
+                    assert(false);
+                    //renderTokenChecked(r, openParenToken, LIT_TO_STR("("), NONE);
+                    //renderParameters(r, &catch->parameters, COMMA_SPACE, 0);
+                    //renderTokenChecked(r, catch->body->startToken - 1, LIT_TO_STR(")"), SPACE);
+                }
+                pushStatementDocument(r, catch->body);
+            }
+
+            pushWord(r, wordHardline());
         } break;
         case ASTNodeType_BreakStatement: {
             //renderTokenChecked(r, node->startToken, LIT_TO_STR("break"), SEMICOLON);
