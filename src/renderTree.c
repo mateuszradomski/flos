@@ -796,7 +796,7 @@ pushCallArgumentListDocument(Render *r, TokenId startingToken, ASTNodeListRanged
         }
     } else {
         pushCommentsAfterToken(r, listGetTokenId(names, 0) - 1);
-        pushWord(r, wordSpace());
+        pushWord(r, wordLine());
         ASTNodeLink *argument = expressions->head;
         assert(names->count == expressions->count);
         for(u32 i = 0; i < expressions->count; i++, argument = argument->next) {
