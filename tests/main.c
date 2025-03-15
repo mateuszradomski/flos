@@ -323,5 +323,6 @@ UTEST_F(SolFmtFixture, stateVariableDeclarations) { utest_fixture->path = "tests
 UTEST_F(SolFmtFixture, tuples) { utest_fixture->path = "tests/tuples.sol"; }
 UTEST_F(SolFmtFixture, whileStatements) { utest_fixture->path = "tests/whileStatements.sol"; }
 UTEST_F(SolFmtFixture, tryCatch) { utest_fixture->path = "tests/tryCatch.sol"; }
+UTEST_F(SolFmtFixture, binaryOperationGroup) { utest_fixture->path = "tests/binaryOperationGroup.sol"; }
 
 UTEST_MAIN();
