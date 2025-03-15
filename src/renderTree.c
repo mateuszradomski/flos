@@ -574,6 +574,11 @@ pushCommentsAfterToken(Render *r, TokenId token) {
         .size = endOffset - startOffset,
     };
 
+    if(r->wordCount > 0 && r->words[r->wordCount - 1].type != WordType_Text) {
+        r->trailingWhitespace = r->words[r->wordCount - 1];
+        r->wordCount -= 1;
+    }
+
     if(input.size >= 2) {
         u32 cursor = 0;
 
@@ -722,7 +727,7 @@ pushTokenWordOnly(Render *r, TokenId token) {
         .nest = r->nest,
     };
 
-    if(r->trailingWhitespace.type == WordType_Hardline) {
+    if(r->trailingWhitespace.type != WordType_None) {
         pushWord(r, r->trailingWhitespace);
         r->trailingWhitespace = (Word){};
     }
@@ -771,9 +776,14 @@ static void
 pushCallArgumentListDocument(Render *r, TokenId startingToken, ASTNodeListRanged *expressions, TokenIdList *names) {
     assert(expressions->count != -1);
 
-    pushTokenWord(r, startingToken);
     pushGroup(r);
+    pushTokenWord(r, startingToken);
+    if(names->count > 0) {
+        pushTokenWordOnly(r, listGetTokenId(names, 0) - 1);
+    }
+    pushWord(r, wordSoftline());
     pushNest(r);
+
     if(names->count == 0) {
         ASTNodeLink *argument = expressions->head;
         for(u32 i = 0; i < expressions->count; i++, argument = argument->next) {
@@ -785,7 +795,7 @@ pushCallArgumentListDocument(Render *r, TokenId startingToken, ASTNodeListRanged
             }
         }
     } else {
-        pushTokenWord(r, listGetTokenId(names, 0) - 1);
+        pushCommentsAfterToken(r, listGetTokenId(names, 0) - 1);
         pushWord(r, wordSpace());
         ASTNodeLink *argument = expressions->head;
         assert(names->count == expressions->count);
@@ -800,21 +810,31 @@ pushCallArgumentListDocument(Render *r, TokenId startingToken, ASTNodeListRanged
 
             if(i < expressions->count - 1) {
                 pushTokenWord(r, argument->node.endToken + 1);
+                pushWord(r, wordLine());
             }
-            pushWord(r, wordLine());
         }
-        pushTokenWord(r, expressions->last->node.endToken + 1);
     }
-    popNestWithLastWord(r);
-    popGroup(r);
 
+    TokenId endToken = 0;
     if(expressions->count > 0) {
         TokenId token = expressions->last->node.endToken + 1;
         token += names->count > 0;
-        pushTokenWord(r, token);
+        endToken = token;
     } else {
-        pushTokenWord(r, startingToken + 1);
+        endToken = startingToken + 1;
     }
+
+    popNestWithLastWord(r);
+    pushWord(r, wordSoftline());
+    if(names->count > 0) {
+        pushTokenWord(r, expressions->last->node.endToken + 1);
+    }
+    pushTokenWordOnly(r, endToken);
+    popGroup(r);
+    pushCommentsAfterToken(r, endToken);
+
+    assert(stringMatch(LIT_TO_STR("("), r->tokens.tokenStrings[startingToken]));
+    assert(stringMatch(LIT_TO_STR(")"), r->tokens.tokenStrings[endToken]));
 }
 
 static void pushParametersDocument(Render *r, ASTNodeListRanged *parameters);
@@ -1083,7 +1103,9 @@ pushExpressionDocument(Render *r, ASTNode *node) {
                     assert(stringMatch(LIT_TO_STR(","), r->tokens.tokenStrings[expression->node.endToken + 1]));
                     pushTokenWord(r, expression->node.endToken + 1);
                 }
-                pushWord(r, wordLine());
+
+                Word whitespace = i < array->expressions.count - 1 ? wordLine() : wordSoftline();
+                pushWord(r, whitespace);
             }
 
             popNest(r);
