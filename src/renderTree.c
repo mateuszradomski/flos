@@ -1528,17 +1528,35 @@ pushStatementDocument(Render *r, ASTNode *node) {
         case ASTNodeType_TryStatement: {
             ASTNodeTryStatement *statement = &node->tryStatementNode;
             assert(stringMatch(LIT_TO_STR("try"), r->tokens.tokenStrings[node->startToken]));
+            pushGroup(r);
             pushTokenWord(r, node->startToken);
 
             pushWord(r, wordSpace());
             pushExpressionDocument(r, statement->expression);
+
+            if(statement->returnParameters.count != -1) {
+                assert(stringMatch(LIT_TO_STR("returns"), r->tokens.tokenStrings[statement->expression->endToken + 1]));
+                assert(stringMatch(LIT_TO_STR("("), r->tokens.tokenStrings[statement->expression->endToken + 2]));
+                assert(stringMatch(LIT_TO_STR(")"), r->tokens.tokenStrings[statement->body->startToken - 1]));
+
+                pushWord(r, wordSpace());
+                pushTokenWord(r, statement->expression->endToken + 1);
+                pushWord(r, wordSpace());
+
+                // TODO(radomski): Does the parameters list always gets blown
+                // into multiple lines or do we allow to get the parameters on
+                // the same line if they don't straddle the line limit
+                pushTokenWord(r, statement->expression->endToken + 2);
+                pushWord(r, wordSoftline());
+                pushNest(r);
+                pushParametersDocument(r, &statement->returnParameters);
+                popNest(r);
+                pushWord(r, wordSoftline());
+                pushTokenWord(r, statement->body->startToken - 1);
+            }
+
             pushWord(r, wordSpace());
-
-            //renderTokenChecked(r, statement->expression->endToken + 1, LIT_TO_STR("returns"), SPACE);
-            //renderTokenChecked(r, statement->expression->endToken + 2, LIT_TO_STR("("), NONE);
-            //renderParameters(r, &statement->returnParameters, COMMA_SPACE, 0);
-            //renderTokenChecked(r, statement->body->startToken - 1, LIT_TO_STR(")"), SPACE);
-
+            popGroup(r);
             pushStatementDocument(r, statement->body);
 
             ASTNodeLink *catchLink = statement->catches.head;
@@ -1548,20 +1566,23 @@ pushStatementDocument(Render *r, ASTNode *node) {
                 assert(stringMatch(LIT_TO_STR("catch"), r->tokens.tokenStrings[catchLink->node.startToken]));
 
                 pushTokenWord(r, catchLink->node.startToken);
-                pushWord(r, wordSpace());
 
                 u32 openParenToken = catchLink->node.startToken + 1;
                 if(catch->identifier != INVALID_TOKEN_ID) {
+                    pushWord(r, wordSpace());
                     pushTokenWord(r, catch->identifier);
                     openParenToken = catch->identifier + 1;
                 }
             
                 if(catch->parameters.count != -1) {
-                    assert(false);
-                    //renderTokenChecked(r, openParenToken, LIT_TO_STR("("), NONE);
-                    //renderParameters(r, &catch->parameters, COMMA_SPACE, 0);
-                    //renderTokenChecked(r, catch->body->startToken - 1, LIT_TO_STR(")"), SPACE);
+                    assert(stringMatch(LIT_TO_STR("("), r->tokens.tokenStrings[openParenToken]));
+                    assert(stringMatch(LIT_TO_STR(")"), r->tokens.tokenStrings[catch->body->startToken - 1]));
+                    pushTokenWord(r, openParenToken);
+                    pushParametersDocument(r, &catch->parameters);
+                    pushTokenWord(r, catch->body->startToken - 1);
                 }
+
+                pushWord(r, wordSpace());
                 pushStatementDocument(r, catch->body);
             }
         } break;
