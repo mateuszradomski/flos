@@ -1008,14 +1008,16 @@ pushExpressionDocument(Render *r, ASTNode *node) {
             pushNest(r);
             ASTNodeLink *element = tuple->elements.head;
             for(u32 i = 0; i < tuple->elements.count; i++, element = element->next) {
-                if(element->node.type != ASTNodeType_None) {
+                bool isNamed = element->node.type != ASTNodeType_None;
+                if(isNamed) {
+                    if(i > 0) { pushWord(r, wordLine()); }
                     pushExpressionDocument(r, &element->node);
                 }
 
                 if(i < tuple->elements.count - 1) {
-                    assert(stringMatch(LIT_TO_STR(","), r->tokens.tokenStrings[element->node.endToken + 1]));
-                    pushTokenWord(r, element->node.endToken + 1);
-                    pushWord(r, wordLine());
+                    TokenId commaToken = isNamed ? element->node.endToken + 1 : element->next->node.startToken - 1;
+                    assert(stringMatch(LIT_TO_STR(","), r->tokens.tokenStrings[commaToken]));
+                    pushTokenWord(r, commaToken);
                 }
             }
             popNest(r);
@@ -1377,21 +1379,53 @@ pushStatementDocument(Render *r, ASTNode *node) {
             pushWord(r, wordHardline());
         } break;
         case ASTNodeType_VariableDeclarationTupleStatement: {
-            //ASTNodeVariableDeclarationTupleStatement *statement = &node->variableDeclarationTupleStatementNode;
-            //
-            //renderTokenChecked(r, node->startToken, LIT_TO_STR("("), NONE);
-            //ASTNodeLink *decl = statement->declarations.head;
-            //for(u32 i = 0; i < statement->declarations.count; i++, decl = decl->next) {
-            //if(decl->node.type != ASTNodeType_None) {
-            //ConnectType innerConnect = i == statement->declarations.count - 1 ? connect : COMMA_SPACE;
-            //renderVariableDeclaration(r, &decl->node, innerConnect);
-            //}
-            //}
-            //renderTokenChecked(r, statement->initialValue->startToken - 2, LIT_TO_STR(")"), SPACE);
-            //renderTokenChecked(r, statement->initialValue->startToken - 1, LIT_TO_STR("="), SPACE);
-            //
-            //renderExpression(r, statement->initialValue, SEMICOLON);
-            assert(false);
+            ASTNodeVariableDeclarationTupleStatement *statement = &node->variableDeclarationTupleStatementNode;
+            assert(stringMatch(LIT_TO_STR(";"), r->tokens.tokenStrings[node->endToken]));
+            assert(stringMatch(LIT_TO_STR("("), r->tokens.tokenStrings[node->startToken]));
+
+            pushGroup(r);
+            pushTokenWord(r, node->startToken);
+            pushNest(r);
+            pushWord(r, wordSoftline());
+            ASTNodeLink *it = statement->declarations.head;
+            for(u32 i = 0; i < statement->declarations.count; i++, it = it->next) {
+                if(it->node.type != ASTNodeType_None) {
+                    ASTNodeVariableDeclaration *decl = &it->node.variableDeclarationNode;
+
+                    pushTypeDocument(r, decl->type);
+                    pushWord(r, wordSpace());
+
+                    if(decl->dataLocation != INVALID_TOKEN_ID) {
+                        pushTokenWord(r, decl->dataLocation);
+                        pushWord(r, wordSpace());
+                    }
+
+                    pushTokenWord(r, decl->name);
+                    if(i < statement->declarations.count - 1) {
+                        assert(stringMatch(LIT_TO_STR(","), r->tokens.tokenStrings[decl->name + 1]));
+                        pushTokenWord(r, decl->name + 1);
+                        pushWord(r, wordLine());
+                    }
+                }
+            }
+            assert(stringMatch(LIT_TO_STR(")"), r->tokens.tokenStrings[statement->initialValue->startToken - 2]));
+            assert(stringMatch(LIT_TO_STR("="), r->tokens.tokenStrings[statement->initialValue->startToken - 1]));
+            popNest(r);
+            pushWord(r, wordSoftline());
+            pushTokenWord(r, statement->initialValue->startToken - 2);
+            pushWord(r, wordSpace());
+            pushTokenWord(r, statement->initialValue->startToken - 1);
+            popGroup(r);
+
+            pushGroup(r);
+            pushNest(r);
+            pushWord(r, wordLine());
+            pushExpressionDocument(r, statement->initialValue);
+            pushTokenWord(r, node->endToken);
+            popNest(r);
+            popGroup(r);
+
+            pushWord(r, wordHardline());
         } break;
         case ASTNodeType_DoWhileStatement: {
             //ASTNodeWhileStatement *statement = &node->whileStatementNode;
