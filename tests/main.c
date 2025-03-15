@@ -325,5 +325,6 @@ UTEST_F(SolFmtFixture, whileStatements) { utest_fixture->path = "tests/whileStat
 UTEST_F(SolFmtFixture, tryCatch) { utest_fixture->path = "tests/tryCatch.sol"; }
 UTEST_F(SolFmtFixture, binaryOperationGroup) { utest_fixture->path = "tests/binaryOperationGroup.sol"; }
 UTEST_F(SolFmtFixture, experimentalTerneries) { utest_fixture->path = "tests/experimentalTerneries.sol"; }
+UTEST_F(SolFmtFixture, functionCalls) { utest_fixture->path = "tests/functionCalls.sol"; }
 
 UTEST_MAIN();

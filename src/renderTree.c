@@ -825,9 +825,11 @@ pushCallArgumentListDocument(Render *r, TokenId startingToken, ASTNodeListRanged
     }
 
     popNestWithLastWord(r);
-    pushWord(r, wordSoftline());
     if(names->count > 0) {
+    pushWord(r, wordLine());
         pushTokenWord(r, expressions->last->node.endToken + 1);
+    } else {
+    pushWord(r, wordSoftline());
     }
     pushTokenWordOnly(r, endToken);
     popGroup(r);
