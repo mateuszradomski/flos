@@ -2280,16 +2280,16 @@ pushMemberDocument(Render *r, ASTNode *member) {
             pushGroup(r);
             pushNest(r);
             if(function->visibility != INVALID_TOKEN_ID) {
-                pushWord(r, wordSpace());
+                pushWord(r, wordLine());
                 pushTokenWord(r, function->visibility);
             }
             if(function->stateMutability != INVALID_TOKEN_ID) {
-                pushWord(r, wordSpace());
+                pushWord(r, wordLine());
                 pushTokenWord(r, function->stateMutability);
             }
 
             if(function->virtual != INVALID_TOKEN_ID) {
-                pushWord(r, wordSpace());
+                pushWord(r, wordLine());
                 pushTokenWord(r, function->virtual);
             }
 

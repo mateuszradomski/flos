@@ -251,7 +251,8 @@ contract Comments12 {
 }
 
 contract Comments13 {
-    function commentInModifierInvocation() external
+    function commentInModifierInvocation()
+        external
         // comment 1
         modifier1 // comment 2
         (
