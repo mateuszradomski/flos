@@ -314,5 +314,6 @@ UTEST_F(SolFmtFixture, forStatement) { utest_fixture->path = "tests/forStatement
 UTEST_F(SolFmtFixture, functionDefinitions) { utest_fixture->path = "tests/functionDefinitions.sol"; }
 UTEST_F(SolFmtFixture, functionDefinitions_v0_5_0) { utest_fixture->path = "tests/functionDefinitions_v0_5_0.sol"; }
 UTEST_F(SolFmtFixture, indexOf) { utest_fixture->path = "tests/indexOf.sol"; }
+UTEST_F(SolFmtFixture, inheritanceSpecifier) { utest_fixture->path = "tests/inheritanceSpecifier.sol"; }
 
 UTEST_MAIN();
