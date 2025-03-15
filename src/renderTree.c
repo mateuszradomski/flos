@@ -1005,8 +1005,10 @@ pushExpressionDocument(Render *r, ASTNode *node) {
 
             pushGroup(r);
             pushTokenWord(r, node->startToken);
+            pushWord(r, wordSoftline());
             pushNest(r);
             ASTNodeLink *element = tuple->elements.head;
+            pushGroup(r);
             for(u32 i = 0; i < tuple->elements.count; i++, element = element->next) {
                 bool isNamed = element->node.type != ASTNodeType_None;
                 if(isNamed) {
@@ -1020,7 +1022,9 @@ pushExpressionDocument(Render *r, ASTNode *node) {
                     pushTokenWord(r, commaToken);
                 }
             }
+            popGroup(r);
             popNest(r);
+            pushWord(r, wordSoftline());
             pushTokenWord(r, node->endToken);
             popGroup(r);
         } break;
@@ -1119,6 +1123,7 @@ pushExpressionDocument(Render *r, ASTNode *node) {
             assert(stringMatch(LIT_TO_STR("?"), r->tokens.tokenStrings[ternery->condition->endToken + 1]));
 
             pushGroup(r);
+            pushGroup(r);
             pushExpressionDocument(r, ternery->condition);
             popGroup(r);
 
@@ -1137,6 +1142,7 @@ pushExpressionDocument(Render *r, ASTNode *node) {
             pushTokenWord(r, ternery->trueExpression->endToken + 1);
             pushWord(r, wordSpace());
             pushExpressionDocument(r, ternery->falseExpression);
+            popGroup(r);
             popGroup(r);
 
             popNest(r);
