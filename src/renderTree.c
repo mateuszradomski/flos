@@ -1140,21 +1140,26 @@ pushExpressionDocument(Render *r, ASTNode *node) {
             popNest(r);
         } break;
         case ASTNodeType_NamedParameterExpression: {
-            // assert(stringMatch(LIT_TO_STR("{"), r->tokens.tokenStrings[named->expression->endToken + 1]));
-            // assert(stringMatch(LIT_TO_STR("}"), r->tokens.tokenStrings[node->endToken]));
+            ASTNodeNamedParametersExpression *named = &node->namedParametersExpressionNode;
 
-            // ASTNodeNamedParametersExpression *named = &node->namedParametersExpressionNode;
-            // renderExpression(r, named->expression, NONE);
 
-            // renderToken(r, named->expression->endToken + 1, SPACE);
-            // ASTNodeLink *expression = named->expressions.head;
-            // for(u32 i = 0; i < named->expressions.count; i++, expression = expression->next) {
-            //     ConnectType connect = i == named->expressions.count - 1 ? SPACE : COMMA_SPACE;
-            //     renderToken(r, listGetTokenId(&named->names, i), COLON_SPACE);
-            //     renderExpression(r, &expression->node, connect);
-            // }
-            // renderToken(r, node->endToken, connect);
-            assert(false);
+            pushExpressionDocument(r, named->expression);
+
+            assert(stringMatch(LIT_TO_STR("{"), r->tokens.tokenStrings[named->expression->endToken + 1]));
+            assert(stringMatch(LIT_TO_STR("}"), r->tokens.tokenStrings[node->endToken]));
+
+            pushTokenWord(r, named->expression->endToken + 1);
+            pushWord(r, wordLine());
+            ASTNodeLink *expression = named->expressions.head;
+            for(u32 i = 0; i < named->expressions.count; i++, expression = expression->next) {
+                assert(stringMatch(LIT_TO_STR(":"), r->tokens.tokenStrings[listGetTokenId(&named->names, i) + 1]));
+                pushTokenWord(r, listGetTokenId(&named->names, i));
+                pushTokenWord(r, listGetTokenId(&named->names, i) + 1);
+                pushWord(r, wordSpace());
+                pushExpressionDocument(r, &expression->node);
+            }
+            pushWord(r, wordLine());
+            pushTokenWord(r, node->endToken);
         } break;
         default: {
             assert(0);
