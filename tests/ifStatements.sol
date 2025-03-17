@@ -2,51 +2,51 @@ contract IfStatements {
     function hi() public {
         if (simpleIf) return true;
 
-        if (simpleIf) return (true,true,true,true,true,true,true,true,true,true,true);
+        if (simpleIf) return (true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true);
 
         if (simpleIf) return true;
         else return false;
 
-        if (simpleIf) return (true,true,true,true,true,true,true,true,true,true,true);
+        if (simpleIf) return (true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true);
         else return false;
 
         if (simpleIf) return true;
-        else return (false,false,false,false,false,false,false,false,false,false,false);
+        else return (false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false);
 
-        if (simpleIf) return (true,true,true,true,true,true,true,true,true,true,true);
-        else return (false,false,false,false,false,false,false,false,false,false,false);
-
-        if (simpleIf) return true;
-        else if (simpleElseIf) return (true,false);
-        else return false;
-
-        if (simpleIf) return (true,true,true,true,true,true,true,true,true,true,true);
-        else if (simpleElseIf) return (true,false);
-        else return false;
+        if (simpleIf) return (true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true);
+        else return (false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false);
 
         if (simpleIf) return true;
         else if (simpleElseIf) return (true,false);
-        else return (false,false,false,false,false,false,false,false,false,false,false);
+        else return false;
 
-        if (simpleIf) return (true,true,true,true,true,true,true,true,true,true,true);
+        if (simpleIf) return (true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true);
         else if (simpleElseIf) return (true,false);
-        else return (false,false,false,false,false,false,false,false,false,false,false);
-
-        if (simpleIf) return true;
-        else if (simpleElseIf) return (true,false,true,false,true,false,true,false,true,false);
-        else return false;
-
-        if (simpleIf) return (true,true,true,true,true,true,true,true,true,true,true);
-        else if (simpleElseIf) return (true,false,true,false,true,false,true,false,true,false);
         else return false;
 
         if (simpleIf) return true;
-        else if (simpleElseIf) return (true,false,true,false,true,false,true,false,true,false);
-        else return (false,false,false,false,false,false,false,false,false,false,false);
+        else if (simpleElseIf) return (true,false);
+        else return (false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false);
 
-        if (simpleIf) return (true,true,true,true,true,true,true,true,true,true,true);
-        else if (simpleElseIf) return (true,false,true,false,true,false,true,false,true,false);
-        else return (false,false,false,false,false,false,false,false,false,false,false);
+        if (simpleIf) return (true,true,true,true,true,true,true,true,true,true,true,false,false,false,false,false,false);
+        else if (simpleElseIf) return (true,false);
+        else return (false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false);
+
+        if (simpleIf) return true;
+        else if (simpleElseIf) return (true,false,true,false,true,false,true,false,true,false,false,false,false,false,false,false);
+        else return false;
+
+        if (simpleIf) return (true,true,true,true,true,true,true,true,true,true,true,false,false,false,false,false,false);
+        else if (simpleElseIf) return (true,false,true,false,true,false,true,false,true,false,false,false,false,false,false,false);
+        else return false;
+
+        if (simpleIf) return true;
+        else if (simpleElseIf) return (true,false,true,false,true,false,true,false,true,false,false,false,false,false,false,false);
+        else return (false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false);
+
+        if (simpleIf) return (true,true,true,true,true,true,true,true,true,true,true,false,false,false,false,false,false);
+        else if (simpleElseIf) return (true,false,true,false,true,false,true,false,true,false,false,false,false,false,false,false);
+        else return (false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false);
 
         if (simpleIf) { return true; }
 
@@ -138,51 +138,375 @@ contract IfStatements {
     function hi() public {
         if(simpleIf) return true;
 
-        if(simpleIf) return (true, true, true, true, true, true, true, true, true, true, true);
+        if(simpleIf)
+            return (
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+            );
 
         if(simpleIf) return true;
         else return false;
 
-        if(simpleIf) return (true, true, true, true, true, true, true, true, true, true, true);
+        if(simpleIf)
+            return (
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+            );
         else return false;
 
         if(simpleIf) return true;
-        else return (false, false, false, false, false, false, false, false, false, false, false);
+        else
+            return (
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+            );
 
-        if(simpleIf) return (true, true, true, true, true, true, true, true, true, true, true);
-        else return (false, false, false, false, false, false, false, false, false, false, false);
+        if(simpleIf)
+            return (
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+            );
+        else
+            return (
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+            );
 
         if(simpleIf) return true;
         else if(simpleElseIf) return (true, false);
         else return false;
 
-        if(simpleIf) return (true, true, true, true, true, true, true, true, true, true, true);
+        if(simpleIf)
+            return (
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+            );
         else if(simpleElseIf) return (true, false);
         else return false;
 
         if(simpleIf) return true;
         else if(simpleElseIf) return (true, false);
-        else return (false, false, false, false, false, false, false, false, false, false, false);
+        else
+            return (
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+            );
 
-        if(simpleIf) return (true, true, true, true, true, true, true, true, true, true, true);
+        if(simpleIf)
+            return (
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+            );
         else if(simpleElseIf) return (true, false);
-        else return (false, false, false, false, false, false, false, false, false, false, false);
+        else
+            return (
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+            );
 
         if(simpleIf) return true;
-        else if(simpleElseIf) return (true, false, true, false, true, false, true, false, true, false);
+        else if(simpleElseIf)
+            return (
+                true,
+                false,
+                true,
+                false,
+                true,
+                false,
+                true,
+                false,
+                true,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+            );
         else return false;
 
-        if(simpleIf) return (true, true, true, true, true, true, true, true, true, true, true);
-        else if(simpleElseIf) return (true, false, true, false, true, false, true, false, true, false);
+        if(simpleIf)
+            return (
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+            );
+        else if(simpleElseIf)
+            return (
+                true,
+                false,
+                true,
+                false,
+                true,
+                false,
+                true,
+                false,
+                true,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+            );
         else return false;
 
         if(simpleIf) return true;
-        else if(simpleElseIf) return (true, false, true, false, true, false, true, false, true, false);
-        else return (false, false, false, false, false, false, false, false, false, false, false);
+        else if(simpleElseIf)
+            return (
+                true,
+                false,
+                true,
+                false,
+                true,
+                false,
+                true,
+                false,
+                true,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+            );
+        else
+            return (
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+            );
 
-        if(simpleIf) return (true, true, true, true, true, true, true, true, true, true, true);
-        else if(simpleElseIf) return (true, false, true, false, true, false, true, false, true, false);
-        else return (false, false, false, false, false, false, false, false, false, false, false);
+        if(simpleIf)
+            return (
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+            );
+        else if(simpleElseIf)
+            return (
+                true,
+                false,
+                true,
+                false,
+                true,
+                false,
+                true,
+                false,
+                true,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+            );
+        else
+            return (
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+            );
 
         if(simpleIf) {
             return true;

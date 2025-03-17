@@ -1344,8 +1344,16 @@ pushStatementDocument(Render *r, ASTNode *node) {
                 pushWord(r, trueStatementIsBlock ? wordSpace() : wordHardline());
 
                 pushTokenWord(r, node->ifStatementNode.falseStatement->startToken - 1);
-                pushWord(r, wordSpace());
+
+                // TODO(radomski): These probaly should be something better
+                bool falseStatementIsBlock = 
+                    node->ifStatementNode.falseStatement->type == ASTNodeType_BlockStatement ||
+                    node->ifStatementNode.falseStatement->type == ASTNodeType_IfStatement;
+                if(!falseStatementIsBlock) { pushGroup(r); pushNest(r); }
+                pushWord(r, falseStatementIsBlock ? wordSpace() : wordLine());
                 pushStatementDocument(r, node->ifStatementNode.falseStatement);
+                if(!falseStatementIsBlock) { popNest(r); popGroup(r); }
+
                 lastStatement = node->ifStatementNode.falseStatement;
             }
         } break;
