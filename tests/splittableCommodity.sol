@@ -70,8 +70,7 @@ contract SplittableCommodity is MintableCommodity {
     function split(uint _tokenId, address _to, uint256 _amount) public whenNotPaused {
         address supplierProxy = IContractRegistry(contractRegistry).getLatestProxyAddr("Supplier");
         require(
-            msg.sender ==
-            IContractRegistry(contractRegistry).getLatestProxyAddr("FifoCrcMarket") ||
+            msg.sender == IContractRegistry(contractRegistry).getLatestProxyAddr("FifoCrcMarket") ||
             ISupplier(supplierProxy).isAllowed(this, "IMintableCommodity"),
             "Splitting can only be done when both the ISplittableCommodity interface is enabled and is called by a supplier or the FifoCrcMarket is used."
         );

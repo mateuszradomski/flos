@@ -342,11 +342,8 @@ contract Conditional {
 
         // long conditional, short consequent/alternate, not chained - do indent after ?
         string storage longConditional = (
-            bifornCringerMoshedPerplexSawder ==
-            2 /
-            askTrovenaBeenaDependsRowans &&
-            glimseGlyphsHazardNoopsTieTie >=
-            averredBathersBoxroomBuggyNurl().anodyneCondosMalateOverateRetinol()
+            bifornCringerMoshedPerplexSawder == 2 / askTrovenaBeenaDependsRowans &&
+            glimseGlyphsHazardNoopsTieTie >= averredBathersBoxroomBuggyNurl().anodyneCondosMalateOverateRetinol()
         )
             ? "foo"
             : "bar";
@@ -354,11 +351,8 @@ contract Conditional {
         // long conditional, short consequent/alternate, chained
         // (break on short consequents iff in chained ternary and its conditional broke)
         string storage longConditionalChained = (
-            bifornCringerMoshedPerplexSawder ==
-            2 /
-            askTrovenaBeenaDependsRowans &&
-            glimseGlyphsHazardNoopsTieTie >=
-            averredBathersBoxroomBuggyNurl().anodyneCondosMalateOverateRetinol()
+            bifornCringerMoshedPerplexSawder == 2 / askTrovenaBeenaDependsRowans &&
+            glimseGlyphsHazardNoopsTieTie >= averredBathersBoxroomBuggyNurl().anodyneCondosMalateOverateRetinol()
         )
             ? "foo"
             : anotherCondition ? "bar" : "baz";

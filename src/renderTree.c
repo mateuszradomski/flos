@@ -102,10 +102,10 @@ renderComments(Render *r, u32 startOffset, u32 endOffset) {
 
     u32 index = 0;
     while(true) {
-        u32 finished = true; 
+        u32 finished = true;
         for(u32 i = index; i < input.size - 1; i++) {
             String comment = (String) { .data = 0x0, .size = 0 };
-            u32 commentStart = i; 
+            u32 commentStart = i;
             u32 commentEnd = i;
 
             u32 commentType = CommentType_None;
@@ -247,7 +247,7 @@ renderComments(Render *r, u32 startOffset, u32 endOffset) {
 
     if(index != 0 && preceedingNewlines >= 2) {
         finishLine(r->writer);
-    } 
+    }
 
     return commentCount;
 }
@@ -348,7 +348,7 @@ debugPrintDocument(Word *words, u32 count, u32 group) {
             }
         } else {
             switch(w->type) {
-                case WordType_Text: { 
+                case WordType_Text: {
                     for(u32 j = 0; j < w->text.size; j++) {
                         printf(" ");
                     }
@@ -405,7 +405,7 @@ renderGroup(Render *r, Word *words, s32 count, u32 group) {
 
     w->size = baseWritten;
     w->lineSize = baseLineSize;
-    
+
     return processGroupWords(r, words, count, group, WordRenderLineType_Newline);
 }
 
@@ -562,7 +562,7 @@ preserveHardlinesIntoDocument(Render *r, ASTNode *node) {
 
 static void
 pushCommentsAfterToken(Render *r, TokenId token) {
-    TokenId nextToken = token == r->tokens.count - 1 ? token : token + 1; 
+    TokenId nextToken = token == r->tokens.count - 1 ? token : token + 1;
     String next = getTokenString(r->tokens, nextToken);
     String current = getTokenString(r->tokens, token);
 
@@ -583,9 +583,9 @@ pushCommentsAfterToken(Render *r, TokenId token) {
         u32 cursor = 0;
 
         while(true) {
-            u32 finished = true; 
+            u32 finished = true;
             for(u32 i = cursor; i < input.size - 1; i++) {
-                u32 commentStart = i; 
+                u32 commentStart = i;
                 u32 commentEnd = i;
                 String comment = (String) { .data = 0x0, .size = 0 };
                 u32 commentType = CommentType_None;
@@ -709,7 +709,7 @@ pushCommentsAfterToken(Render *r, TokenId token) {
 
         if(cursor != 0 && preceedingNewlines >= 2) {
             pushWord(r, wordHardline());
-        } 
+        }
     }
 
     if(r->wordCount > 0 && r->words[r->wordCount - 1].type != WordType_Text) {
@@ -950,6 +950,81 @@ pushTypeDocument(Render *r, ASTNode *node) {
     }
 }
 
+static u32
+getOperatorPrecedence2(TokenType type) {
+    switch(type) {
+        case TokenType_PlusPlus:
+        case TokenType_MinusMinus:
+        case TokenType_Dot:
+        case TokenType_LParen:
+        case TokenType_LBrace:
+        case TokenType_LBracket: return -1;
+        case TokenType_StarStar: return -3;
+        case TokenType_Star:
+        case TokenType_Divide:
+        case TokenType_Percent: return -4;
+        case TokenType_Plus:
+        case TokenType_Minus: return -5;
+        case TokenType_LeftShift:
+        case TokenType_RightShift:
+        case TokenType_RightShiftZero: return -6;
+        case TokenType_Ampersand: return -7;
+        case TokenType_Carrot: return -8;
+        case TokenType_Pipe: return -9;
+        case TokenType_LeftEqual:
+        case TokenType_RightEqual:
+        case TokenType_LTick:
+        case TokenType_RTick: return -10;
+        case TokenType_EqualEqual:
+        case TokenType_NotEqual: return -11;
+        case TokenType_LogicalAnd: return -12;
+        case TokenType_LogicalOr: return -13;
+        case TokenType_QuestionMark: return -14;
+        case TokenType_Equal:
+        case TokenType_OrEqual:
+        case TokenType_XorEqual:
+        case TokenType_AndEqual:
+        case TokenType_LeftShiftEqual:
+        case TokenType_RightShiftEqual:
+        case TokenType_PlusEqual:
+        case TokenType_MinusEqual:
+        case TokenType_StarEqual:
+        case TokenType_DivideEqual:
+        case TokenType_PercentEqual: return -15;
+        default: assert(false);
+    }
+}
+
+static void
+pushBinaryExpressionDocument(Render *r, ASTNode *node, u32 parentPrecedense) {
+    ASTNodeBinaryExpression *binary = &node->binaryExpressionNode;
+
+    u32 currentPrecedense = getOperatorPrecedence2(binary->operator);
+    bool startingPrecedense = parentPrecedense == 0;
+    bool differingPrecedense = parentPrecedense != currentPrecedense;
+    bool openGroup = startingPrecedense || differingPrecedense;
+
+    if(openGroup) { pushGroup(r); }
+
+    if(binary->left->type == ASTNodeType_BinaryExpression) {
+        pushBinaryExpressionDocument(r, binary->left, currentPrecedense);
+    } else {
+        pushExpressionDocument(r, binary->left);
+    }
+
+    pushWord(r, wordSpace());
+    pushWord(r, wordText(tokenTypeToString(binary->operator)));
+    pushWord(r, wordLine());
+
+    if(binary->right->type == ASTNodeType_BinaryExpression) {
+        pushBinaryExpressionDocument(r, binary->right, currentPrecedense);
+    } else {
+        pushExpressionDocument(r, binary->right);
+    }
+
+    if(openGroup) { popGroup(r); }
+}
+
 static void
 pushExpressionDocument(Render *r, ASTNode *node) {
     switch(node->type){
@@ -990,14 +1065,7 @@ pushExpressionDocument(Render *r, ASTNode *node) {
             pushTokenWord(r, node->identifierExpressionNode.value);
         } break;
         case ASTNodeType_BinaryExpression: {
-            pushExpressionDocument(r, node->binaryExpressionNode.left);
-            pushWord(r, wordSpace());
-
-            // TODO(radomski): Use the token
-            pushWord(r, wordText(tokenTypeToString(node->binaryExpressionNode.operator)));
-            pushWord(r, wordLine());
-
-            pushExpressionDocument(r, node->binaryExpressionNode.right);
+            pushBinaryExpressionDocument(r, node, 0);
         } break;
         case ASTNodeType_TupleExpression: {
             assert(stringMatch(LIT_TO_STR("("), r->tokens.tokenStrings[node->startToken]));
@@ -1323,7 +1391,7 @@ pushStatementDocument(Render *r, ASTNode *node) {
             assert(stringMatch(LIT_TO_STR("if"), r->tokens.tokenStrings[node->startToken]));
             assert(stringMatch(LIT_TO_STR("("), r->tokens.tokenStrings[node->startToken + 1]));
             assert(stringMatch(LIT_TO_STR(")"), r->tokens.tokenStrings[node->ifStatementNode.conditionExpression->endToken + 1]));
-            
+
             pushTokenWord(r, node->startToken);
 
             pushGroup(r);
@@ -1346,7 +1414,7 @@ pushStatementDocument(Render *r, ASTNode *node) {
                 pushTokenWord(r, node->ifStatementNode.falseStatement->startToken - 1);
 
                 // TODO(radomski): These probaly should be something better
-                bool falseStatementIsBlock = 
+                bool falseStatementIsBlock =
                     node->ifStatementNode.falseStatement->type == ASTNodeType_BlockStatement ||
                     node->ifStatementNode.falseStatement->type == ASTNodeType_IfStatement;
                 if(!falseStatementIsBlock) { pushGroup(r); pushNest(r); }
@@ -1488,7 +1556,7 @@ pushStatementDocument(Render *r, ASTNode *node) {
             pushTokenWord(r, node->startToken + 1);
             pushGroup(r);
             pushWord(r, wordSoftline());
-            
+
             if(statement->variableStatement != 0x0) {
                 pushStatementDocument(r, statement->variableStatement);
             } else {
@@ -1512,7 +1580,7 @@ pushStatementDocument(Render *r, ASTNode *node) {
             }
 
             pushWord(r, wordSoftline());
-            
+
             popNest(r);
             popGroup(r);
             pushTokenWord(r, statement->body->startToken - 1);
@@ -1593,7 +1661,7 @@ pushStatementDocument(Render *r, ASTNode *node) {
                     pushTokenWord(r, catch->identifier);
                     openParenToken = catch->identifier + 1;
                 }
-            
+
                 if(catch->parameters.count != -1) {
                     assert(stringMatch(LIT_TO_STR("("), r->tokens.tokenStrings[openParenToken]));
                     assert(stringMatch(LIT_TO_STR(")"), r->tokens.tokenStrings[catch->body->startToken - 1]));
@@ -1940,7 +2008,7 @@ pushMemberDocument(Render *r, ASTNode *member) {
         } break;
         case ASTNodeType_Import: {
             assert(stringMatch(LIT_TO_STR("import"), r->tokens.tokenStrings[member->startToken]));
-            
+
             pushGroup(r);
             pushTokenWord(r, member->startToken);
             pushWord(r, wordSpace());
@@ -1964,7 +2032,7 @@ pushMemberDocument(Render *r, ASTNode *member) {
                         pushWord(r, wordSpace());
                         pushTokenWord(r, alias);
                         lastToken = alias + 1;
-                    } 
+                    }
 
                     bool isLastElement = i == member->symbols.count - 1;
                     if(!isLastElement) {
