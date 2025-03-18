@@ -729,8 +729,9 @@ pushTokenWordOnly(Render *r, TokenId token) {
     };
 
     if(r->trailingWhitespace.type != WordType_None) {
-        pushWord(r, r->trailingWhitespace);
+        Word tw = r->trailingWhitespace;
         r->trailingWhitespace = (Word){};
+        pushWord(r, tw);
     }
 
     pushWord(r, w);
