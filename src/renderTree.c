@@ -495,15 +495,16 @@ popNestWithLastWord(Render *r) {
 
 static void
 pushWord(Render *r, Word w) {
-    if(r->trailingWhitespace.type == WordType_Hardline && w.type != WordType_None) {
-        r->words[r->wordCount++] = r->trailingWhitespace;
-        r->trailingWhitespace = (Word){};
-    } else {
-        w.group = r->group;
-        w.nest = r->nest;
+    bool isWhitespace = r->trailingWhitespace.type == WordType_Hardline;
 
-        r->words[r->wordCount++] = w;
+    if(isWhitespace && w.type != WordType_None) {
+        w = r->trailingWhitespace;
+        r->trailingWhitespace = (Word){};
     }
+
+    w.group = r->group;
+    w.nest = r->nest;
+    r->words[r->wordCount++] = w;
 }
 
 static Word
