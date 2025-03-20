@@ -493,11 +493,20 @@ popNestWithLastWord(Render *r) {
     r->words[r->wordCount - 1].nest -= 1;
 }
 
+static bool
+isWordWhitespace(Word w) {
+    return (
+        w.type == WordType_Line ||
+        w.type == WordType_Softline ||
+        w.type == WordType_Hardline
+    );
+}
+
 static void
 pushWord(Render *r, Word w) {
-    bool isWhitespace = r->trailingWhitespace.type == WordType_Hardline;
+    bool isHardline = r->trailingWhitespace.type == WordType_Hardline;
 
-    if(isWhitespace && w.type != WordType_None) {
+    if(isHardline && isWordWhitespace(w)) {
         w = r->trailingWhitespace;
         r->trailingWhitespace = (Word){};
     }
@@ -731,7 +740,10 @@ pushTokenWordOnly(Render *r, TokenId token) {
     if(r->trailingWhitespace.type != WordType_None) {
         Word tw = r->trailingWhitespace;
         r->trailingWhitespace = (Word){};
-        pushWord(r, tw);
+
+        tw.group = r->group;
+        tw.nest = r->nest;
+        r->words[r->wordCount++] = tw;
     }
 
     pushWord(r, w);
@@ -998,18 +1010,19 @@ getOperatorPrecedence2(TokenType type) {
 }
 
 static void
-pushBinaryExpressionDocument(Render *r, ASTNode *node, u32 parentPrecedense) {
+pushBinaryExpressionDocument(Render *r, ASTNode *node, u32 parentPrecedence) {
     ASTNodeBinaryExpression *binary = &node->binaryExpressionNode;
 
-    u32 currentPrecedense = getOperatorPrecedence2(binary->operator);
-    bool startingPrecedense = parentPrecedense == 0;
-    bool differingPrecedense = parentPrecedense != currentPrecedense;
-    bool openGroup = startingPrecedense || differingPrecedense;
+    u32 currentPrecedence = getOperatorPrecedence2(binary->operator);
+    bool startingPrecedence = parentPrecedence == 0;
+    bool differingPrecedence = parentPrecedence != currentPrecedence;
+    bool openGroup = startingPrecedence || differingPrecedence;
+    bool openNest = !startingPrecedence && differingPrecedence;
 
     if(openGroup) { pushGroup(r); }
 
     if(binary->left->type == ASTNodeType_BinaryExpression) {
-        pushBinaryExpressionDocument(r, binary->left, currentPrecedense);
+        pushBinaryExpressionDocument(r, binary->left, currentPrecedence);
     } else {
         pushExpressionDocument(r, binary->left);
     }
@@ -1019,7 +1032,9 @@ pushBinaryExpressionDocument(Render *r, ASTNode *node, u32 parentPrecedense) {
     pushWord(r, wordLine());
 
     if(binary->right->type == ASTNodeType_BinaryExpression) {
-        pushBinaryExpressionDocument(r, binary->right, currentPrecedense);
+        if (openNest) { pushNest(r); }
+        pushBinaryExpressionDocument(r, binary->right, currentPrecedence);
+        if(openNest)  { popNest(r); }
     } else {
         pushExpressionDocument(r, binary->right);
     }
