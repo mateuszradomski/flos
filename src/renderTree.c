@@ -15,13 +15,14 @@ typedef enum WordType {
     WordType_Space,
     WordType_Softline,
     WordType_Hardline,
+    WordType_NestPush,
+    WordType_NestPop,
     WordType_Count,
 } WordType;
 
 typedef struct Word {
     WordType type;
     u8 group;
-    u8 nest;
     union {
         String text;
         TokenId token;
@@ -42,7 +43,6 @@ typedef struct Render {
     s32 wordCount;
     u32 wordCapacity;
     u8 group;
-    u8 nest;
     Word trailingWhitespace;
 } Render;
 
@@ -252,7 +252,7 @@ renderComments(Render *r, u32 startOffset, u32 endOffset) {
     return commentCount;
 }
 
-static void renderDocumentWord(Render *r, Word *word, WordRenderLineType lineType);
+static u32 renderDocumentWord(Render *r, Word *word, u32 nest, WordRenderLineType lineType);
 
 static bool
 hasHardline(Word *words, u32 count, u32 group) {
@@ -313,7 +313,6 @@ fits(Render *r, Word *words, s32 count, u32 group, u32 remainingWidth) {
             case WordType_Hardline: {
                 return false;
             } break;
-            case WordType_None: {} break;
             default: break;
         }
         if (width > remainingWidth) {
@@ -365,17 +364,17 @@ debugPrintDocument(Word *words, u32 count, u32 group) {
     printf("\n");
 }
 
-static u32 renderGroup(Render *r, Word *words, s32 count, u32 group);
-static u32 processGroupWords(Render *r, Word *words, s32 count, u32 group, WordRenderLineType lineType) {
+static u32 renderGroup(Render *r, Word *words, s32 count, u32 group, u32 nest);
+static u32 processGroupWords(Render *r, Word *words, s32 count, u32 group, u32 nest, WordRenderLineType lineType) {
     u32 processed = 0;
     for (u32 i = 0; i < (u32)count && words[i].group >= group;) {
         Word *word = &words[i];
         if (word->group > group) {
-            u32 sub_processed = renderGroup(r, words + i, count - i, group + 1);
+            u32 sub_processed = renderGroup(r, words + i, count - i, group + 1, nest);
             i += sub_processed;
             processed += sub_processed;
         } else {
-            renderDocumentWord(r, word, lineType);
+            nest = renderDocumentWord(r, word, nest, lineType);
             i++;
             processed++;
         }
@@ -384,36 +383,37 @@ static u32 processGroupWords(Render *r, Word *words, s32 count, u32 group, WordR
 }
 
 static u32
-renderGroup(Render *r, Word *words, s32 count, u32 group) {
+renderGroup(Render *r, Word *words, s32 count, u32 group, u32 nest) {
     if (count <= 0) return 0;
 
     Writer *w = r->writer;
 
     // Early exit for hardline groups
     if (hasHardline(words, count, group)) {
-        return processGroupWords(r, words, count, group, WordRenderLineType_Newline);
+        return processGroupWords(r, words, count, group, nest, WordRenderLineType_Newline);
     }
 
     // Try fitting everything on one line
     u32 baseLineSize = w->lineSize;
     u32 baseWritten = w->size;
 
-    u32 remainingWidth = 120 - (w->lineSize == 0 ? w->indentSize * words[0].nest : w->lineSize);
+    u32 remainingWidth = 120 - (w->lineSize == 0 ? w->indentSize * nest : w->lineSize);
     if (fits(r, words, count, group, remainingWidth)) {
-        return processGroupWords(r, words, count, group, WordRenderLineType_Space);
+        return processGroupWords(r, words, count, group, nest, WordRenderLineType_Space);
     }
 
     w->size = baseWritten;
     w->lineSize = baseLineSize;
 
-    return processGroupWords(r, words, count, group, WordRenderLineType_Newline);
+    return processGroupWords(r, words, count, group, nest, WordRenderLineType_Newline);
 }
 
-static void
-renderDocumentWord(Render *r, Word *word, WordRenderLineType lineType) {
+static u32
+renderDocumentWord(Render *r, Word *word, u32 nest, WordRenderLineType lineType) {
     Writer *w = r->writer;
-    setIndent(w, word->nest);
+    setIndent(w, nest);
 
+    u32 nestActive = (lineType == WordRenderLineType_Newline) ? 1 : 0;
     switch(word->type) {
         case WordType_Text: {
             writeString(r->writer, word->text);
@@ -436,9 +436,13 @@ renderDocumentWord(Render *r, Word *word, WordRenderLineType lineType) {
             }
         } break;
         case WordType_Hardline: { finishLine(w); } break;
+        case WordType_NestPush: { nest += nestActive; } break;
+        case WordType_NestPop: { nest -= nestActive; } break;
         case WordType_None: {} break;
         default: { assert(false); }
     }
+
+    return nest;
 }
 
 static void
@@ -454,7 +458,9 @@ renderDocument(Render *r) {
         }
     }
 
-    renderGroup(r, r->words, r->wordCount, 0);
+    u32 group = 0;
+    u32 nest = 0;
+    renderGroup(r, r->words, r->wordCount, group, nest);
     r->wordCount = 0;
 }
 
@@ -474,23 +480,19 @@ popGroup(Render *r) {
 
 static void
 pushNest(Render *r) {
-    r->nest += 1;
+    pushWord(r, (Word){ .type = WordType_NestPush });
 }
 
 static void
 popNest(Render *r) {
-    r->nest -= 1;
+    pushWord(r, (Word){ .type = WordType_NestPop });
 }
 
 static void
 addNest(Render *r, s32 nest) {
-    r->nest += nest;
-}
-
-static void
-popNestWithLastWord(Render *r) {
-    popNest(r);
-    r->words[r->wordCount - 1].nest -= 1;
+    if(nest == 0) {}
+    else if(nest > 0) { pushNest(r); }
+    else if(nest < 0) { popNest(r); }
 }
 
 static bool
@@ -512,7 +514,6 @@ pushWord(Render *r, Word w) {
     }
 
     w.group = r->group;
-    w.nest = r->nest;
     r->words[r->wordCount++] = w;
 }
 
@@ -584,7 +585,10 @@ pushCommentsAfterToken(Render *r, TokenId token) {
         .size = endOffset - startOffset,
     };
 
-    if(r->wordCount > 0 && r->words[r->wordCount - 1].type != WordType_Text) {
+    if(r->wordCount > 0 &&
+       r->words[r->wordCount - 1].type != WordType_Text &&
+       r->words[r->wordCount - 1].type != WordType_NestPush &&
+       r->words[r->wordCount - 1].type != WordType_NestPop) {
         r->trailingWhitespace = r->words[r->wordCount - 1];
         r->wordCount -= 1;
     }
@@ -722,7 +726,10 @@ pushCommentsAfterToken(Render *r, TokenId token) {
         }
     }
 
-    if(r->wordCount > 0 && r->words[r->wordCount - 1].type != WordType_Text) {
+    if(r->wordCount > 0 &&
+       r->words[r->wordCount - 1].type != WordType_Text &&
+       r->words[r->wordCount - 1].type != WordType_NestPush &&
+       r->words[r->wordCount - 1].type != WordType_NestPop) {
         r->trailingWhitespace = r->words[r->wordCount - 1];
         r->wordCount -= 1;
     }
@@ -734,7 +741,6 @@ pushTokenWordOnly(Render *r, TokenId token) {
         .type = WordType_Text,
         .text = getTokenString(r->tokens, token),
         .group = r->group,
-        .nest = r->nest,
     };
 
     if(r->trailingWhitespace.type != WordType_None) {
@@ -742,7 +748,6 @@ pushTokenWordOnly(Render *r, TokenId token) {
         r->trailingWhitespace = (Word){};
 
         tw.group = r->group;
-        tw.nest = r->nest;
         r->words[r->wordCount++] = tw;
     }
 
@@ -767,7 +772,6 @@ pushTokenAsStringWordOnly(Render *r, TokenId token) {
         .type = WordType_Text,
         .text = text,
         .group = r->group,
-        .nest = r->nest,
     };
 
     pushWord(r, w);
@@ -795,8 +799,8 @@ pushCallArgumentListDocument(Render *r, TokenId startingToken, ASTNodeListRanged
     if(names->count > 0) {
         pushTokenWordOnly(r, listGetTokenId(names, 0) - 1);
     }
-    pushWord(r, wordSoftline());
     pushNest(r);
+    pushWord(r, wordSoftline());
 
     if(names->count == 0) {
         ASTNodeLink *argument = expressions->head;
@@ -838,13 +842,14 @@ pushCallArgumentListDocument(Render *r, TokenId startingToken, ASTNodeListRanged
         endToken = startingToken + 1;
     }
 
-    popNestWithLastWord(r);
+    popNest(r);
     if(names->count > 0) {
-    pushWord(r, wordLine());
+        pushWord(r, wordLine());
         pushTokenWord(r, expressions->last->node.endToken + 1);
     } else {
-    pushWord(r, wordSoftline());
+        pushWord(r, wordSoftline());
     }
+
     pushTokenWordOnly(r, endToken);
     popGroup(r);
     pushCommentsAfterToken(r, endToken);
@@ -1032,9 +1037,7 @@ pushBinaryExpressionDocument(Render *r, ASTNode *node, u32 parentPrecedence) {
     pushWord(r, wordLine());
 
     if(binary->right->type == ASTNodeType_BinaryExpression) {
-        if (openNest) { pushNest(r); }
         pushBinaryExpressionDocument(r, binary->right, currentPrecedence);
-        if(openNest)  { popNest(r); }
     } else {
         pushExpressionDocument(r, binary->right);
     }
@@ -1230,9 +1233,9 @@ pushExpressionDocument(Render *r, ASTNode *node) {
             pushWord(r, wordSpace());
             pushExpressionDocument(r, ternery->falseExpression);
             popGroup(r);
-            popGroup(r);
 
             popNest(r);
+            popGroup(r);
         } break;
         case ASTNodeType_NamedParameterExpression: {
             ASTNodeNamedParametersExpression *named = &node->namedParametersExpressionNode;
@@ -1243,8 +1246,8 @@ pushExpressionDocument(Render *r, ASTNode *node) {
             assert(stringMatch(LIT_TO_STR("}"), r->tokens.tokenStrings[node->endToken]));
 
             pushGroup(r);
-            pushTokenWord(r, named->expression->endToken + 1);
             pushNest(r);
+            pushTokenWord(r, named->expression->endToken + 1);
             pushWord(r, wordLine());
             ASTNodeLink *expression = named->expressions.head;
             for(u32 i = 0; i < named->expressions.count; i++, expression = expression->next) {
@@ -1598,8 +1601,8 @@ pushStatementDocument(Render *r, ASTNode *node) {
 
             pushWord(r, wordSoftline());
 
-            popNest(r);
             popGroup(r);
+            popNest(r);
             pushTokenWord(r, statement->body->startToken - 1);
             popGroup(r);
 
@@ -2057,7 +2060,7 @@ pushMemberDocument(Render *r, ASTNode *member) {
                     }
                     pushWord(r, wordLine());
                 }
-                popNestWithLastWord(r);
+                popNest(r);
 
                 assert(stringMatch(LIT_TO_STR("}"), r->tokens.tokenStrings[member->pathTokenId - 2]));
                 assert(stringMatch(LIT_TO_STR("from"), r->tokens.tokenStrings[member->pathTokenId - 1]));
@@ -2164,7 +2167,7 @@ pushMemberDocument(Render *r, ASTNode *member) {
 
                 pushWord(r, wordHardline());
             }
-            popNestWithLastWord(r);
+            popNest(r);
 
             pushTokenWordOnly(r, member->endToken);
             popGroup(r);
@@ -2201,7 +2204,7 @@ pushMemberDocument(Render *r, ASTNode *member) {
                 pushWord(r, wordHardline());
             }
 
-            popNestWithLastWord(r);
+            popNest(r);
 
             pushTokenWordOnly(r, member->endToken);
             popGroup(r);
@@ -2247,7 +2250,7 @@ pushMemberDocument(Render *r, ASTNode *member) {
                 }
             }
             pushWord(r, wordSoftline());
-            popNestWithLastWord(r);
+            popNest(r);
 
             pushTokenWord(r, member->endToken - 1);
             pushTokenWordOnly(r, member->endToken);
@@ -2292,7 +2295,7 @@ pushMemberDocument(Render *r, ASTNode *member) {
                 }
             }
             pushWord(r, wordSoftline());
-            popNestWithLastWord(r);
+            popNest(r);
 
             pushTokenWord(r, member->endToken - 1);
             pushTokenWordOnly(r, member->endToken);
@@ -2335,8 +2338,8 @@ pushMemberDocument(Render *r, ASTNode *member) {
             pushTokenWord(r, constNode->identifier + 1);
             pushWord(r, expressionLinkWord(constNode->expression));
 
-            pushGroup(r);
             addNest(r, expressionNest(constNode->expression));
+            pushGroup(r);
             pushExpressionDocument(r, constNode->expression);
             popGroup(r);
             addNest(r, -expressionNest(constNode->expression));
@@ -2366,15 +2369,17 @@ pushMemberDocument(Render *r, ASTNode *member) {
             pushTokenWord(r, decl->identifier);
 
             if(decl->expression) {
+                addNest(r, expressionNest(decl->expression));
+
                 assert(stringMatch(LIT_TO_STR("="), r->tokens.tokenStrings[decl->identifier + 1]));
                 pushWord(r, wordSpace());
                 pushTokenWord(r, decl->identifier + 1);
                 pushWord(r, expressionLinkWord(decl->expression));
 
                 pushGroup(r);
-                addNest(r, expressionNest(decl->expression));
                 pushExpressionDocument(r, decl->expression);
                 popGroup(r);
+
                 addNest(r, -expressionNest(decl->expression));
             }
 
@@ -2490,10 +2495,10 @@ pushMemberDocument(Render *r, ASTNode *member) {
 
             pushGroup(r);
 
-            pushGroup(r);
             pushTokenWord(r, member->startToken);
-
             pushNest(r);
+
+            pushGroup(r);
             TokenId openParenToken = member->startToken + 1;
             TokenId closeParenToken = constructor->parameters.count > 0
                 ? constructor->parameters.last->node.endToken + 1
