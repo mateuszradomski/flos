@@ -1153,6 +1153,9 @@ pushExpressionDocument(Render *r, ASTNode *node) {
         } break;
         case ASTNodeType_UnaryExpression: {
             pushTokenWord(r, node->startToken);
+            if(node->unaryExpressionNode.operator == TokenType_Delete) {
+                pushWord(r, wordSpace());
+            }
             pushExpressionDocument(r, node->unaryExpressionNode.subExpression);
 
             assert(stringMatch(tokenTypeToString(node->unaryExpressionNode.operator), getTokenString(r->tokens, node->startToken)));
@@ -2322,8 +2325,8 @@ pushMemberDocument(Render *r, ASTNode *member) {
             pushWord(r, wordSpace());
             pushTokenWord(r, member->structNode.nameTokenId);
             pushWord(r, wordSpace());
-            pushTokenWord(r, member->startToken + 2);
             pushNest(r);
+            pushTokenWord(r, member->startToken + 2);
             pushWord(r, wordLine());
 
             ASTNodeListRanged *list = &member->structNode.members;

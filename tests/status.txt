@@ -2,10 +2,10 @@
 |:--------------------------------------------------------|-------|---------|-----------------------------|
 | AddressPayable/AddressPayable.sol                       |   YES |     YES |                             |
 | AllSolidityFeatures/AllSolidityFeatures.sol             |   YES |     YES |                             |
-| AllSolidityFeaturesV0.4.26/AllSolidityFeatures.sol      |    NO |         |                             |
+| AllSolidityFeaturesV0.4.26/AllSolidityFeatures.sol      |   YES |     YES |   `var (,a,b,)` not working |
 | Arrays/Arrays.sol                                       |   YES |     YES |                             |
 | Assembly/Assembly.sol                                   |   YES |     YES |                             |
-| AssemblyV0.4.26/Assembly.sol                            |    NO |         |                             |
+| AssemblyV0.4.26/Assembly.sol                            |    NO |     NO! |      I can't parse this yet |
 | BasicIterator/BasicIterator.sol                         |   YES |     YES |                             |
 | BinaryOperators/BinaryOperators.sol                     |   YES |     YES |                    Not 100% |
 | BinaryOperators/Parentheses.sol                         |   YES |     YES | Not 100%, manually modified |

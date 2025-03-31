@@ -337,6 +337,7 @@ UTEST_F(SolFmtFixture, multipartStrings) { utest_fixture->path = "tests/multipar
 UTEST_F(SolFmtFixture, hexLiteral) { utest_fixture->path = "tests/hexLiteral.sol"; }
 UTEST_F(SolFmtFixture, quotes) { utest_fixture->path = "tests/quotes.sol"; }
 UTEST_F(SolFmtFixture, strings) { utest_fixture->path = "tests/strings.sol"; }
+UTEST_F(SolFmtFixture, allFeaturesV0_4_26) { utest_fixture->path = "tests/allFeaturesV0_4_26.sol"; }
 UTEST_F(SolFmtFixture, issue355) { utest_fixture->path = "tests/issue355.sol"; }
 UTEST_F(SolFmtFixture, issue799) { utest_fixture->path = "tests/issue799.sol"; }
 UTEST_F(SolFmtFixture, issue843) { utest_fixture->path = "tests/issue843.sol"; }

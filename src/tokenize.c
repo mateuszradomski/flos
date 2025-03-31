@@ -196,7 +196,7 @@ tokenTypeToString(TokenType tokenType) {
         case TokenType_Error: return LIT_TO_STR("Error");
         case TokenType_Using: return LIT_TO_STR("Using");
         case TokenType_Global: return LIT_TO_STR("Global");
-        case TokenType_Delete: return LIT_TO_STR("Delete");
+        case TokenType_Delete: return LIT_TO_STR("delete");
         case TokenType_True: return LIT_TO_STR("True");
         case TokenType_False: return LIT_TO_STR("False");
         case TokenType_Unchecked: return LIT_TO_STR("Unchecked");
