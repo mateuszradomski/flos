@@ -328,5 +328,6 @@ UTEST_F(SolFmtFixture, experimentalTerneries) { utest_fixture->path = "tests/exp
 UTEST_F(SolFmtFixture, functionCalls) { utest_fixture->path = "tests/functionCalls.sol"; }
 UTEST_F(SolFmtFixture, ifStatements) { utest_fixture->path = "tests/ifStatements.sol"; }
 UTEST_F(SolFmtFixture, assembly) { utest_fixture->path = "tests/assembly.sol"; }
+UTEST_F(SolFmtFixture, allFeatures) { utest_fixture->path = "tests/allFeatures.sol"; }
 
 UTEST_MAIN();

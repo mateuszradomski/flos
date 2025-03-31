@@ -1297,7 +1297,7 @@ renderYulFunctionCall(Render *r, ASTNode *node) {
     ASTNodeYulFunctionCallExpression *function = &node->yulFunctionCallExpressionNode;
 
     pushGroup(r);
-    pushTokenWordOnly(r, function->identifier);
+    pushTokenWord(r, function->identifier);
 
     assert(stringMatch(LIT_TO_STR("("), r->tokens.tokenStrings[function->identifier + 1]));
     pushTokenWord(r, function->identifier + 1);
@@ -1322,6 +1322,8 @@ renderYulFunctionCall(Render *r, ASTNode *node) {
     assert(stringMatch(LIT_TO_STR(")"), r->tokens.tokenStrings[node->endToken]));
     pushTokenWordOnly(r, node->endToken);
     popGroup(r);
+
+    pushCommentsAfterToken(r, node->endToken);
 }
 
 static void
@@ -1989,7 +1991,6 @@ pushOverridesDocument(Render *r, TokenId overrideToken, ASTNodeListRanged *overr
             assert(stringMatch(LIT_TO_STR("("), r->tokens.tokenStrings[overrides->startToken - 1]));
             assert(stringMatch(LIT_TO_STR(")"), r->tokens.tokenStrings[overrides->endToken + 1]));
 
-            pushWord(r, wordSpace());
             pushTokenWord(r, overrides->startToken - 1);
 
             ASTNodeLink *override = overrides->head;
@@ -2002,7 +2003,6 @@ pushOverridesDocument(Render *r, TokenId overrideToken, ASTNodeListRanged *overr
             }
 
             pushTokenWord(r, overrides->endToken + 1);
-            pushWord(r, wordSpace());
         }
     }
 }
@@ -2401,7 +2401,16 @@ pushMemberDocument(Render *r, ASTNode *member) {
             pushWord(r, wordSoftline());
             popNest(r);
 
-            pushTokenWord(r, member->endToken - 1);
+            TokenId closeParam = event->anonymous ? member->endToken - 2 : member->endToken - 1;
+            assert(stringMatch(LIT_TO_STR(")"), r->tokens.tokenStrings[closeParam]));
+            pushTokenWord(r, closeParam);
+
+            if(event->anonymous) {
+                pushWord(r, wordSpace());
+                pushTokenWord(r, member->endToken - 1);
+            }
+
+
             pushTokenWordOnly(r, member->endToken);
             popGroup(r);
 
@@ -2459,18 +2468,24 @@ pushMemberDocument(Render *r, ASTNode *member) {
 
             pushGroup(r);
             pushTypeDocument(r, decl->type);
-            pushWord(r, wordSpace());
 
+            pushGroup(r);
+            pushNest(r);
             if(decl->visibility != INVALID_TOKEN_ID) {
+                pushWord(r, wordLine());
                 pushTokenWord(r, decl->visibility);
-                pushWord(r, wordSpace());
             }
             if(decl->mutability != INVALID_TOKEN_ID) {
+                pushWord(r, wordLine());
                 pushTokenWord(r, decl->mutability);
-                pushWord(r, wordSpace());
             }
 
+            pushOverridesDocument(r, decl->override, &decl->overrides);
+
+            pushWord(r, wordSpace());
             pushTokenWord(r, decl->identifier);
+            popNest(r);
+            popGroup(r);
 
             if(decl->expression) {
                 addNest(r, expressionNest(decl->expression));
@@ -2673,6 +2688,8 @@ pushMemberDocument(Render *r, ASTNode *member) {
                 pushWord(r, wordSpace());
                 pushTokenWord(r, modifier->virtual);
             }
+            
+            pushOverridesDocument(r, modifier->override, modifier->overrides);
 
             popGroup(r);
             if(modifier->body != 0x0) {
