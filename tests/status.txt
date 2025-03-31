@@ -81,4 +81,4 @@
 | WhileStatements/WhileStatements.sol                     |   YES |     YES |                             |
 | WrongCompiler/WrongCompiler.sol                         |    NO |         |                             |
 | quotes/Quotes.sol                                       |   YES |     YES |                             |
-| strings/strings.sol                                     |    NO |      NO |                             |
+| strings/strings.sol                                     |   YES |     YES |                             |
