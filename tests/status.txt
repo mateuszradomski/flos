@@ -69,10 +69,10 @@
 | StringLiteral/StringLiteral.sol                         |   YES |     YES |                             |
 | StyleGuide/BlankLines.sol                               |   YES |     YES |                             |
 | StyleGuide/ControlStructures.sol                        |   YES |     YES |   Some commented from start |
-| StyleGuide/FunctionDeclaration.sol                      |    NO |      NO |                             |
+| StyleGuide/FunctionDeclaration.sol                      |   YES |     YES |                             |
 | StyleGuide/Mappings.sol                                 |   YES |     YES |                             |
-| StyleGuide/MaximumLineLength.sol                        |    NO |      NO |                             |
-| StyleGuide/OtherRecommendations.sol                     |    NO |      NO |                             |
+| StyleGuide/MaximumLineLength.sol                        |   YES |     YES |                             |
+| StyleGuide/OtherRecommendations.sol                     |   YES |     YES |                             |
 | StyleGuide/VariableDeclarations.sol                     |   YES |     YES |                             |
 | StyleGuide/WhitespaceInExpressions.sol                  |   YES |     YES |                             |
 | TryCatch/TryCatch.sol                                   |   YES |     YES |                             |
