@@ -9,7 +9,7 @@
 | BasicIterator/BasicIterator.sol                         |   YES |     YES |                             |
 | BinaryOperators/BinaryOperators.sol                     |   YES |     YES |                    Not 100% |
 | BinaryOperators/Parentheses.sol                         |   YES |     YES | Not 100%, manually modified |
-| BreakingChangesV0.7.4/BreakingChangesV0.7.4.sol         |    NO |         |                             |
+| BreakingChangesV0.7.4/BreakingChangesV0.7.4.sol         |   YES |     YES |                             |
 | BreakingChangesV0.8.0/BreakingChangesV0.8.0.sol         |   YES |     YES |                             |
 | Comments/Comments.sol                                   |   YES |     YES |                             |
 | Conditional/Conditional.sol                             |   YES |     YES |                             |
