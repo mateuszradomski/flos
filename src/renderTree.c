@@ -39,6 +39,10 @@ typedef struct Render {
     TokenizeResult tokens;
     u8 *sourceBaseAddress;
 
+    u32 scratchBufferSize;
+    u32 scratchBufferCapacity;
+    u8 *scratchBuffer;
+
     Word *words;
     s32 wordCount;
     u32 wordCapacity;
@@ -523,6 +527,11 @@ wordText(String text) {
 }
 
 static Word
+wordNone() {
+    return (Word) { .type = WordType_None };
+}
+
+static Word
 wordHardline() {
     return (Word) { .type = WordType_Hardline };
 }
@@ -763,17 +772,38 @@ pushTokenWord(Render *r, TokenId token) {
 static void
 pushTokenAsStringWordOnly(Render *r, TokenId token) {
     String text = getTokenString(r->tokens, token);
-    assert(text.data[-1] == '"');
-    assert(text.data[text.size] == '"');
-    text.data -= 1;
-    text.size += 2;
+
+    if(text.data[-1] == '"' && text.data[text.size] == '"') {
+        text.data -= 1;
+        text.size += 2;
+    } else {
+        u8 *data = r->scratchBuffer + r->scratchBufferSize;
+        u8 *head = data;
+        *head++ = '"';
+        for (size_t i = 0; i < text.size; ++i) {
+            u8 current = text.data[i];
+            if (current == '"') {
+                *head++ = '\\';
+                *head++ = '"';
+            } else if (current == '\\' && (i + 1 < text.size) && text.data[i + 1] == '\'') {
+                *head++ = '\'';
+                i++;
+            } else {
+                *head++ = current;
+            }
+        }
+        *head++ = '"';
+        text.data = data;
+        text.size = (u32)(head - data);
+        r->scratchBufferSize += text.size;
+        assert(r->scratchBufferSize <= r->scratchBufferCapacity && "Scratch buffer overflow detected when wrapping string with quotes");
+    }
 
     Word w = {
         .type = WordType_Text,
         .text = text,
         .group = r->group,
     };
-
     pushWord(r, w);
 }
 
@@ -1059,19 +1089,22 @@ pushExpressionDocument(Render *r, ASTNode *node) {
         case ASTNodeType_UnicodeStringLitExpression:
         case ASTNodeType_StringLitExpression: {
             ASTNodeStringLitExpression *expression = &node->stringLitExpressionNode;
-            // TODO(radomski): Escaping
 
-            if(node->type == ASTNodeType_HexStringLitExpression) {
-                pushWord(r, wordText(LIT_TO_STR("hex")));
-            } else if(node->type == ASTNodeType_UnicodeStringLitExpression) {
-                pushWord(r, wordText(LIT_TO_STR("unicode")));
-            }
-            pushWord(r, wordText(LIT_TO_STR("\"")));
+            pushGroup(r);
+            Word w = (node->type == ASTNodeType_HexStringLitExpression) ? wordText(LIT_TO_STR("hex")) :
+                     (node->type == ASTNodeType_UnicodeStringLitExpression) ? wordText(LIT_TO_STR("unicode")) :
+                     wordNone();
+
             for(u32 i = 0; i < expression->values.count; i++) {
+                if(i > 0) {
+                    pushWord(r, wordHardline());
+                }
+
+                pushWord(r, w);
                 TokenId literal = listGetTokenId(&expression->values, i);
-                pushTokenWord(r, literal);
+                pushTokenAsStringWordOnly(r, literal);
             }
-            pushWord(r, wordText(LIT_TO_STR("\"")));
+            popGroup(r);
         } break;
         case ASTNodeType_BoolLitExpression: {
             pushTokenWord(r, node->boolLitExpressionNode.value);
@@ -2688,7 +2721,7 @@ pushMemberDocument(Render *r, ASTNode *member) {
                 pushWord(r, wordSpace());
                 pushTokenWord(r, modifier->virtual);
             }
-            
+
             pushOverridesDocument(r, modifier->override, modifier->overrides);
 
             popGroup(r);
@@ -2806,6 +2839,8 @@ renderTree(Arena *arena, ASTNode tree, String originalSource, TokenizeResult tok
         .indentSize = 4,
     };
 
+
+    u32 scratchBufferCapacity = 8 * Megabyte;
     Render render = {
         .writer = &writer,
         .tokens = tokens,
@@ -2815,6 +2850,10 @@ renderTree(Arena *arena, ASTNode tree, String originalSource, TokenizeResult tok
         .words = arrayPush(arena, Word, 131072) + 1,
         .wordCount = 0,
         .wordCapacity = 131071,
+
+        .scratchBufferCapacity = scratchBufferCapacity,
+        .scratchBufferSize = 0,
+        .scratchBuffer = arrayPush(arena, u8, scratchBufferCapacity),
     };
 
     u32 startOfTokens = tokens.tokenStrings[tree.startToken].data - originalSource.data;

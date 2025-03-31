@@ -23,7 +23,7 @@
 | FunctionCalls/FunctionCalls.sol                         |   YES |     YES |                             |
 | FunctionDefinitions/FunctionDefinitions.sol             |   YES |     YES |                             |
 | FunctionDefinitionsV0.5.0/FunctionDefinitions.sol       |   YES |     YES |                             |
-| HexLiteral/HexLiteral.sol                               |    NO |      NO |                             |
+| HexLiteral/HexLiteral.sol                               |   YES |     YES |                             |
 | IfStatements/IfStatements.sol                           |   YES |     YES |                             |
 | Immutable/Immutable.sol                                 |   YES |     YES |                             |
 | ImportDirective/ImportDirectives.sol                    |   YES |     YES |                             |
@@ -42,7 +42,7 @@
 | MemberAccess/MemberAccess.sol                           |   YES |     YES |                             |
 | ModifierDefinitions/ModifierDefinitions.sol             |   YES |     YES |                             |
 | ModifierInvocations/ModifierInvocations.sol             |   YES |     YES |                             |
-| MultipartStrings/MultipartStrings.sol                   |    NO |      NO |                             |
+| MultipartStrings/MultipartStrings.sol                   |   YES |     YES |                             |
 | NameValueExpression/NameValueExpression.sol             |   YES |     YES |                             |
 | NumberLiteral/NumberLiteral.sol                         |   YES |     YES |                             |
 | Ownable/Ownable.sol                                     |   YES |     YES |                             |
@@ -66,7 +66,7 @@
 | SimpleStorage/SimpleStorage.sol                         |   YES |     YES |                             |
 | SplittableCommodity/SplittableCommodity.sol             |   YES |     YES |                             |
 | StateVariableDeclarations/StateVariableDeclarations.sol |   YES |     YES |                             |
-| StringLiteral/StringLiteral.sol                         |    NO |      NO |                             |
+| StringLiteral/StringLiteral.sol                         |   YES |     YES |                             |
 | StyleGuide/BlankLines.sol                               |   YES |     YES |                             |
 | StyleGuide/ControlStructures.sol                        |   YES |     YES |   Some commented from start |
 | StyleGuide/FunctionDeclaration.sol                      |    NO |      NO |                             |
@@ -80,5 +80,5 @@
 | TypeDefinition/TypeDefinition.sol                       |   YES |     YES |                             |
 | WhileStatements/WhileStatements.sol                     |   YES |     YES |                             |
 | WrongCompiler/WrongCompiler.sol                         |    NO |         |                             |
-| quotes/Quotes.sol                                       |    NO |      NO |                             |
+| quotes/Quotes.sol                                       |   YES |     YES |                             |
 | strings/strings.sol                                     |    NO |      NO |                             |
