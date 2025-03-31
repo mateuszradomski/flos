@@ -366,17 +366,17 @@ contract Group {
     bool resultBoolean;
 
     function exp() public {
-        resultUint256 = veryVeryVeryLongUint256A ** veryVeryVeryLongUint256B ** veryVeryVeryLongUint256C;
+        resultUint256 = veryVeryVeryLongUint256A ** (veryVeryVeryLongUint256B ** veryVeryVeryLongUint256C);
         resultUint256 = veryVeryVeryLongUint256A ** veryVeryVeryLongUint256B * veryVeryVeryLongUint256C;
         resultUint256 = veryVeryVeryLongUint256A ** veryVeryVeryLongUint256B / veryVeryVeryLongUint256C;
         resultUint256 = veryVeryVeryLongUint256A ** veryVeryVeryLongUint256B % veryVeryVeryLongUint256C;
         resultUint256 = veryVeryVeryLongUint256A ** veryVeryVeryLongUint256B + veryVeryVeryLongUint256C;
         resultUint256 = veryVeryVeryLongUint256A ** veryVeryVeryLongUint256B - veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A ** veryVeryVeryLongUint256B << veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A ** veryVeryVeryLongUint256B >> veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A ** veryVeryVeryLongUint256B & veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A ** veryVeryVeryLongUint256B | veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A ** veryVeryVeryLongUint256B ^ veryVeryVeryLongUint256C;
+        resultUint256 = (veryVeryVeryLongUint256A ** veryVeryVeryLongUint256B) << veryVeryVeryLongUint256C;
+        resultUint256 = (veryVeryVeryLongUint256A ** veryVeryVeryLongUint256B) >> veryVeryVeryLongUint256C;
+        resultUint256 = (veryVeryVeryLongUint256A ** veryVeryVeryLongUint256B) & veryVeryVeryLongUint256C;
+        resultUint256 = (veryVeryVeryLongUint256A ** veryVeryVeryLongUint256B) | veryVeryVeryLongUint256C;
+        resultUint256 = (veryVeryVeryLongUint256A ** veryVeryVeryLongUint256B) ^ veryVeryVeryLongUint256C;
         resultBoolean = veryVeryVeryLongUint256A ** veryVeryVeryLongUint256B == veryVeryVeryLongUint256C;
         resultBoolean = veryVeryVeryLongUint256A ** veryVeryVeryLongUint256B != veryVeryVeryLongUint256C;
         resultBoolean = veryVeryVeryLongUint256A ** veryVeryVeryLongUint256B < veryVeryVeryLongUint256C;
@@ -388,15 +388,15 @@ contract Group {
     function mul() public {
         resultUint256 = veryVeryVeryLongUint256A * veryVeryVeryLongUint256B ** veryVeryVeryLongUint256C;
         resultUint256 = veryVeryVeryLongUint256A * veryVeryVeryLongUint256B * veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A * veryVeryVeryLongUint256B / veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A * veryVeryVeryLongUint256B % veryVeryVeryLongUint256C;
+        resultUint256 = (veryVeryVeryLongUint256A * veryVeryVeryLongUint256B) / veryVeryVeryLongUint256C;
+        resultUint256 = (veryVeryVeryLongUint256A * veryVeryVeryLongUint256B) % veryVeryVeryLongUint256C;
         resultUint256 = veryVeryVeryLongUint256A * veryVeryVeryLongUint256B + veryVeryVeryLongUint256C;
         resultUint256 = veryVeryVeryLongUint256A * veryVeryVeryLongUint256B - veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A * veryVeryVeryLongUint256B << veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A * veryVeryVeryLongUint256B >> veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A * veryVeryVeryLongUint256B & veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A * veryVeryVeryLongUint256B | veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A * veryVeryVeryLongUint256B ^ veryVeryVeryLongUint256C;
+        resultUint256 = (veryVeryVeryLongUint256A * veryVeryVeryLongUint256B) << veryVeryVeryLongUint256C;
+        resultUint256 = (veryVeryVeryLongUint256A * veryVeryVeryLongUint256B) >> veryVeryVeryLongUint256C;
+        resultUint256 = (veryVeryVeryLongUint256A * veryVeryVeryLongUint256B) & veryVeryVeryLongUint256C;
+        resultUint256 = (veryVeryVeryLongUint256A * veryVeryVeryLongUint256B) | veryVeryVeryLongUint256C;
+        resultUint256 = (veryVeryVeryLongUint256A * veryVeryVeryLongUint256B) ^ veryVeryVeryLongUint256C;
         resultBoolean = veryVeryVeryLongUint256A * veryVeryVeryLongUint256B == veryVeryVeryLongUint256C;
         resultBoolean = veryVeryVeryLongUint256A * veryVeryVeryLongUint256B != veryVeryVeryLongUint256C;
         resultBoolean = veryVeryVeryLongUint256A * veryVeryVeryLongUint256B < veryVeryVeryLongUint256C;
@@ -407,16 +407,16 @@ contract Group {
 
     function div() public {
         resultUint256 = veryVeryVeryLongUint256A / veryVeryVeryLongUint256B ** veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A / veryVeryVeryLongUint256B * veryVeryVeryLongUint256C;
+        resultUint256 = (veryVeryVeryLongUint256A / veryVeryVeryLongUint256B) * veryVeryVeryLongUint256C;
         resultUint256 = veryVeryVeryLongUint256A / veryVeryVeryLongUint256B / veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A / veryVeryVeryLongUint256B % veryVeryVeryLongUint256C;
+        resultUint256 = (veryVeryVeryLongUint256A / veryVeryVeryLongUint256B) % veryVeryVeryLongUint256C;
         resultUint256 = veryVeryVeryLongUint256A / veryVeryVeryLongUint256B + veryVeryVeryLongUint256C;
         resultUint256 = veryVeryVeryLongUint256A / veryVeryVeryLongUint256B - veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A / veryVeryVeryLongUint256B << veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A / veryVeryVeryLongUint256B >> veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A / veryVeryVeryLongUint256B & veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A / veryVeryVeryLongUint256B | veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A / veryVeryVeryLongUint256B ^ veryVeryVeryLongUint256C;
+        resultUint256 = (veryVeryVeryLongUint256A / veryVeryVeryLongUint256B) << veryVeryVeryLongUint256C;
+        resultUint256 = (veryVeryVeryLongUint256A / veryVeryVeryLongUint256B) >> veryVeryVeryLongUint256C;
+        resultUint256 = (veryVeryVeryLongUint256A / veryVeryVeryLongUint256B) & veryVeryVeryLongUint256C;
+        resultUint256 = (veryVeryVeryLongUint256A / veryVeryVeryLongUint256B) | veryVeryVeryLongUint256C;
+        resultUint256 = (veryVeryVeryLongUint256A / veryVeryVeryLongUint256B) ^ veryVeryVeryLongUint256C;
         resultBoolean = veryVeryVeryLongUint256A / veryVeryVeryLongUint256B == veryVeryVeryLongUint256C;
         resultBoolean = veryVeryVeryLongUint256A / veryVeryVeryLongUint256B != veryVeryVeryLongUint256C;
         resultBoolean = veryVeryVeryLongUint256A / veryVeryVeryLongUint256B < veryVeryVeryLongUint256C;
@@ -427,16 +427,16 @@ contract Group {
 
     function mod() public {
         resultUint256 = veryVeryVeryLongUint256A % veryVeryVeryLongUint256B ** veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A % veryVeryVeryLongUint256B * veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A % veryVeryVeryLongUint256B / veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A % veryVeryVeryLongUint256B % veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A % veryVeryVeryLongUint256B + veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A % veryVeryVeryLongUint256B - veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A % veryVeryVeryLongUint256B << veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A % veryVeryVeryLongUint256B >> veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A % veryVeryVeryLongUint256B & veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A % veryVeryVeryLongUint256B | veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A % veryVeryVeryLongUint256B ^ veryVeryVeryLongUint256C;
+        resultUint256 = (veryVeryVeryLongUint256A % veryVeryVeryLongUint256B) * veryVeryVeryLongUint256C;
+        resultUint256 = (veryVeryVeryLongUint256A % veryVeryVeryLongUint256B) / veryVeryVeryLongUint256C;
+        resultUint256 = (veryVeryVeryLongUint256A % veryVeryVeryLongUint256B) % veryVeryVeryLongUint256C;
+        resultUint256 = (veryVeryVeryLongUint256A % veryVeryVeryLongUint256B) + veryVeryVeryLongUint256C;
+        resultUint256 = (veryVeryVeryLongUint256A % veryVeryVeryLongUint256B) - veryVeryVeryLongUint256C;
+        resultUint256 = (veryVeryVeryLongUint256A % veryVeryVeryLongUint256B) << veryVeryVeryLongUint256C;
+        resultUint256 = (veryVeryVeryLongUint256A % veryVeryVeryLongUint256B) >> veryVeryVeryLongUint256C;
+        resultUint256 = (veryVeryVeryLongUint256A % veryVeryVeryLongUint256B) & veryVeryVeryLongUint256C;
+        resultUint256 = (veryVeryVeryLongUint256A % veryVeryVeryLongUint256B) | veryVeryVeryLongUint256C;
+        resultUint256 = (veryVeryVeryLongUint256A % veryVeryVeryLongUint256B) ^ veryVeryVeryLongUint256C;
         resultBoolean = veryVeryVeryLongUint256A % veryVeryVeryLongUint256B == veryVeryVeryLongUint256C;
         resultBoolean = veryVeryVeryLongUint256A % veryVeryVeryLongUint256B != veryVeryVeryLongUint256C;
         resultBoolean = veryVeryVeryLongUint256A % veryVeryVeryLongUint256B < veryVeryVeryLongUint256C;
@@ -449,14 +449,14 @@ contract Group {
         resultUint256 = veryVeryVeryLongUint256A + veryVeryVeryLongUint256B ** veryVeryVeryLongUint256C;
         resultUint256 = veryVeryVeryLongUint256A + veryVeryVeryLongUint256B * veryVeryVeryLongUint256C;
         resultUint256 = veryVeryVeryLongUint256A + veryVeryVeryLongUint256B / veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A + veryVeryVeryLongUint256B % veryVeryVeryLongUint256C;
+        resultUint256 = veryVeryVeryLongUint256A + (veryVeryVeryLongUint256B % veryVeryVeryLongUint256C);
         resultUint256 = veryVeryVeryLongUint256A + veryVeryVeryLongUint256B + veryVeryVeryLongUint256C;
         resultUint256 = veryVeryVeryLongUint256A + veryVeryVeryLongUint256B - veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A + veryVeryVeryLongUint256B << veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A + veryVeryVeryLongUint256B >> veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A + veryVeryVeryLongUint256B & veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A + veryVeryVeryLongUint256B | veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A + veryVeryVeryLongUint256B ^ veryVeryVeryLongUint256C;
+        resultUint256 = (veryVeryVeryLongUint256A + veryVeryVeryLongUint256B) << veryVeryVeryLongUint256C;
+        resultUint256 = (veryVeryVeryLongUint256A + veryVeryVeryLongUint256B) >> veryVeryVeryLongUint256C;
+        resultUint256 = (veryVeryVeryLongUint256A + veryVeryVeryLongUint256B) & veryVeryVeryLongUint256C;
+        resultUint256 = (veryVeryVeryLongUint256A + veryVeryVeryLongUint256B) | veryVeryVeryLongUint256C;
+        resultUint256 = (veryVeryVeryLongUint256A + veryVeryVeryLongUint256B) ^ veryVeryVeryLongUint256C;
         resultBoolean = veryVeryVeryLongUint256A + veryVeryVeryLongUint256B == veryVeryVeryLongUint256C;
         resultBoolean = veryVeryVeryLongUint256A + veryVeryVeryLongUint256B != veryVeryVeryLongUint256C;
         resultBoolean = veryVeryVeryLongUint256A + veryVeryVeryLongUint256B < veryVeryVeryLongUint256C;
@@ -469,14 +469,14 @@ contract Group {
         resultUint256 = veryVeryVeryLongUint256A - veryVeryVeryLongUint256B ** veryVeryVeryLongUint256C;
         resultUint256 = veryVeryVeryLongUint256A - veryVeryVeryLongUint256B * veryVeryVeryLongUint256C;
         resultUint256 = veryVeryVeryLongUint256A - veryVeryVeryLongUint256B / veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A - veryVeryVeryLongUint256B % veryVeryVeryLongUint256C;
+        resultUint256 = veryVeryVeryLongUint256A - (veryVeryVeryLongUint256B % veryVeryVeryLongUint256C);
         resultUint256 = veryVeryVeryLongUint256A - veryVeryVeryLongUint256B + veryVeryVeryLongUint256C;
         resultUint256 = veryVeryVeryLongUint256A - veryVeryVeryLongUint256B - veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A - veryVeryVeryLongUint256B << veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A - veryVeryVeryLongUint256B >> veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A - veryVeryVeryLongUint256B & veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A - veryVeryVeryLongUint256B | veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A - veryVeryVeryLongUint256B ^ veryVeryVeryLongUint256C;
+        resultUint256 = (veryVeryVeryLongUint256A - veryVeryVeryLongUint256B) << veryVeryVeryLongUint256C;
+        resultUint256 = (veryVeryVeryLongUint256A - veryVeryVeryLongUint256B) >> veryVeryVeryLongUint256C;
+        resultUint256 = (veryVeryVeryLongUint256A - veryVeryVeryLongUint256B) & veryVeryVeryLongUint256C;
+        resultUint256 = (veryVeryVeryLongUint256A - veryVeryVeryLongUint256B) | veryVeryVeryLongUint256C;
+        resultUint256 = (veryVeryVeryLongUint256A - veryVeryVeryLongUint256B) ^ veryVeryVeryLongUint256C;
         resultBoolean = veryVeryVeryLongUint256A - veryVeryVeryLongUint256B == veryVeryVeryLongUint256C;
         resultBoolean = veryVeryVeryLongUint256A - veryVeryVeryLongUint256B != veryVeryVeryLongUint256C;
         resultBoolean = veryVeryVeryLongUint256A - veryVeryVeryLongUint256B < veryVeryVeryLongUint256C;
@@ -486,17 +486,17 @@ contract Group {
     }
 
     function shiftL() public {
-        resultUint256 = veryVeryVeryLongUint256A << veryVeryVeryLongUint256B ** veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A << veryVeryVeryLongUint256B * veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A << veryVeryVeryLongUint256B / veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A << veryVeryVeryLongUint256B % veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A << veryVeryVeryLongUint256B + veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A << veryVeryVeryLongUint256B - veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A << veryVeryVeryLongUint256B << veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A << veryVeryVeryLongUint256B >> veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A << veryVeryVeryLongUint256B & veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A << veryVeryVeryLongUint256B | veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A << veryVeryVeryLongUint256B ^ veryVeryVeryLongUint256C;
+        resultUint256 = veryVeryVeryLongUint256A << (veryVeryVeryLongUint256B ** veryVeryVeryLongUint256C);
+        resultUint256 = veryVeryVeryLongUint256A << (veryVeryVeryLongUint256B * veryVeryVeryLongUint256C);
+        resultUint256 = veryVeryVeryLongUint256A << (veryVeryVeryLongUint256B / veryVeryVeryLongUint256C);
+        resultUint256 = veryVeryVeryLongUint256A << (veryVeryVeryLongUint256B % veryVeryVeryLongUint256C);
+        resultUint256 = veryVeryVeryLongUint256A << (veryVeryVeryLongUint256B + veryVeryVeryLongUint256C);
+        resultUint256 = veryVeryVeryLongUint256A << (veryVeryVeryLongUint256B - veryVeryVeryLongUint256C);
+        resultUint256 = (veryVeryVeryLongUint256A << veryVeryVeryLongUint256B) << veryVeryVeryLongUint256C;
+        resultUint256 = (veryVeryVeryLongUint256A << veryVeryVeryLongUint256B) >> veryVeryVeryLongUint256C;
+        resultUint256 = (veryVeryVeryLongUint256A << veryVeryVeryLongUint256B) & veryVeryVeryLongUint256C;
+        resultUint256 = (veryVeryVeryLongUint256A << veryVeryVeryLongUint256B) | veryVeryVeryLongUint256C;
+        resultUint256 = (veryVeryVeryLongUint256A << veryVeryVeryLongUint256B) ^ veryVeryVeryLongUint256C;
         resultBoolean = veryVeryVeryLongUint256A << veryVeryVeryLongUint256B == veryVeryVeryLongUint256C;
         resultBoolean = veryVeryVeryLongUint256A << veryVeryVeryLongUint256B != veryVeryVeryLongUint256C;
         resultBoolean = veryVeryVeryLongUint256A << veryVeryVeryLongUint256B < veryVeryVeryLongUint256C;
@@ -506,17 +506,17 @@ contract Group {
     }
 
     function shiftR() public {
-        resultUint256 = veryVeryVeryLongUint256A >> veryVeryVeryLongUint256B ** veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A >> veryVeryVeryLongUint256B * veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A >> veryVeryVeryLongUint256B / veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A >> veryVeryVeryLongUint256B % veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A >> veryVeryVeryLongUint256B + veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A >> veryVeryVeryLongUint256B - veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A >> veryVeryVeryLongUint256B << veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A >> veryVeryVeryLongUint256B >> veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A >> veryVeryVeryLongUint256B & veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A >> veryVeryVeryLongUint256B | veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A >> veryVeryVeryLongUint256B ^ veryVeryVeryLongUint256C;
+        resultUint256 = veryVeryVeryLongUint256A >> (veryVeryVeryLongUint256B ** veryVeryVeryLongUint256C);
+        resultUint256 = veryVeryVeryLongUint256A >> (veryVeryVeryLongUint256B * veryVeryVeryLongUint256C);
+        resultUint256 = veryVeryVeryLongUint256A >> (veryVeryVeryLongUint256B / veryVeryVeryLongUint256C);
+        resultUint256 = veryVeryVeryLongUint256A >> (veryVeryVeryLongUint256B % veryVeryVeryLongUint256C);
+        resultUint256 = veryVeryVeryLongUint256A >> (veryVeryVeryLongUint256B + veryVeryVeryLongUint256C);
+        resultUint256 = veryVeryVeryLongUint256A >> (veryVeryVeryLongUint256B - veryVeryVeryLongUint256C);
+        resultUint256 = (veryVeryVeryLongUint256A >> veryVeryVeryLongUint256B) << veryVeryVeryLongUint256C;
+        resultUint256 = (veryVeryVeryLongUint256A >> veryVeryVeryLongUint256B) >> veryVeryVeryLongUint256C;
+        resultUint256 = (veryVeryVeryLongUint256A >> veryVeryVeryLongUint256B) & veryVeryVeryLongUint256C;
+        resultUint256 = (veryVeryVeryLongUint256A >> veryVeryVeryLongUint256B) | veryVeryVeryLongUint256C;
+        resultUint256 = (veryVeryVeryLongUint256A >> veryVeryVeryLongUint256B) ^ veryVeryVeryLongUint256C;
         resultBoolean = veryVeryVeryLongUint256A >> veryVeryVeryLongUint256B == veryVeryVeryLongUint256C;
         resultBoolean = veryVeryVeryLongUint256A >> veryVeryVeryLongUint256B != veryVeryVeryLongUint256C;
         resultBoolean = veryVeryVeryLongUint256A >> veryVeryVeryLongUint256B < veryVeryVeryLongUint256C;
@@ -526,17 +526,17 @@ contract Group {
     }
 
     function bitAnd() public {
-        resultUint256 = veryVeryVeryLongUint256A & veryVeryVeryLongUint256B ** veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A & veryVeryVeryLongUint256B * veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A & veryVeryVeryLongUint256B / veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A & veryVeryVeryLongUint256B % veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A & veryVeryVeryLongUint256B + veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A & veryVeryVeryLongUint256B - veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A & veryVeryVeryLongUint256B << veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A & veryVeryVeryLongUint256B >> veryVeryVeryLongUint256C;
+        resultUint256 = veryVeryVeryLongUint256A & (veryVeryVeryLongUint256B ** veryVeryVeryLongUint256C);
+        resultUint256 = veryVeryVeryLongUint256A & (veryVeryVeryLongUint256B * veryVeryVeryLongUint256C);
+        resultUint256 = veryVeryVeryLongUint256A & (veryVeryVeryLongUint256B / veryVeryVeryLongUint256C);
+        resultUint256 = veryVeryVeryLongUint256A & (veryVeryVeryLongUint256B % veryVeryVeryLongUint256C);
+        resultUint256 = veryVeryVeryLongUint256A & (veryVeryVeryLongUint256B + veryVeryVeryLongUint256C);
+        resultUint256 = veryVeryVeryLongUint256A & (veryVeryVeryLongUint256B - veryVeryVeryLongUint256C);
+        resultUint256 = veryVeryVeryLongUint256A & (veryVeryVeryLongUint256B << veryVeryVeryLongUint256C);
+        resultUint256 = veryVeryVeryLongUint256A & (veryVeryVeryLongUint256B >> veryVeryVeryLongUint256C);
         resultUint256 = veryVeryVeryLongUint256A & veryVeryVeryLongUint256B & veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A & veryVeryVeryLongUint256B | veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A & veryVeryVeryLongUint256B ^ veryVeryVeryLongUint256C;
+        resultUint256 = (veryVeryVeryLongUint256A & veryVeryVeryLongUint256B) | veryVeryVeryLongUint256C;
+        resultUint256 = (veryVeryVeryLongUint256A & veryVeryVeryLongUint256B) ^ veryVeryVeryLongUint256C;
         resultBoolean = veryVeryVeryLongUint256A & veryVeryVeryLongUint256B == veryVeryVeryLongUint256C;
         resultBoolean = veryVeryVeryLongUint256A & veryVeryVeryLongUint256B != veryVeryVeryLongUint256C;
         resultBoolean = veryVeryVeryLongUint256A & veryVeryVeryLongUint256B < veryVeryVeryLongUint256C;
@@ -546,17 +546,17 @@ contract Group {
     }
 
     function bitOr() public {
-        resultUint256 = veryVeryVeryLongUint256A | veryVeryVeryLongUint256B ** veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A | veryVeryVeryLongUint256B * veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A | veryVeryVeryLongUint256B / veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A | veryVeryVeryLongUint256B % veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A | veryVeryVeryLongUint256B + veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A | veryVeryVeryLongUint256B - veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A | veryVeryVeryLongUint256B << veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A | veryVeryVeryLongUint256B >> veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A | veryVeryVeryLongUint256B & veryVeryVeryLongUint256C;
+        resultUint256 = veryVeryVeryLongUint256A | (veryVeryVeryLongUint256B ** veryVeryVeryLongUint256C);
+        resultUint256 = veryVeryVeryLongUint256A | (veryVeryVeryLongUint256B * veryVeryVeryLongUint256C);
+        resultUint256 = veryVeryVeryLongUint256A | (veryVeryVeryLongUint256B / veryVeryVeryLongUint256C);
+        resultUint256 = veryVeryVeryLongUint256A | (veryVeryVeryLongUint256B % veryVeryVeryLongUint256C);
+        resultUint256 = veryVeryVeryLongUint256A | (veryVeryVeryLongUint256B + veryVeryVeryLongUint256C);
+        resultUint256 = veryVeryVeryLongUint256A | (veryVeryVeryLongUint256B - veryVeryVeryLongUint256C);
+        resultUint256 = veryVeryVeryLongUint256A | (veryVeryVeryLongUint256B << veryVeryVeryLongUint256C);
+        resultUint256 = veryVeryVeryLongUint256A | (veryVeryVeryLongUint256B >> veryVeryVeryLongUint256C);
+        resultUint256 = veryVeryVeryLongUint256A | (veryVeryVeryLongUint256B & veryVeryVeryLongUint256C);
         resultUint256 = veryVeryVeryLongUint256A | veryVeryVeryLongUint256B | veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A | veryVeryVeryLongUint256B ^ veryVeryVeryLongUint256C;
+        resultUint256 = veryVeryVeryLongUint256A | (veryVeryVeryLongUint256B ^ veryVeryVeryLongUint256C);
         resultBoolean = veryVeryVeryLongUint256A | veryVeryVeryLongUint256B == veryVeryVeryLongUint256C;
         resultBoolean = veryVeryVeryLongUint256A | veryVeryVeryLongUint256B != veryVeryVeryLongUint256C;
         resultBoolean = veryVeryVeryLongUint256A | veryVeryVeryLongUint256B < veryVeryVeryLongUint256C;
@@ -566,16 +566,16 @@ contract Group {
     }
 
     function bitXor() public {
-        resultUint256 = veryVeryVeryLongUint256A ^ veryVeryVeryLongUint256B ** veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A ^ veryVeryVeryLongUint256B * veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A ^ veryVeryVeryLongUint256B / veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A ^ veryVeryVeryLongUint256B % veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A ^ veryVeryVeryLongUint256B + veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A ^ veryVeryVeryLongUint256B - veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A ^ veryVeryVeryLongUint256B << veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A ^ veryVeryVeryLongUint256B >> veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A ^ veryVeryVeryLongUint256B & veryVeryVeryLongUint256C;
-        resultUint256 = veryVeryVeryLongUint256A ^ veryVeryVeryLongUint256B | veryVeryVeryLongUint256C;
+        resultUint256 = veryVeryVeryLongUint256A ^ (veryVeryVeryLongUint256B ** veryVeryVeryLongUint256C);
+        resultUint256 = veryVeryVeryLongUint256A ^ (veryVeryVeryLongUint256B * veryVeryVeryLongUint256C);
+        resultUint256 = veryVeryVeryLongUint256A ^ (veryVeryVeryLongUint256B / veryVeryVeryLongUint256C);
+        resultUint256 = veryVeryVeryLongUint256A ^ (veryVeryVeryLongUint256B % veryVeryVeryLongUint256C);
+        resultUint256 = veryVeryVeryLongUint256A ^ (veryVeryVeryLongUint256B + veryVeryVeryLongUint256C);
+        resultUint256 = veryVeryVeryLongUint256A ^ (veryVeryVeryLongUint256B - veryVeryVeryLongUint256C);
+        resultUint256 = veryVeryVeryLongUint256A ^ (veryVeryVeryLongUint256B << veryVeryVeryLongUint256C);
+        resultUint256 = veryVeryVeryLongUint256A ^ (veryVeryVeryLongUint256B >> veryVeryVeryLongUint256C);
+        resultUint256 = veryVeryVeryLongUint256A ^ (veryVeryVeryLongUint256B & veryVeryVeryLongUint256C);
+        resultUint256 = (veryVeryVeryLongUint256A ^ veryVeryVeryLongUint256B) | veryVeryVeryLongUint256C;
         resultUint256 = veryVeryVeryLongUint256A ^ veryVeryVeryLongUint256B ^ veryVeryVeryLongUint256C;
         resultBoolean = veryVeryVeryLongUint256A ^ veryVeryVeryLongUint256B == veryVeryVeryLongUint256C;
         resultBoolean = veryVeryVeryLongUint256A ^ veryVeryVeryLongUint256B != veryVeryVeryLongUint256C;
@@ -691,10 +691,10 @@ contract Group {
 
     function logic() public {
         resultBoolean = veryVeryVeryLongBooleanA || veryVeryVeryLongBooleanB || veryVeryVeryLongBooleanC;
-        resultBoolean = veryVeryVeryLongBooleanA || veryVeryVeryLongBooleanB && veryVeryVeryLongBooleanC;
+        resultBoolean = veryVeryVeryLongBooleanA || (veryVeryVeryLongBooleanB && veryVeryVeryLongBooleanC);
         resultBoolean = veryVeryVeryLongBooleanA || veryVeryVeryLongBooleanB == veryVeryVeryLongBooleanC;
         resultBoolean = veryVeryVeryLongBooleanA || veryVeryVeryLongBooleanB != veryVeryVeryLongBooleanC;
-        resultBoolean = veryVeryVeryLongBooleanA && veryVeryVeryLongBooleanB || veryVeryVeryLongBooleanC;
+        resultBoolean = (veryVeryVeryLongBooleanA && veryVeryVeryLongBooleanB) || veryVeryVeryLongBooleanC;
         resultBoolean = veryVeryVeryLongBooleanA && veryVeryVeryLongBooleanB && veryVeryVeryLongBooleanC;
         resultBoolean = veryVeryVeryLongBooleanA && veryVeryVeryLongBooleanB == veryVeryVeryLongBooleanC;
         resultBoolean = veryVeryVeryLongBooleanA && veryVeryVeryLongBooleanB != veryVeryVeryLongBooleanC;

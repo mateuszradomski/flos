@@ -1041,24 +1041,49 @@ getOperatorPrecedence2(TokenType type) {
         case TokenType_StarEqual:
         case TokenType_DivideEqual:
         case TokenType_PercentEqual: return -15;
+        case TokenType_None: return 0;
         default: assert(false);
     }
 }
 
 static void
-pushBinaryExpressionDocument(Render *r, ASTNode *node, u32 parentPrecedence) {
+pushBinaryExpressionDocument(Render *r, ASTNode *node, TokenId outerOperator) {
     ASTNodeBinaryExpression *binary = &node->binaryExpressionNode;
 
-    u32 currentPrecedence = getOperatorPrecedence2(binary->operator);
-    bool startingPrecedence = parentPrecedence == 0;
-    bool differingPrecedence = parentPrecedence != currentPrecedence;
+    u32 outerPrecedence = getOperatorPrecedence2(outerOperator);
+    u32 innerPrec = getOperatorPrecedence2(binary->operator);
+    bool startingPrecedence = outerPrecedence == 0;
+    bool differingPrecedence = outerPrecedence != innerPrec;
     bool openGroup = startingPrecedence || differingPrecedence;
     bool openNest = !startingPrecedence && differingPrecedence;
 
-    if(openGroup) { pushGroup(r); }
+    bool outerHigherThanAssignment = outerPrecedence > getOperatorPrecedence2(TokenType_Equal);
+    bool notInequality = innerPrec != getOperatorPrecedence2(TokenType_LTick);
+    bool notEqualities = innerPrec != getOperatorPrecedence2(TokenType_EqualEqual);
+    bool outerNotInequality = outerPrecedence != getOperatorPrecedence2(TokenType_LTick);
+    bool outerNotEquality = outerPrecedence != getOperatorPrecedence2(TokenType_EqualEqual);
+    bool base = !startingPrecedence && outerHigherThanAssignment && notInequality && notEqualities && outerNotInequality && outerNotEquality;
 
+    bool outerHasLowerPrecedence = outerPrecedence < innerPrec;
+    bool outerNotAdd = outerPrecedence != getOperatorPrecedence2(TokenType_Plus);
+    bool outerNotMultipliaction = outerPrecedence != getOperatorPrecedence2(TokenType_Star);
+    bool operatorsDontMatch = binary->operator != outerOperator;
+
+    // Cares about different things depending on the outer and the inner operator
+    bool outerDependentCase = outerNotAdd && (
+        outerNotMultipliaction && outerHasLowerPrecedence && innerPrec < getOperatorPrecedence2(TokenType_StarStar) ||
+        operatorsDontMatch && innerPrec == getOperatorPrecedence2(TokenType_Star) ||
+        outerNotMultipliaction && innerPrec == getOperatorPrecedence2(TokenType_StarStar)
+    );
+
+    // Doesn't care about what the outer is, always is present as long as base is also true
+    bool alwaysPresentCase = innerPrec == getOperatorPrecedence2(TokenType_LeftShift) || (binary->operator == TokenType_Percent);
+    bool addParens = base && (outerDependentCase || alwaysPresentCase);
+
+    if(openGroup || addParens) { pushGroup(r); }
+    if(addParens) { pushWord(r, wordText(LIT_TO_STR("("))); }
     if(binary->left->type == ASTNodeType_BinaryExpression) {
-        pushBinaryExpressionDocument(r, binary->left, currentPrecedence);
+        pushBinaryExpressionDocument(r, binary->left, binary->operator);
     } else {
         pushExpressionDocument(r, binary->left);
     }
@@ -1068,12 +1093,13 @@ pushBinaryExpressionDocument(Render *r, ASTNode *node, u32 parentPrecedence) {
     pushWord(r, wordLine());
 
     if(binary->right->type == ASTNodeType_BinaryExpression) {
-        pushBinaryExpressionDocument(r, binary->right, currentPrecedence);
+        pushBinaryExpressionDocument(r, binary->right, binary->operator);
     } else {
         pushExpressionDocument(r, binary->right);
     }
 
-    if(openGroup) { popGroup(r); }
+    if(addParens) { pushWord(r, wordText(LIT_TO_STR(")"))); }
+    if(openGroup || addParens) { popGroup(r); }
 }
 
 static void
@@ -1119,7 +1145,7 @@ pushExpressionDocument(Render *r, ASTNode *node) {
             pushTokenWord(r, node->identifierExpressionNode.value);
         } break;
         case ASTNodeType_BinaryExpression: {
-            pushBinaryExpressionDocument(r, node, 0);
+            pushBinaryExpressionDocument(r, node, TokenType_None);
         } break;
         case ASTNodeType_TupleExpression: {
             assert(stringMatch(LIT_TO_STR("("), r->tokens.tokenStrings[node->startToken]));
