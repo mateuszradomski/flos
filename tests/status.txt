@@ -1,0 +1,84 @@
+|                                                    Test | Added | Passing |                       Notes |
+|:--------------------------------------------------------|-------|---------|-----------------------------|
+| AddressPayable/AddressPayable.sol                       |   YES |     YES |                             |
+| AllSolidityFeatures/AllSolidityFeatures.sol             |   YES |     YES |                             |
+| AllSolidityFeaturesV0.4.26/AllSolidityFeatures.sol      |    NO |         |                             |
+| Arrays/Arrays.sol                                       |   YES |     YES |                             |
+| Assembly/Assembly.sol                                   |   YES |     YES |                             |
+| AssemblyV0.4.26/Assembly.sol                            |    NO |         |                             |
+| BasicIterator/BasicIterator.sol                         |   YES |     YES |                             |
+| BinaryOperators/BinaryOperators.sol                     |   YES |     YES |                    Not 100% |
+| BinaryOperators/Parentheses.sol                         |   YES |     YES | Not 100%, manually modified |
+| BreakingChangesV0.7.4/BreakingChangesV0.7.4.sol         |    NO |         |                             |
+| BreakingChangesV0.8.0/BreakingChangesV0.8.0.sol         |   YES |     YES |                             |
+| Comments/Comments.sol                                   |   YES |     YES |                             |
+| Conditional/Conditional.sol                             |   YES |     YES |                             |
+| Constructors/Constructors.sol                           |   YES |     YES |                             |
+| ContractDefinitions/ContractDefinitions.sol             |   YES |     YES |                             |
+| CustomErrors/CustomErrors.sol                           |   YES |     YES |                             |
+| EnumDefinitions/EnumDefinitions.sol                     |   YES |     YES |                             |
+| Etc/Etc.sol                                             |   YES |     YES |                             |
+| ExperimentalTernaries/ExperimentalTernaries.sol         |   YES |     YES |                             |
+| ForStatements/ForStatements.sol                         |   YES |     YES |                             |
+| FunctionCalls/FunctionCalls.sol                         |   YES |     YES |                             |
+| FunctionDefinitions/FunctionDefinitions.sol             |   YES |     YES |                             |
+| FunctionDefinitionsV0.5.0/FunctionDefinitions.sol       |   YES |     YES |                             |
+| HexLiteral/HexLiteral.sol                               |    NO |      NO |                             |
+| IfStatements/IfStatements.sol                           |   YES |     YES |                             |
+| Immutable/Immutable.sol                                 |   YES |     YES |                             |
+| ImportDirective/ImportDirectives.sol                    |   YES |     YES |                             |
+| Inbox/Inbox.sol                                         |   YES |     YES |                             |
+| IndexOf/IndexOf.sol                                     |   YES |     YES |                             |
+| IndexRangeAccess/IndexRangeAccess.sol                   |   YES |     YES |                             |
+| InheritanceSpecifier/InheritanceSpecifier.sol           |   YES |     YES |                             |
+| Issues/Issue205.sol                                     |    NO |      NO |                             |
+| Issues/Issue289.sol                                     |    NO |      NO |                             |
+| Issues/Issue355.sol                                     |    NO |      NO |                             |
+| Issues/Issue385.sol                                     |    NO |      NO |                             |
+| Issues/Issue564.sol                                     |    NO |      NO |                             |
+| Issues/Issue799.sol                                     |    NO |      NO |                             |
+| Issues/Issue843.sol                                     |    NO |      NO |                             |
+| Libraries/Libraries.sol                                 |   YES |     YES |                             |
+| MemberAccess/MemberAccess.sol                           |   YES |     YES |                             |
+| ModifierDefinitions/ModifierDefinitions.sol             |   YES |     YES |                             |
+| ModifierInvocations/ModifierInvocations.sol             |   YES |     YES |                             |
+| MultipartStrings/MultipartStrings.sol                   |    NO |      NO |                             |
+| NameValueExpression/NameValueExpression.sol             |   YES |     YES |                             |
+| NumberLiteral/NumberLiteral.sol                         |   YES |     YES |                             |
+| Ownable/Ownable.sol                                     |   YES |     YES |                             |
+| Parentheses/AddNoParentheses.sol                        |    NO |      NO |                             |
+| Parentheses/BitAndNoParentheses.sol                     |    NO |      NO |                             |
+| Parentheses/BitOrNoParentheses.sol                      |    NO |      NO |                             |
+| Parentheses/BitXorNoParentheses.sol                     |    NO |      NO |                             |
+| Parentheses/DivNoParentheses.sol                        |    NO |      NO |                             |
+| Parentheses/ExpNoParentheses.sol                        |    NO |      NO |                             |
+| Parentheses/LogicNoParentheses.sol                      |    NO |      NO |                             |
+| Parentheses/ModNoParentheses.sol                        |    NO |      NO |                             |
+| Parentheses/MulNoParentheses.sol                        |    NO |      NO |                             |
+| Parentheses/ShiftLNoParentheses.sol                     |    NO |      NO |                             |
+| Parentheses/ShiftRNoParentheses.sol                     |    NO |      NO |                             |
+| Parentheses/SubNoParentheses.sol                        |    NO |      NO |                             |
+| Pragma/Pragma.sol                                       |   YES |     YES |                             |
+| PrettierIgnore/PrettierIgnore.sol                       |    NO |         |                             |
+| Proxy/Proxy.sol                                         |    NO |      NO |                             |
+| SampleCrowdsale/SampleCrowdsale.sol                     |   YES |     YES |                             |
+| SimpleAuction/SimpleAuction.sol                         |   YES |     YES |                             |
+| SimpleStorage/SimpleStorage.sol                         |   YES |     YES |                             |
+| SplittableCommodity/SplittableCommodity.sol             |   YES |     YES |                             |
+| StateVariableDeclarations/StateVariableDeclarations.sol |   YES |     YES |                             |
+| StringLiteral/StringLiteral.sol                         |    NO |      NO |                             |
+| StyleGuide/BlankLines.sol                               |   YES |     YES |                             |
+| StyleGuide/ControlStructures.sol                        |    NO |      NO |                             |
+| StyleGuide/FunctionDeclaration.sol                      |    NO |      NO |                             |
+| StyleGuide/Mappings.sol                                 |   YES |     YES |                             |
+| StyleGuide/MaximumLineLength.sol                        |    NO |      NO |                             |
+| StyleGuide/OtherRecommendations.sol                     |    NO |      NO |                             |
+| StyleGuide/VariableDeclarations.sol                     |   YES |     YES |                             |
+| StyleGuide/WhitespaceInExpressions.sol                  |    NO |      NO |                             |
+| TryCatch/TryCatch.sol                                   |   YES |     YES |                             |
+| Tuples/Tuples.sol                                       |   YES |     YES |                             |
+| TypeDefinition/TypeDefinition.sol                       |   YES |     YES |                             |
+| WhileStatements/WhileStatements.sol                     |   YES |     YES |                             |
+| WrongCompiler/WrongCompiler.sol                         |    NO |         |                             |
+| quotes/Quotes.sol                                       |    NO |      NO |                             |
+| strings/strings.sol                                     |    NO |      NO |                             |
