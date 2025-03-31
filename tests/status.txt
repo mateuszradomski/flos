@@ -74,7 +74,7 @@
 | StyleGuide/MaximumLineLength.sol                        |    NO |      NO |                             |
 | StyleGuide/OtherRecommendations.sol                     |    NO |      NO |                             |
 | StyleGuide/VariableDeclarations.sol                     |   YES |     YES |                             |
-| StyleGuide/WhitespaceInExpressions.sol                  |    NO |      NO |                             |
+| StyleGuide/WhitespaceInExpressions.sol                  |   YES |     YES |                             |
 | TryCatch/TryCatch.sol                                   |   YES |     YES |                             |
 | Tuples/Tuples.sol                                       |   YES |     YES |                             |
 | TypeDefinition/TypeDefinition.sol                       |   YES |     YES |                             |
