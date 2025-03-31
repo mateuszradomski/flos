@@ -329,5 +329,10 @@ UTEST_F(SolFmtFixture, functionCalls) { utest_fixture->path = "tests/functionCal
 UTEST_F(SolFmtFixture, ifStatements) { utest_fixture->path = "tests/ifStatements.sol"; }
 UTEST_F(SolFmtFixture, assembly) { utest_fixture->path = "tests/assembly.sol"; }
 UTEST_F(SolFmtFixture, allFeatures) { utest_fixture->path = "tests/allFeatures.sol"; }
+UTEST_F(SolFmtFixture, proxy) { utest_fixture->path = "tests/proxy.sol"; }
+UTEST_F(SolFmtFixture, controlStructures) { utest_fixture->path = "tests/controlStructures.sol"; }
+UTEST_F(SolFmtFixture, issue355) { utest_fixture->path = "tests/issue355.sol"; }
+UTEST_F(SolFmtFixture, issue799) { utest_fixture->path = "tests/issue799.sol"; }
+UTEST_F(SolFmtFixture, issue843) { utest_fixture->path = "tests/issue843.sol"; }
 
 UTEST_MAIN();

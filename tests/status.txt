@@ -33,11 +33,11 @@
 | InheritanceSpecifier/InheritanceSpecifier.sol           |   YES |     YES |                             |
 | Issues/Issue205.sol                                     |    NO |      NO |                             |
 | Issues/Issue289.sol                                     |    NO |      NO |                             |
-| Issues/Issue355.sol                                     |    NO |      NO |                             |
+| Issues/Issue355.sol                                     |   YES |     YES |                             |
 | Issues/Issue385.sol                                     |    NO |      NO |                             |
 | Issues/Issue564.sol                                     |    NO |      NO |                             |
-| Issues/Issue799.sol                                     |    NO |      NO |                             |
-| Issues/Issue843.sol                                     |    NO |      NO |                             |
+| Issues/Issue799.sol                                     |   YES |     YES |                             |
+| Issues/Issue843.sol                                     |   YES |     YES |                             |
 | Libraries/Libraries.sol                                 |   YES |     YES |                             |
 | MemberAccess/MemberAccess.sol                           |   YES |     YES |                             |
 | ModifierDefinitions/ModifierDefinitions.sol             |   YES |     YES |                             |
@@ -60,7 +60,7 @@
 | Parentheses/SubNoParentheses.sol                        |    NO |      NO |                             |
 | Pragma/Pragma.sol                                       |   YES |     YES |                             |
 | PrettierIgnore/PrettierIgnore.sol                       |    NO |         |                             |
-| Proxy/Proxy.sol                                         |    NO |      NO |                             |
+| Proxy/Proxy.sol                                         |   YES |     YES |                             |
 | SampleCrowdsale/SampleCrowdsale.sol                     |   YES |     YES |                             |
 | SimpleAuction/SimpleAuction.sol                         |   YES |     YES |                             |
 | SimpleStorage/SimpleStorage.sol                         |   YES |     YES |                             |
@@ -68,7 +68,7 @@
 | StateVariableDeclarations/StateVariableDeclarations.sol |   YES |     YES |                             |
 | StringLiteral/StringLiteral.sol                         |    NO |      NO |                             |
 | StyleGuide/BlankLines.sol                               |   YES |     YES |                             |
-| StyleGuide/ControlStructures.sol                        |    NO |      NO |                             |
+| StyleGuide/ControlStructures.sol                        |   YES |     YES |   Some commented from start |
 | StyleGuide/FunctionDeclaration.sol                      |    NO |      NO |                             |
 | StyleGuide/Mappings.sol                                 |   YES |     YES |                             |
 | StyleGuide/MaximumLineLength.sol                        |    NO |      NO |                             |
