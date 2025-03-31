@@ -983,6 +983,7 @@ pushTypeDocument(Render *r, ASTNode *node) {
 
                 pushGroup(r);
                 pushTokenWord(r, node->functionTypeNode.returnParameters.head->node.endToken - 2);
+                pushWord(r, wordSpace());
                 pushTokenWord(r, node->functionTypeNode.returnParameters.head->node.endToken - 1);
                 pushNest(r);
                 pushParametersDocument(r, &node->functionTypeNode.returnParameters);

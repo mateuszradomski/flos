@@ -673,10 +673,10 @@ contract ConstructorWithoutVisibility {
 
 contract FunctionTypes {
     struct Something {
-        function(address) external view returns(uint256) getSomething;
+        function(address) external view returns (uint256) getSomething;
     }
 
-    function reduce(uint256[] memory self, function(uint256, uint256) pure returns(uint256) f)
+    function reduce(uint256[] memory self, function(uint256, uint256) pure returns (uint256) f)
         internal
         pure
         returns (uint256 r)
