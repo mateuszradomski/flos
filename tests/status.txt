@@ -79,6 +79,6 @@
 | Tuples/Tuples.sol                                       |   YES |     YES |                             |
 | TypeDefinition/TypeDefinition.sol                       |   YES |     YES |                             |
 | WhileStatements/WhileStatements.sol                     |   YES |     YES |                             |
-| WrongCompiler/WrongCompiler.sol                         |    NO |         |                             |
+| WrongCompiler/WrongCompiler.sol                         |   YES |     YES |                             |
 | quotes/Quotes.sol                                       |   YES |     YES |                             |
 | strings/strings.sol                                     |   YES |     YES |                             |

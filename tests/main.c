@@ -339,6 +339,7 @@ UTEST_F(SolFmtFixture, quotes) { utest_fixture->path = "tests/quotes.sol"; }
 UTEST_F(SolFmtFixture, strings) { utest_fixture->path = "tests/strings.sol"; }
 UTEST_F(SolFmtFixture, allFeaturesV0_4_26) { utest_fixture->path = "tests/allFeaturesV0_4_26.sol"; }
 UTEST_F(SolFmtFixture, breakingChangesV0_7_4) { utest_fixture->path = "tests/breakingChangesV0.7.4.sol"; }
+UTEST_F(SolFmtFixture, wrongCompiler) { utest_fixture->path = "tests/wrongCompiler.sol"; }
 UTEST_F(SolFmtFixture, issue355) { utest_fixture->path = "tests/issue355.sol"; }
 UTEST_F(SolFmtFixture, issue799) { utest_fixture->path = "tests/issue799.sol"; }
 UTEST_F(SolFmtFixture, issue843) { utest_fixture->path = "tests/issue843.sol"; }
