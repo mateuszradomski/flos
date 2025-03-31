@@ -1290,65 +1290,79 @@ expressionNest(ASTNode *node) {
     }
 }
 
+static void renderYulExpression(Render *r, ASTNode *node);
 
 static void
 renderYulFunctionCall(Render *r, ASTNode *node) {
-    // ASTNodeYulFunctionCallExpression *function = &node->yulFunctionCallExpressionNode;
+    ASTNodeYulFunctionCallExpression *function = &node->yulFunctionCallExpressionNode;
 
-    // renderToken(r, function->identifier, NONE);
-    // assert(stringMatch(LIT_TO_STR("("), r->tokens.tokenStrings[function->identifier + 1]));
-    // renderToken(r, function->identifier + 1, NONE);
-    // ASTNodeLink *argument = function->arguments.head;
-    // for(u32 i = 0; i < function->arguments.count; i++, argument = argument->next) {
-    //     ConnectType connect = i == function->arguments.count - 1 ? NONE : COMMA_SPACE;
-    //     renderYulExpression(r, &argument->node, connect);
-    // }
-    // assert(stringMatch(LIT_TO_STR(")"), r->tokens.tokenStrings[node->endToken]));
-    // renderToken(r, node->endToken, connect);
-    assert(false);
+    pushGroup(r);
+    pushTokenWordOnly(r, function->identifier);
+
+    assert(stringMatch(LIT_TO_STR("("), r->tokens.tokenStrings[function->identifier + 1]));
+    pushTokenWord(r, function->identifier + 1);
+
+    if (function->arguments.count > 0) {
+        pushNest(r);
+        pushWord(r, wordSoftline());
+
+        ASTNodeLink *argument = function->arguments.head;
+        for(u32 i = 0; i < function->arguments.count; i++, argument = argument->next) {
+            renderYulExpression(r, &argument->node);
+            if(i < function->arguments.count - 1) {
+                pushTokenWord(r, argument->node.endToken + 1); // comma
+                pushWord(r, wordLine());
+            }
+        }
+
+        popNest(r);
+        pushWord(r, wordSoftline());
+    }
+
+    assert(stringMatch(LIT_TO_STR(")"), r->tokens.tokenStrings[node->endToken]));
+    pushTokenWordOnly(r, node->endToken);
+    popGroup(r);
 }
 
 static void
 renderYulExpression(Render *r, ASTNode *node) {
-    // switch(node->type) {
-    //     case ASTNodeType_YulNumberLitExpression: {
-    //         renderToken(r, node->yulNumberLitExpressionNode.value, connect);
-    //     } break;
-    //     case ASTNodeType_YulStringLitExpression: {
-    //         // TODO(radomski): Escaping
-    //         writeString(r->writer, LIT_TO_STR("\""));
-    //         renderToken(r, node->yulHexStringLitExpressionNode.value, NONE);
-    //         writeString(r->writer, LIT_TO_STR("\""));
-    //         renderConnect(r, connect);
-    //     } break;
-    //     case ASTNodeType_YulHexNumberLitExpression: {
-    //         renderToken(r, node->yulHexNumberLitExpressionNode.value, connect);
-    //     } break;
-    //     case ASTNodeType_YulBoolLitExpression: {
-    //         renderToken(r, node->yulBoolLitExpressionNode.value, connect);
-    //     } break;
-    //     case ASTNodeType_YulHexStringLitExpression: {
-    //         // TODO(radomski): Escaping
-    //         writeString(r->writer, LIT_TO_STR("hex\""));
-    //         renderToken(r, node->yulHexStringLitExpressionNode.value, NONE);
-    //         writeString(r->writer, LIT_TO_STR("\""));
-    //         renderConnect(r, connect);
-    //     } break;
-    //     case ASTNodeType_YulMemberAccessExpression: {
-    //         for(u32 i = 0; i < node->yulIdentifierPathExpressionNode.count; i++) {
-    //             ConnectType connection = i == node->yulIdentifierPathExpressionNode.count - 1 ? connect : DOT;
-    //             renderToken(r, node->yulIdentifierPathExpressionNode.identifiers[i], connection);
-    //         }
-    //     } break;
-    //     case ASTNodeType_YulFunctionCallExpression: {
-    //         renderYulFunctionCall(r, node, connect);
-    //     } break;
-    //     default: {
-    //         javascriptPrintNumber(node->type);
-    //         assert(0);
-    //     }
-    // }
-    assert(false);
+    switch(node->type) {
+        case ASTNodeType_YulNumberLitExpression: {
+            pushTokenWord(r, node->yulNumberLitExpressionNode.value);
+        } break;
+        case ASTNodeType_YulStringLitExpression: {
+            pushTokenAsStringWord(r, node->yulStringLitExpressionNode.value);
+        } break;
+        case ASTNodeType_YulHexNumberLitExpression: {
+            pushTokenWord(r, node->yulHexNumberLitExpressionNode.value);
+        } break;
+        case ASTNodeType_YulBoolLitExpression: {
+            pushTokenWord(r, node->yulBoolLitExpressionNode.value);
+        } break;
+        case ASTNodeType_YulHexStringLitExpression: {
+            pushWord(r, wordText(LIT_TO_STR("hex")));
+            pushTokenAsStringWord(r, node->yulHexStringLitExpressionNode.value);
+        } break;
+        case ASTNodeType_YulMemberAccessExpression: {
+            ASTNodeYulIdentifierPathExpression *path = &node->yulIdentifierPathExpressionNode;
+
+            for(u32 i = 0; i < path->count; i++) {
+                if(i != 0) {
+                    assert(stringMatch(LIT_TO_STR("."), r->tokens.tokenStrings[path->identifiers[i - 1] + 1]));
+                    pushTokenWord(r, path->identifiers[i - 1] + 1);
+                }
+
+                pushTokenWord(r, path->identifiers[i]);
+            }
+
+        } break;
+        case ASTNodeType_YulFunctionCallExpression: {
+            renderYulFunctionCall(r, node);
+        } break;
+        default: {
+            assert(0);
+        }
+    }
 }
 
 static void
@@ -1695,167 +1709,257 @@ pushStatementDocument(Render *r, ASTNode *node) {
             }
         } break;
         case ASTNodeType_BreakStatement: {
-            //renderTokenChecked(r, node->startToken, LIT_TO_STR("break"), SEMICOLON);
-            assert(false);
+            pushTokenWord(r, node->startToken);
+            pushTokenWord(r, node->endToken); // SEMICOLON
         } break;
         case ASTNodeType_ContinueStatement: {
-            //renderTokenChecked(r, node->startToken, LIT_TO_STR("continue"), SEMICOLON);
-            assert(false);
+            pushTokenWord(r, node->startToken);
+            pushTokenWord(r, node->endToken); // SEMICOLON
         } break;
         case ASTNodeType_AssemblyStatement: {
-            //ASTNodeAssemblyStatement *statement = &node->assemblyStatementNode;
-            //
-            //renderTokenChecked(r, node->startToken, LIT_TO_STR("assembly"), SPACE);
-            //if(statement->isEVMAsm) {
-            //renderCString(r, "\"evmasm\"", SPACE);
-            //}
-            //
-            //if(statement->flags.count > 0) {
-            //renderCString(r, "(", NONE);
-            //for(u32 i = 0; i < statement->flags.count; i++) {
-            //writeString(r->writer, LIT_TO_STR("\""));
-            //renderToken(r, listGetTokenId(&statement->flags, i), NONE);
-            //writeString(r->writer, LIT_TO_STR("\""));
-            //if(i != statement->flags.count - 1) {
-            //renderCString(r, ",", SPACE);
-            //}
-            //}
-            //renderCString(r, ")", SPACE);
-            //}
-            //
-            //renderStatement(r, statement->body, NEWLINE);
-            assert(false);
+            ASTNodeAssemblyStatement *statement = &node->assemblyStatementNode;
+
+            pushGroup(r);
+            pushTokenWord(r, node->startToken); // assembly
+            pushWord(r, wordSpace());
+            if(statement->isEVMAsm) {
+                pushWord(r, wordText(LIT_TO_STR("\"evmasm\"")));
+                pushWord(r, wordSpace());
+            }
+
+            if(statement->flags.count > 0) {
+                TokenIdList *flags = &statement->flags;
+                assert(stringMatch(LIT_TO_STR("("), r->tokens.tokenStrings[listGetTokenId(flags, 0) - 1]));
+                assert(stringMatch(LIT_TO_STR(")"), r->tokens.tokenStrings[listGetTokenId(flags, flags->count - 1) + 1]));
+
+                pushTokenWord(r, listGetTokenId(flags, 0) - 1); // (
+                for(u32 i = 0; i < flags->count; i++) {
+                    TokenId flagToken = listGetTokenId(flags, i);
+                    pushTokenAsStringWord(r, flagToken);
+                    if(i != flags->count - 1) {
+                        pushTokenWord(r, flagToken + 1); // ,
+                        pushWord(r, wordSpace());
+                    }
+                }
+                pushTokenWord(r, listGetTokenId(flags, flags->count - 1) + 1); // (
+                pushWord(r, wordSpace());
+            }
+
+            pushStatementDocument(r, statement->body);
+            popGroup(r);
         } break;
         case ASTNodeType_YulBlockStatement: {
-            //ASTNodeBlockStatement *block = &node->blockStatementNode;
-            //renderToken(r, node->startToken, block->statements.count > 0 ? NEWLINE : SPACE);
-            //
-            //pushIndent(r->writer);
-            //ASTNodeLink *statement = block->statements.head;
-            //for(u32 i = 0; i < block->statements.count; i++, statement = statement->next) {
-            //if(i != 0) {
-            //preservePresentNewLines(r, &statement->node);
-            //}
-            //renderStatement(r, &statement->node, NONE);
-            //}
-            //popIndent(r->writer);
-            //
-            //renderToken(r, node->endToken, connect);
-            //return;
-            assert(false);
+            ASTNodeBlockStatement *block = &node->blockStatementNode;
+            pushGroup(r);
+            pushTokenWordOnly(r, node->startToken); // {
+            pushNest(r);
+
+            pushCommentsAfterToken(r, node->startToken);
+            pushWord(r, wordLine());
+
+            ASTNodeLink *statement = block->statements.head;
+            for(u32 i = 0; i < block->statements.count; i++, statement = statement->next) {
+                if(i != 0) { preserveHardlinesIntoDocument(r, &statement->node); }
+
+                pushStatementDocument(r, &statement->node);
+                pushWord(r, wordHardline());
+            }
+
+            popNest(r);
+            pushTokenWordOnly(r, node->endToken); // }
+            popGroup(r);
         } break;
         case ASTNodeType_YulVariableDeclaration: {
-            //ASTNodeYulVariableDeclaration *statement = &node->yulVariableDeclarationNode;
-            //renderTokenChecked(r, node->startToken, LIT_TO_STR("let"), SPACE);
-            //
-            //ConnectType valueConnect = statement->value != 0x0 ? SPACE : NEWLINE;
-            //for(u32 i = 0; i < statement->identifiers.count; i++) {
-            //ConnectType connect = i == statement->identifiers.count - 1 ? valueConnect : COMMA_SPACE;
-            //renderToken(r, listGetTokenId(&statement->identifiers, i), connect);
-            //}
-            //
-            //if(statement->value != 0x0) {
-            //renderTokenChecked(r, statement->value->startToken - 2, LIT_TO_STR(":"), NONE);
-            //renderTokenChecked(r, statement->value->startToken - 1, LIT_TO_STR("="), SPACE);
-            //renderYulExpression(r, statement->value, NEWLINE);
-            //}
-            assert(false);
+            ASTNodeYulVariableDeclaration *statement = &node->yulVariableDeclarationNode;
+            assert(stringMatch(LIT_TO_STR("let"), r->tokens.tokenStrings[node->startToken]));
+
+            pushGroup(r);
+            pushTokenWord(r, node->startToken);
+            pushWord(r, wordSpace());
+
+            for(u32 i = 0; i < statement->identifiers.count; i++) {
+                TokenId identifierToken = listGetTokenId(&statement->identifiers, i);
+                pushTokenWord(r, identifierToken);
+                if (i < statement->identifiers.count - 1) {
+                    pushTokenWord(r, identifierToken + 1);
+                    pushWord(r, wordSpace());
+                }
+            }
+
+            if(statement->value != 0x0) {
+                assert(stringMatch(LIT_TO_STR(":"), r->tokens.tokenStrings[statement->value->startToken - 2]));
+                assert(stringMatch(LIT_TO_STR("="), r->tokens.tokenStrings[statement->value->startToken - 1]));
+
+                pushWord(r, wordSpace());
+                pushTokenWord(r, statement->value->startToken - 2);
+                pushTokenWord(r, statement->value->startToken - 1);
+                pushWord(r, wordSpace());
+                renderYulExpression(r, statement->value);
+            }
+            popGroup(r);
         } break;
         case ASTNodeType_YulVariableAssignment: {
-            //ASTNodeYulVariableAssignment *statement = &node->yulVariableAssignmentNode;
-            //
-            //ASTNodeLink *it = statement->paths.head;
-            //ConnectType valueConnect = statement->value != 0x0 ? SPACE : NEWLINE;
-            //for(u32 i = 0; i < statement->paths.count; i++, it = it->next) {
-            //ConnectType connect = i == statement->paths.count - 1 ? valueConnect : COMMA_SPACE;
-            //renderYulExpression(r, &it->node, connect);
-            //}
-            //
-            //if(statement->value != 0x0) {
-            //renderTokenChecked(r, statement->value->startToken - 2, LIT_TO_STR(":"), NONE);
-            //renderTokenChecked(r, statement->value->startToken - 1, LIT_TO_STR("="), SPACE);
-            //renderYulExpression(r, statement->value, NEWLINE);
-            //}
-            assert(false);
+            ASTNodeYulVariableAssignment *statement = &node->yulVariableAssignmentNode;
+            pushGroup(r);
+
+            ASTNodeLink *it = statement->paths.head;
+            for(u32 i = 0; i < statement->paths.count; i++, it = it->next) {
+                renderYulExpression(r, &it->node);
+                if (i < statement->paths.count - 1) {
+                    pushTokenWord(r, it->node.endToken + 1); // ,
+                    pushWord(r, wordSpace());
+                }
+            }
+
+            if(statement->value != 0x0) {
+                pushWord(r, wordSpace());
+                assert(stringMatch(LIT_TO_STR(":"), r->tokens.tokenStrings[statement->value->startToken - 2]));
+                assert(stringMatch(LIT_TO_STR("="), r->tokens.tokenStrings[statement->value->startToken - 1]));
+                pushTokenWord(r, statement->value->startToken - 2); // :=
+                pushTokenWord(r, statement->value->startToken - 1); // :=
+                pushWord(r, wordSpace());
+                renderYulExpression(r, statement->value);
+            }
+            popGroup(r);
         } break;
         case ASTNodeType_YulFunctionCallExpression: {
-            //renderYulFunctionCall(r, node, NEWLINE);
-            assert(false);
+            renderYulFunctionCall(r, node);
         } break;
         case ASTNodeType_YulIfStatement: {
-            //ASTNodeYulIfStatement *statement = &node->yulIfStatementNode;
-            //
-            //renderTokenChecked(r, node->startToken, LIT_TO_STR("if"), SPACE);
-            //renderYulExpression(r, statement->expression, SPACE);
-            //renderStatement(r, statement->body, NEWLINE);
-            assert(false);
+            ASTNodeYulIfStatement *statement = &node->yulIfStatementNode;
+            pushGroup(r);
+
+            pushTokenWord(r, node->startToken); // if
+            pushWord(r, wordSpace());
+            renderYulExpression(r, statement->expression);
+            pushWord(r, wordSpace());
+            pushStatementDocument(r, statement->body);
+            popGroup(r);
         } break;
         case ASTNodeType_YulForStatement: {
-            //ASTNodeYulForStatement *statement = &node->yulForStatementNode;
-            //
-            //renderTokenChecked(r, node->startToken, LIT_TO_STR("for"), SPACE);
-            //renderStatement(r, statement->variableDeclaration, SPACE);
-            //renderYulExpression(r, statement->condition, SPACE);
-            //renderStatement(r, statement->increment, SPACE);
-            //renderStatement(r, statement->body, NEWLINE);
-            assert(false);
+            ASTNodeYulForStatement *statement = &node->yulForStatementNode;
+            pushGroup(r);
+
+            pushGroup(r);
+            pushTokenWord(r, node->startToken); // for
+            pushWord(r, wordSpace());
+            pushStatementDocument(r, statement->variableDeclaration);
+            pushWord(r, wordSpace());
+            renderYulExpression(r, statement->condition);
+            pushWord(r, wordSpace());
+            pushStatementDocument(r, statement->increment);
+            pushWord(r, wordSpace());
+            popGroup(r);
+
+            pushStatementDocument(r, statement->body);
+            popGroup(r);
         } break;
         case ASTNodeType_YulFunctionDefinition: {
-            //ASTNodeYulFunctionDefinition *statement = &node->yulFunctionDefinitionNode;
-            //
-            //renderTokenChecked(r, node->startToken, LIT_TO_STR("function"), SPACE);
-            //renderToken(r, statement->identifier, statement->parameters.count > 0 ? NONE : SPACE);
-            //if(statement->parameters.count > 0) {
-            //renderCString(r, "(", NONE);
-            //for(u32 i = 0; i < statement->parameters.count; i++) {
-            //ConnectType connect = i == statement->parameters.count - 1 ? NONE : COMMA_SPACE;
-            //renderToken(r, listGetTokenId(&statement->parameters, i), connect);
-            //}
-            //renderCString(r, ")", SPACE);
-            //}
-            //
-            //if(statement->returnParameters.count > 0) {
-            //renderCString(r, "->", SPACE);
-            //for(u32 i = 0; i < statement->returnParameters.count; i++) {
-            //ConnectType connect = i == statement->returnParameters.count - 1 ? SPACE : COMMA_SPACE;
-            //renderToken(r, listGetTokenId(&statement->returnParameters, i), connect);
-            //}
-            //}
-            //
-            //renderStatement(r, statement->body, NEWLINE);
-            assert(false);
+            ASTNodeYulFunctionDefinition *statement = &node->yulFunctionDefinitionNode;
+            pushGroup(r);
+
+            pushTokenWord(r, node->startToken); // function
+            pushWord(r, wordSpace());
+            pushTokenWord(r, statement->identifier); // function name
+
+            if(statement->parameters.count > 0) {
+                TokenIdList *parameters = &statement->parameters;
+                assert(stringMatch(LIT_TO_STR("("), r->tokens.tokenStrings[listGetTokenId(parameters, 0) - 1]));
+                assert(stringMatch(LIT_TO_STR(")"), r->tokens.tokenStrings[listGetTokenId(parameters, parameters->count - 1) + 1]));
+
+                pushGroup(r);
+                pushNest(r);
+                pushTokenWord(r, listGetTokenId(parameters, 0) - 1);
+                pushWord(r, wordSoftline());
+                for(u32 i = 0; i < parameters->count; i++) {
+                    TokenId parameterToken = listGetTokenId(&statement->parameters, i);
+                    pushTokenWord(r, parameterToken);
+                    if (i < statement->parameters.count - 1) {
+                        pushTokenWord(r, parameterToken + 1);
+                        pushWord(r, wordLine());
+                    }
+                }
+                pushWord(r, wordSoftline());
+                popNest(r);
+                pushTokenWord(r, listGetTokenId(parameters, parameters->count - 1) + 1);
+                popGroup(r);
+            } else {
+                assert(stringMatch(LIT_TO_STR("("), r->tokens.tokenStrings[statement->identifier + 1]));
+                assert(stringMatch(LIT_TO_STR(")"), r->tokens.tokenStrings[statement->identifier + 2]));
+                pushTokenWord(r, statement->identifier + 1);
+                pushTokenWord(r, statement->identifier + 2);
+            }
+
+            pushWord(r, wordSpace());
+
+            if(statement->returnParameters.count > 0) {
+                TokenIdList *returnParameters = &statement->returnParameters;
+
+                // Assuming the "->" is always two tokens before the return type list
+                TokenId arrowToken1 = listGetTokenId(returnParameters, 0) - 2;
+                TokenId arrowToken2 = listGetTokenId(returnParameters, 0) - 1;
+
+                assert(stringMatch(LIT_TO_STR("-"), r->tokens.tokenStrings[arrowToken1]));
+                assert(stringMatch(LIT_TO_STR(">"), r->tokens.tokenStrings[arrowToken2]));
+
+                pushTokenWord(r, arrowToken1);
+                pushTokenWord(r, arrowToken2);
+
+                pushGroup(r);
+                pushNest(r);
+
+                pushWord(r, wordLine());
+                for(u32 i = 0; i < returnParameters->count; i++) {
+                    TokenId returnToken = listGetTokenId(returnParameters, i);
+                    pushTokenWord(r, returnToken);
+                    if (i < returnParameters->count - 1) {
+                        assert(stringMatch(LIT_TO_STR(","), r->tokens.tokenStrings[returnToken + 1]));
+                        pushTokenWord(r, returnToken + 1); // ,
+                        pushWord(r, wordLine());
+                    }
+                }
+                popNest(r);
+                pushWord(r, wordLine());
+                popGroup(r);
+            }
+
+            pushStatementDocument(r, statement->body);
+            popGroup(r);
         } break;
         case ASTNodeType_YulSwitchStatement: {
-            //ASTNodeYulSwitchStatement *statement = &node->yulSwitchStatementNode;
-            //
-            //renderTokenChecked(r, node->startToken, LIT_TO_STR("switch"), SPACE);
-            //ConnectType expressionConnect = statement->cases.count > 0 || statement->defaultBlock != 0x0 ? NEWLINE : SPACE;
-            //renderYulExpression(r, statement->expression, expressionConnect);
-            //
-            //ASTNodeLink *it = statement->cases.head;
-            //for(u32 i = 0; i < statement->cases.count; i++, it = it->next) {
-            //renderTokenChecked(r, it->node.yulCaseNode.literal->startToken - 1, LIT_TO_STR("case"), SPACE);
-            //renderYulExpression(r, it->node.yulCaseNode.literal, SPACE);
-            //renderStatement(r, it->node.yulCaseNode.block, NEWLINE);
-            //}
-            //
-            //if(statement->defaultBlock != 0x0) {
-            //renderTokenChecked(r, statement->defaultBlock->yulCaseNode.block->startToken - 1, LIT_TO_STR("default"), SPACE);
-            //renderStatement(r, statement->defaultBlock->yulCaseNode.block, NEWLINE);
-            //}
-            assert(false);
+            ASTNodeYulSwitchStatement *statement = &node->yulSwitchStatementNode;
+            pushGroup(r);
+
+            pushTokenWord(r, node->startToken); // switch
+            pushWord(r, wordSpace());
+            renderYulExpression(r, statement->expression);
+
+            ASTNodeLink *it = statement->cases.head;
+            for(u32 i = 0; i < statement->cases.count; i++, it = it->next) {
+                pushWord(r, wordLine());
+                pushTokenWord(r, it->node.yulCaseNode.literal->startToken - 1); // case
+                pushWord(r, wordSpace());
+                renderYulExpression(r, it->node.yulCaseNode.literal);
+                pushWord(r, wordSpace());
+                pushStatementDocument(r, it->node.yulCaseNode.block);
+            }
+
+            if(statement->defaultBlock != 0x0) {
+                pushWord(r, wordLine());
+                pushTokenWord(r, statement->defaultBlock->yulCaseNode.block->startToken - 1); // default
+                pushWord(r, wordSpace());
+                pushStatementDocument(r, statement->defaultBlock->yulCaseNode.block);
+            }
+            popGroup(r);
         } break;
         case ASTNodeType_YulLeaveStatement: {
-            //renderTokenChecked(r, node->startToken, LIT_TO_STR("leave"), NEWLINE);
-            assert(false);
+            pushTokenWord(r, node->startToken);
         } break;
         case ASTNodeType_YulBreakStatement: {
-            //renderTokenChecked(r, node->startToken, LIT_TO_STR("break"), NEWLINE);
-            assert(false);
+            pushTokenWord(r, node->startToken);
         } break;
         case ASTNodeType_YulContinueStatement: {
-            //renderTokenChecked(r, node->startToken, LIT_TO_STR("continue"), NEWLINE);
-            assert(false);
+            pushTokenWord(r, node->startToken);
         } break;
         default: {
             javascriptPrintString("Unreachable, unhandled statement type = ");
