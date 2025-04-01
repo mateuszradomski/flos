@@ -14,7 +14,7 @@
 | enumDefinition                        |     YES |                                                              |
 | enumVariants                          |     YES |                                                              |
 | errorDefinition                       |     YES |                                                              |
-| eventDefinition                       |         |                                                              |
+| eventDefinition                       |     YES |                                                              |
 | forStatement                          |         |                                                              |
 | functionCall                          |         |                                                              |
 | functionCallArgsStatement             |         |                                                              |
