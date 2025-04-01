@@ -5,7 +5,7 @@
 | blockComments                         |     YES |                                                            |
 | blockCommentsFunction                 |     YES |                                                            |
 | conditionalOperatorExpression         |     YES | Comment causes additional line breaking which is incorrect |
-| constructorDefinition                 |         |                                                            |
+| constructorDefinition                 |     YES |                Top comment and pragma get smushed together |
 | constructorModifierStyle              |         |                                                            |
 | contractDefinition                    |         |                                                            |
 | doWhileStatement                      |         |                                                            |
