@@ -23,10 +23,10 @@
 | functionType                          |     YES |                                                              |
 | hexUnderscore                         |     YES |                                                              |
 | ifStatement                           |         |                                                              |
-| ifStatement2                          |         |                                                              |
+| ifStatement2                          |     YES |                                                              |
 | importDirective                       |         |                                                              |
 | inlineDisable                         |         |                                                              |
-| intTypes                              |         |                                                              |
+| intTypes                              |     YES |                                                              |
 | literalExpression                     |         |                                                              |
 | mappingType                           |         |                                                              |
 | modifierDefinition                    |         |                                                              |
