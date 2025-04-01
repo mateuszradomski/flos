@@ -367,6 +367,6 @@ UTEST_F(SolFmtFixture, constructorDefinition) { utest_fixture->path = "tests/fou
 UTEST_F(SolFmtFixture, constructorModifierStyle) { utest_fixture->path = "tests/foundry/constructorModifierStyle.sol"; }
 UTEST_F(SolFmtFixture, doWhileStatement) { utest_fixture->path = "tests/foundry/doWhileStatement.sol"; }
 UTEST_F(SolFmtFixture, docComments) { utest_fixture->path = "tests/foundry/docComments.sol"; }
-
+UTEST_F(SolFmtFixture, emitStatement) { utest_fixture->path = "tests/foundry/emitStatement.sol"; }
 
 UTEST_MAIN();
