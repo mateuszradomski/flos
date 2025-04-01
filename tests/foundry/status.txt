@@ -9,7 +9,7 @@
 | constructorModifierStyle              |     YES |                                                            |
 | contractDefinition                    |         |                                                            |
 | doWhileStatement                      |     YES |                                                            |
-| docComments                           |         |                                                            |
+| docComments                           |     YES |                                                            |
 | emitStatement                         |         |                                                            |
 | enumDefinition                        |         |                                                            |
 | enumVariants                          |         |                                                            |
