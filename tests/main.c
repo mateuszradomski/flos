@@ -372,5 +372,6 @@ UTEST_F(SolFmtFixture, enumDefinition) { utest_fixture->path = "tests/foundry/en
 UTEST_F(SolFmtFixture, enumVariants) { utest_fixture->path = "tests/foundry/enumVariants.sol"; }
 UTEST_F(SolFmtFixture, errorDefinition) { utest_fixture->path = "tests/foundry/errorDefinition.sol"; }
 UTEST_F(SolFmtFixture, eventDefinition) { utest_fixture->path = "tests/foundry/eventDefinition.sol"; }
+UTEST_F(SolFmtFixture, forStatementFoundry) { utest_fixture->path = "tests/foundry/forStatement.sol"; }
 
 UTEST_MAIN();
