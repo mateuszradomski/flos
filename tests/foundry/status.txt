@@ -12,7 +12,7 @@
 | docComments                           |     YES |                                                              |
 | emitStatement                         |     YES | Comment is weird in one statement, kinda hard to fix I think |
 | enumDefinition                        |     YES |                                                              |
-| enumVariants                          |         |                                                              |
+| enumVariants                          |     YES |                                                              |
 | errorDefinition                       |         |                                                              |
 | eventDefinition                       |         |                                                              |
 | forStatement                          |         |                                                              |
