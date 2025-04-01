@@ -362,5 +362,6 @@ UTEST_F(SolFmtFixture, issue843) { utest_fixture->path = "tests/issue843.sol"; }
 UTEST_F(SolFmtFixture, arrayExpressions) { utest_fixture->path = "tests/foundry/arrayExpressions.sol"; }
 UTEST_F(SolFmtFixture, blockCommentsFoundry) { utest_fixture->path = "tests/foundry/blockComments.sol"; }
 UTEST_F(SolFmtFixture, blockCommentsFunctionFoundry) { utest_fixture->path = "tests/foundry/blockCommentsFunction.sol"; }
+UTEST_F(SolFmtFixture, conditionalOperatorExpression) { utest_fixture->path = "tests/foundry/conditionalOperatorExpression.sol"; }
 
 UTEST_MAIN();
