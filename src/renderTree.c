@@ -1614,10 +1614,19 @@ pushStatementDocument(Render *r, ASTNode *node) {
             pushWord(r, wordSpace());
 
             pushGroup(r);
+            TokenId openParen = statement->expression->startToken - 1;
+            TokenId closeParen = statement->expression->endToken + 1;
+            assert(stringMatch(LIT_TO_STR("("), r->tokens.tokenStrings[openParen]));
+            assert(stringMatch(LIT_TO_STR(")"), r->tokens.tokenStrings[closeParen]));
+
             pushTokenWord(r, statement->expression->startToken - 2);
-            pushTokenWord(r, statement->expression->startToken - 1);
+            pushNest(r);
+            pushTokenWord(r, openParen);
+            pushWord(r, wordSoftline());
             pushExpressionDocument(r, statement->expression);
-            pushTokenWord(r, statement->expression->endToken + 1);
+            pushWord(r, wordSoftline());
+            popNest(r);
+            pushTokenWord(r, closeParen);
             popGroup(r);
 
             pushTokenWord(r, node->endToken);

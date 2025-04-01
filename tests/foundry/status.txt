@@ -8,7 +8,7 @@
 | constructorDefinition                 |     YES |                Top comment and pragma get smushed together |
 | constructorModifierStyle              |     YES |                                                            |
 | contractDefinition                    |         |                                                            |
-| doWhileStatement                      |         |                                                            |
+| doWhileStatement                      |     YES |                                                            |
 | docComments                           |         |                                                            |
 | emitStatement                         |         |                                                            |
 | enumDefinition                        |         |                                                            |

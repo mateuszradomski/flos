@@ -365,5 +365,6 @@ UTEST_F(SolFmtFixture, blockCommentsFunctionFoundry) { utest_fixture->path = "te
 UTEST_F(SolFmtFixture, conditionalOperatorExpression) { utest_fixture->path = "tests/foundry/conditionalOperatorExpression.sol"; }
 UTEST_F(SolFmtFixture, constructorDefinition) { utest_fixture->path = "tests/foundry/constructorDefinition.sol"; }
 UTEST_F(SolFmtFixture, constructorModifierStyle) { utest_fixture->path = "tests/foundry/constructorModifierStyle.sol"; }
+UTEST_F(SolFmtFixture, doWhileStatement) { utest_fixture->path = "tests/foundry/doWhileStatement.sol"; }
 
 UTEST_MAIN();
