@@ -20,7 +20,7 @@
 | functionCallArgsStatement             |     YES |                                                              |
 | functionDefinition                    |         |                                                              |
 | functionDefinitionWithFunctionReturns |     YES |                                                              |
-| functionType                          |         |                                                              |
+| functionType                          |     YES |                                                              |
 | hexUnderscore                         |         |                                                              |
 | ifStatement                           |         |                                                              |
 | ifStatement2                          |         |                                                              |
