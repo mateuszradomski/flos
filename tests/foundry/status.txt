@@ -13,7 +13,7 @@
 | emitStatement                         |     YES | Comment is weird in one statement, kinda hard to fix I think |
 | enumDefinition                        |     YES |                                                              |
 | enumVariants                          |     YES |                                                              |
-| errorDefinition                       |         |                                                              |
+| errorDefinition                       |     YES |                                                              |
 | eventDefinition                       |         |                                                              |
 | forStatement                          |         |                                                              |
 | functionCall                          |         |                                                              |
