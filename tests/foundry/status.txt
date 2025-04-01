@@ -3,7 +3,7 @@
 | annotation                            |         |       |
 | arrayExpressions                      |     YES |       |
 | blockComments                         |     YES |       |
-| blockCommentsFunction                 |         |       |
+| blockCommentsFunction                 |     YES |       |
 | conditionalOperatorExpression         |         |       |
 | constructorDefinition                 |         |       |
 | constructorModifierStyle              |         |       |
