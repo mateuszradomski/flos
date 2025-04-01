@@ -17,7 +17,7 @@
 | eventDefinition                       |     YES |                                                              |
 | forStatement                          |     YES |                                                              |
 | functionCall                          |     YES |          One line with comment should be broken but it's not |
-| functionCallArgsStatement             |         |                                                              |
+| functionCallArgsStatement             |     YES |                                                              |
 | functionDefinition                    |         |                                                              |
 | functionDefinitionWithFunctionReturns |         |                                                              |
 | functionType                          |         |                                                              |

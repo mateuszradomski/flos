@@ -374,5 +374,6 @@ UTEST_F(SolFmtFixture, errorDefinition) { utest_fixture->path = "tests/foundry/e
 UTEST_F(SolFmtFixture, eventDefinition) { utest_fixture->path = "tests/foundry/eventDefinition.sol"; }
 UTEST_F(SolFmtFixture, forStatementFoundry) { utest_fixture->path = "tests/foundry/forStatement.sol"; }
 UTEST_F(SolFmtFixture, functionCallFoundry) { utest_fixture->path = "tests/foundry/functionCall.sol"; }
+UTEST_F(SolFmtFixture, functionCallArgsStatement) { utest_fixture->path = "tests/foundry/functionCallArgsStatement.sol"; }
 
 UTEST_MAIN();
