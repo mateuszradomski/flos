@@ -19,7 +19,7 @@
 | functionCall                          |     YES |          One line with comment should be broken but it's not |
 | functionCallArgsStatement             |     YES |                                                              |
 | functionDefinition                    |         |                                                              |
-| functionDefinitionWithFunctionReturns |         |                                                              |
+| functionDefinitionWithFunctionReturns |     YES |                                                              |
 | functionType                          |         |                                                              |
 | hexUnderscore                         |         |                                                              |
 | ifStatement                           |         |                                                              |
