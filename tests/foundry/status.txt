@@ -21,7 +21,7 @@
 | functionDefinition                    |         |                                                              |
 | functionDefinitionWithFunctionReturns |     YES |                                                              |
 | functionType                          |     YES |                                                              |
-| hexUnderscore                         |         |                                                              |
+| hexUnderscore                         |     YES |                                                              |
 | ifStatement                           |         |                                                              |
 | ifStatement2                          |         |                                                              |
 | importDirective                       |         |                                                              |

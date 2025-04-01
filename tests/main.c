@@ -377,5 +377,6 @@ UTEST_F(SolFmtFixture, functionCallFoundry) { utest_fixture->path = "tests/found
 UTEST_F(SolFmtFixture, functionCallArgsStatement) { utest_fixture->path = "tests/foundry/functionCallArgsStatement.sol"; }
 UTEST_F(SolFmtFixture, functionDefinitionWithFunctionReturns) { utest_fixture->path = "tests/foundry/functionDefinitionWithFunctionReturns.sol"; }
 UTEST_F(SolFmtFixture, functionType) { utest_fixture->path = "tests/foundry/functionType.sol"; }
+UTEST_F(SolFmtFixture, hexUnderscore) { utest_fixture->path = "tests/foundry/hexUnderscore.sol"; }
 
 UTEST_MAIN();
