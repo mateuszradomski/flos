@@ -11,7 +11,7 @@
 | doWhileStatement                      |     YES |                                                              |
 | docComments                           |     YES |                                                              |
 | emitStatement                         |     YES | Comment is weird in one statement, kinda hard to fix I think |
-| enumDefinition                        |         |                                                              |
+| enumDefinition                        |     YES |                                                              |
 | enumVariants                          |         |                                                              |
 | errorDefinition                       |         |                                                              |
 | eventDefinition                       |         |                                                              |
