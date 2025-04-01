@@ -2,7 +2,7 @@
 |:--------------------------------------|---------|-------|
 | annotation                            |         |       |
 | arrayExpressions                      |     YES |       |
-| blockComments                         |         |       |
+| blockComments                         |     YES |       |
 | blockCommentsFunction                 |         |       |
 | conditionalOperatorExpression         |         |       |
 | constructorDefinition                 |         |       |
