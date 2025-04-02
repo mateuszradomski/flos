@@ -1,55 +1,55 @@
-|                             Test name | Passing |                                                        NOTES |
-|:--------------------------------------|---------|--------------------------------------------------------------|
-| annotation                            |         |                                                              |
-| arrayExpressions                      |     YES |                                                              |
-| blockComments                         |     YES |                                                              |
-| blockCommentsFunction                 |     YES |                                                              |
-| conditionalOperatorExpression         |     YES |   Comment causes additional line breaking which is incorrect |
-| constructorDefinition                 |     YES |                  Top comment and pragma get smushed together |
-| constructorModifierStyle              |     YES |                                                              |
-| contractDefinition                    |         |                                                              |
-| doWhileStatement                      |     YES |                                                              |
-| docComments                           |     YES |                                                              |
-| emitStatement                         |     YES | Comment is weird in one statement, kinda hard to fix I think |
-| enumDefinition                        |     YES |                                                              |
-| enumVariants                          |     YES |                                                              |
-| errorDefinition                       |     YES |                                                              |
-| eventDefinition                       |     YES |                                                              |
-| forStatement                          |     YES |                                                              |
-| functionCall                          |     YES |          One line with comment should be broken but it's not |
-| functionCallArgsStatement             |     YES |                                                              |
-| functionDefinition                    |         |                                                              |
-| functionDefinitionWithFunctionReturns |     YES |                                                              |
-| functionType                          |     YES |                                                              |
-| hexUnderscore                         |     YES |                                                              |
-| ifStatement                           |         |                                                              |
-| ifStatement2                          |     YES |                                                              |
-| importDirective                       |     YES |                                                              |
-| inlineDisable                         |         |                                                              |
-| intTypes                              |     YES |                                                              |
-| literalExpression                     |     YES |                                   Weird space before comment |
-| mappingType                           |     YES |                                                              |
-| modifierDefinition                    |     YES |                                                              |
-| namedFunctionCallExpression           |         |                                                              |
-| numberLiteralUnderscore               |         |                                                              |
-| operatorExpressions                   |         |                                                              |
-| pragmaDirective                       |         |                                                              |
-| repros                                |         |                                                              |
-| returnStatement                       |         |                                                              |
-| revertNamedArgsStatement              |         |                                                              |
-| revertStatement                       |         |                                                              |
-| simpleComments                        |         |                                                              |
-| sortedImports                         |         |                                                              |
-| statementBlock                        |         |                                                              |
-| structDefinition                      |         |                                                              |
-| thisExpression                        |         |                                                              |
-| trailingComma                         |         |                                                              |
-| tryStatement                          |         |                                                              |
-| typeDefinition                        |         |                                                              |
-| unitExpression                        |         |                                                              |
-| usingDirective                        |         |                                                              |
-| variableAssignment                    |         |                                                              |
-| variableDefinition                    |         |                                                              |
-| whileStatement                        |         |                                                              |
-| yul                                   |         |                                                              |
-| yulStrings                            |         |                                                              |
+|                             Test name | Passing |                                                               NOTES |
+|:--------------------------------------|---------|---------------------------------------------------------------------|
+| annotation                            |         |                                                                     |
+| arrayExpressions                      |     YES |                                                                     |
+| blockComments                         |     YES |                                                                     |
+| blockCommentsFunction                 |     YES |                                                                     |
+| conditionalOperatorExpression         |     YES |          Comment causes additional line breaking which is incorrect |
+| constructorDefinition                 |     YES |                         Top comment and pragma get smushed together |
+| constructorModifierStyle              |     YES |                                                                     |
+| contractDefinition                    |         |                                                                     |
+| doWhileStatement                      |     YES |                                                                     |
+| docComments                           |     YES |                                                                     |
+| emitStatement                         |     YES |        Comment is weird in one statement, kinda hard to fix I think |
+| enumDefinition                        |     YES |                                                                     |
+| enumVariants                          |     YES |                                                                     |
+| errorDefinition                       |     YES |                                                                     |
+| eventDefinition                       |     YES |                                                                     |
+| forStatement                          |     YES |                                                                     |
+| functionCall                          |     YES |                 One line with comment should be broken but it's not |
+| functionCallArgsStatement             |     YES |                                                                     |
+| functionDefinition                    |         |                                                                     |
+| functionDefinitionWithFunctionReturns |     YES |                                                                     |
+| functionType                          |     YES |                                                                     |
+| hexUnderscore                         |     YES |                                                                     |
+| ifStatement                           |         |                                                                     |
+| ifStatement2                          |     YES |                                                                     |
+| importDirective                       |     YES |                                                                     |
+| inlineDisable                         |         |                                                                     |
+| intTypes                              |     YES |                                                                     |
+| literalExpression                     |     YES |                                          Weird space before comment |
+| mappingType                           |     YES |                                                                     |
+| modifierDefinition                    |     YES |                                                                     |
+| namedFunctionCallExpression           |     YES | One TODO should be done in ASTNodeType_VariableDeclarationStatement |
+| numberLiteralUnderscore               |         |                                                                     |
+| operatorExpressions                   |         |                                                                     |
+| pragmaDirective                       |         |                                                                     |
+| repros                                |         |                                                                     |
+| returnStatement                       |         |                                                                     |
+| revertNamedArgsStatement              |         |                                                                     |
+| revertStatement                       |         |                                                                     |
+| simpleComments                        |         |                                                                     |
+| sortedImports                         |         |                                                                     |
+| statementBlock                        |         |                                                                     |
+| structDefinition                      |         |                                                                     |
+| thisExpression                        |         |                                                                     |
+| trailingComma                         |         |                                                                     |
+| tryStatement                          |         |                                                                     |
+| typeDefinition                        |         |                                                                     |
+| unitExpression                        |         |                                                                     |
+| usingDirective                        |         |                                                                     |
+| variableAssignment                    |         |                                                                     |
+| variableDefinition                    |         |                                                                     |
+| whileStatement                        |         |                                                                     |
+| yul                                   |         |                                                                     |
+| yulStrings                            |         |                                                                     |
