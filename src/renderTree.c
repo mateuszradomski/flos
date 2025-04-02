@@ -2858,8 +2858,9 @@ pushMemberDocument(Render *r, ASTNode *member) {
             popNest(r);
 
             assert(stringMatch(LIT_TO_STR("}"), r->tokens.tokenStrings[member->endToken]));
-            pushTokenWord(r, member->endToken);
+            pushTokenWordOnly(r, member->endToken);
             popGroup(r);
+            pushCommentsAfterToken(r, member->endToken);
             popGroup(r);
             pushWord(r, wordHardline());
         } break;

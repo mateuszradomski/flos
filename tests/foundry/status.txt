@@ -33,7 +33,7 @@
 | namedFunctionCallExpression           |     YES | One TODO should be done in ASTNodeType_VariableDeclarationStatement |
 | numberLiteralUnderscore               |     YES |                                                                     |
 | operatorExpressions                   |     YES |                                        Nesting of binary expression |
-| pragmaDirective                       |         |                                                                     |
+| pragmaDirective                       |     YES |                                                                     |
 | repros                                |         |                                                                     |
 | returnStatement                       |         |                                                                     |
 | revertNamedArgsStatement              |         |                                                                     |
