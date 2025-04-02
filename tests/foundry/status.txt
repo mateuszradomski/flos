@@ -27,7 +27,7 @@
 | importDirective                       |     YES |                                                              |
 | inlineDisable                         |         |                                                              |
 | intTypes                              |     YES |                                                              |
-| literalExpression                     |         |                                                              |
+| literalExpression                     |     YES |                                   Weird space before comment |
 | mappingType                           |         |                                                              |
 | modifierDefinition                    |         |                                                              |
 | namedFunctionCallExpression           |         |                                                              |

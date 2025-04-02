@@ -788,6 +788,10 @@ pushTokenAsStringWordOnly(Render *r, TokenId token) {
             } else if (current == '\\' && (i + 1 < text.size) && text.data[i + 1] == '\'') {
                 *head++ = '\'';
                 i++;
+            } else if (current == '\\' && (i + 1 < text.size) && text.data[i + 1] == '"') {
+                *head++ = '\\';
+                *head++ = '"';
+                i++;
             } else {
                 *head++ = current;
             }
@@ -1129,7 +1133,7 @@ pushExpressionDocument(Render *r, ASTNode *node) {
 
                 pushWord(r, w);
                 TokenId literal = listGetTokenId(&expression->values, i);
-                pushTokenAsStringWordOnly(r, literal);
+                pushTokenAsStringWord(r, literal);
             }
             popGroup(r);
         } break;
