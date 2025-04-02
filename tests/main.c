@@ -385,5 +385,6 @@ UTEST_F(SolFmtFixture, literalExpression) { utest_fixture->path = "tests/foundry
 UTEST_F(SolFmtFixture, mappingType) { utest_fixture->path = "tests/foundry/mappingType.sol"; }
 UTEST_F(SolFmtFixture, modifierDefinitionFoundry) { utest_fixture->path = "tests/foundry/modifierDefinition.sol"; }
 UTEST_F(SolFmtFixture, namedFunctionCallExpression) { utest_fixture->path = "tests/foundry/namedFunctionCallExpression.sol"; }
+UTEST_F(SolFmtFixture, numberLiteralUnderscore) { utest_fixture->path = "tests/foundry/numberLiteralUnderscore.sol"; }
 
 UTEST_MAIN();

@@ -31,7 +31,7 @@
 | mappingType                           |     YES |                                                                     |
 | modifierDefinition                    |     YES |                                                                     |
 | namedFunctionCallExpression           |     YES | One TODO should be done in ASTNodeType_VariableDeclarationStatement |
-| numberLiteralUnderscore               |         |                                                                     |
+| numberLiteralUnderscore               |     YES |                                                                     |
 | operatorExpressions                   |         |                                                                     |
 | pragmaDirective                       |         |                                                                     |
 | repros                                |         |                                                                     |
