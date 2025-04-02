@@ -382,5 +382,6 @@ UTEST_F(SolFmtFixture, ifStatement2) { utest_fixture->path = "tests/foundry/ifSt
 UTEST_F(SolFmtFixture, importDirective) { utest_fixture->path = "tests/foundry/importDirective.sol"; }
 UTEST_F(SolFmtFixture, intTypes) { utest_fixture->path = "tests/foundry/intTypes.sol"; }
 UTEST_F(SolFmtFixture, literalExpression) { utest_fixture->path = "tests/foundry/literalExpression.sol"; }
+UTEST_F(SolFmtFixture, mappingType) { utest_fixture->path = "tests/foundry/mappingType.sol"; }
 
 UTEST_MAIN();

@@ -28,7 +28,7 @@
 | inlineDisable                         |         |                                                              |
 | intTypes                              |     YES |                                                              |
 | literalExpression                     |     YES |                                   Weird space before comment |
-| mappingType                           |         |                                                              |
+| mappingType                           |     YES |                                                              |
 | modifierDefinition                    |         |                                                              |
 | namedFunctionCallExpression           |         |                                                              |
 | numberLiteralUnderscore               |         |                                                              |

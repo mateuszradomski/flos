@@ -915,10 +915,14 @@ pushTypeDocument(Render *r, ASTNode *node) {
         } break;
         case ASTNodeType_MappingType: {
             assert(stringMatch(LIT_TO_STR("mapping"), r->tokens.tokenStrings[node->startToken]));
-            assert(stringMatch(LIT_TO_STR("("), r->tokens.tokenStrings[node->startToken + 1]));
             pushTokenWord(r, node->startToken);
-            pushTokenWord(r, node->startToken + 1);
 
+            TokenId openParen = node->startToken + 1;
+            assert(stringMatch(LIT_TO_STR("("), r->tokens.tokenStrings[openParen]));
+
+            pushGroup(r);
+            pushNest(r);
+            pushTokenWord(r, openParen);
             pushTypeDocument(r, node->mappingNode.keyType);
             pushWord(r, wordSpace());
             if(node->mappingNode.keyIdentifier != INVALID_TOKEN_ID) {
@@ -926,15 +930,17 @@ pushTypeDocument(Render *r, ASTNode *node) {
                 pushWord(r, wordSpace());
             }
 
-                pushTokenWord(r, node->mappingNode.valueType->startToken - 2);
-                pushTokenWord(r, node->mappingNode.valueType->startToken - 1);
-                pushWord(r, wordSpace());
+            pushTokenWord(r, node->mappingNode.valueType->startToken - 2);
+            pushTokenWord(r, node->mappingNode.valueType->startToken - 1);
+            pushWord(r, wordSpace());
 
             pushTypeDocument(r, node->mappingNode.valueType);
             if(node->mappingNode.valueIdentifier != INVALID_TOKEN_ID) {
                 pushWord(r, wordSpace());
                 pushTokenWord(r, node->mappingNode.valueIdentifier);
             }
+            popNest(r);
+            popGroup(r);
             pushTokenWord(r, node->endToken);
         } break;
         case ASTNodeType_ArrayType: {
