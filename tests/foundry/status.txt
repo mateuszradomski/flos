@@ -32,7 +32,7 @@
 | modifierDefinition                    |     YES |                                                                     |
 | namedFunctionCallExpression           |     YES | One TODO should be done in ASTNodeType_VariableDeclarationStatement |
 | numberLiteralUnderscore               |     YES |                                                                     |
-| operatorExpressions                   |         |                                                                     |
+| operatorExpressions                   |     YES |                                        Nesting of binary expression |
 | pragmaDirective                       |         |                                                                     |
 | repros                                |         |                                                                     |
 | returnStatement                       |         |                                                                     |

@@ -1099,7 +1099,7 @@ pushBinaryExpressionDocument(Render *r, ASTNode *node, TokenId outerOperator) {
     }
 
     pushWord(r, wordSpace());
-    pushWord(r, wordText(tokenTypeToString(binary->operator)));
+    pushTokenWord(r, binary->right->startToken - 1);
     pushWord(r, wordLine());
 
     if(binary->right->type == ASTNodeType_BinaryExpression) {
