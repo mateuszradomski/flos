@@ -24,7 +24,7 @@
 | hexUnderscore                         |     YES |                                                              |
 | ifStatement                           |         |                                                              |
 | ifStatement2                          |     YES |                                                              |
-| importDirective                       |         |                                                              |
+| importDirective                       |     YES |                                                              |
 | inlineDisable                         |         |                                                              |
 | intTypes                              |     YES |                                                              |
 | literalExpression                     |         |                                                              |
