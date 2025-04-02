@@ -29,7 +29,7 @@
 | intTypes                              |     YES |                                                              |
 | literalExpression                     |     YES |                                   Weird space before comment |
 | mappingType                           |     YES |                                                              |
-| modifierDefinition                    |         |                                                              |
+| modifierDefinition                    |     YES |                                                              |
 | namedFunctionCallExpression           |         |                                                              |
 | numberLiteralUnderscore               |         |                                                              |
 | operatorExpressions                   |         |                                                              |
