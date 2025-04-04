@@ -46,7 +46,7 @@
 | trailingComma                         |         |                                                                     |
 | tryStatement                          |         |                                                                     |
 | typeDefinition                        |     YES |                                                                     |
-| unitExpression                        |         |                                                                     |
+| unitExpression                        |     YES |                                                            Comments |
 | usingDirective                        |         |                                                                     |
 | variableAssignment                    |         |                                                                     |
 | variableDefinition                    |         |                                                                     |
