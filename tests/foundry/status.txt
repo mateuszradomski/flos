@@ -51,5 +51,5 @@
 | variableAssignment                    |     YES |                                                                     |
 | variableDefinition                    |     YES |                                                                     |
 | whileStatement                        |     YES |    While and For statements that are inlined (not block statements) |
-| yul                                   |         |                                                                     |
+| yul                                   |     YES |                                                                     |
 | yulStrings                            |     YES |                             Weird syntax not defined in the grammar |

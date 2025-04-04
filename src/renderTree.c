@@ -1858,6 +1858,7 @@ pushStatementDocument(Render *r, ASTNode *node) {
             popNest(r);
             pushTokenWordOnly(r, node->endToken); // }
             popGroup(r);
+            pushCommentsAfterToken(r, node->endToken);
         } break;
         case ASTNodeType_YulVariableDeclaration: {
             ASTNodeYulVariableDeclaration *statement = &node->yulVariableDeclarationNode;
