@@ -64,21 +64,21 @@ function test() {
         ACCELERATE_SELL_PER_TICK
     );
     if(op == 0x54 // SLOAD
-    ||
-    op == 0x55 // SSTORE
-    ||
-    op == 0xF0 // CREATE
-    ||
-    op == 0xF1 // CALL
-    ||
-    op == 0xF2 // CALLCODE
-    ||
-    op == 0xF4 // DELEGATECALL
-    ||
-    op == 0xF5 // CREATE2
-    ||
-    op == 0xFA // STATICCALL
-    ||
-    op == 0xFF // SELFDESTRUCT
+        ||
+        op == 0x55 // SSTORE
+        ||
+        op == 0xF0 // CREATE
+        ||
+        op == 0xF1 // CALL
+        ||
+        op == 0xF2 // CALLCODE
+        ||
+        op == 0xF4 // DELEGATECALL
+        ||
+        op == 0xF5 // CREATE2
+        ||
+        op == 0xFA // STATICCALL
+        ||
+        op == 0xFF // SELFDESTRUCT
     ) return false;
 }

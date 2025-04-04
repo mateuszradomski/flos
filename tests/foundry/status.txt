@@ -22,7 +22,7 @@
 | functionDefinitionWithFunctionReturns |     YES |                                                                     |
 | functionType                          |     YES |                                                                     |
 | hexUnderscore                         |     YES |                                                                     |
-| ifStatement                           |         |                                                                     |
+| ifStatement                           |     YES |                                                                     |
 | ifStatement2                          |     YES |                                                                     |
 | importDirective                       |     YES |                                                                     |
 | inlineDisable                         |         |                                                                     |

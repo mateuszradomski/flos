@@ -1504,8 +1504,10 @@ pushStatementDocument(Render *r, ASTNode *node) {
             pushTokenWord(r, node->startToken);
 
             pushGroup(r);
+            pushNest(r);
             pushTokenWord(r, node->startToken + 1);
             pushExpressionDocument(r, node->ifStatementNode.conditionExpression);
+            popNest(r);
             pushTokenWord(r, node->ifStatementNode.conditionExpression->endToken + 1);
             popGroup(r);
 

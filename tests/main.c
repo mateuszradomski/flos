@@ -380,6 +380,7 @@ UTEST_F(SolFmtFixture, functionDefinitionFoundry) { utest_fixture->path = "tests
 UTEST_F(SolFmtFixture, functionDefinitionWithFunctionReturns) { utest_fixture->path = "tests/foundry/functionDefinitionWithFunctionReturns.sol"; }
 UTEST_F(SolFmtFixture, functionType) { utest_fixture->path = "tests/foundry/functionType.sol"; }
 UTEST_F(SolFmtFixture, hexUnderscore) { utest_fixture->path = "tests/foundry/hexUnderscore.sol"; }
+UTEST_F(SolFmtFixture, ifStatement) { utest_fixture->path = "tests/foundry/ifStatement.sol"; }
 UTEST_F(SolFmtFixture, ifStatement2) { utest_fixture->path = "tests/foundry/ifStatement2.sol"; }
 UTEST_F(SolFmtFixture, importDirective) { utest_fixture->path = "tests/foundry/importDirective.sol"; }
 UTEST_F(SolFmtFixture, intTypes) { utest_fixture->path = "tests/foundry/intTypes.sol"; }
