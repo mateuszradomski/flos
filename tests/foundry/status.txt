@@ -45,7 +45,7 @@
 | thisExpression                        |     YES |                                            Comments are weird again |
 | trailingComma                         |         |                                                                     |
 | tryStatement                          |         |                                                                     |
-| typeDefinition                        |         |                                                                     |
+| typeDefinition                        |     YES |                                                                     |
 | unitExpression                        |         |                                                                     |
 | usingDirective                        |         |                                                                     |
 | variableAssignment                    |         |                                                                     |
