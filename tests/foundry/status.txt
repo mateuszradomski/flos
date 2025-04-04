@@ -40,7 +40,7 @@
 | revertStatement                       |     YES |  Comments are weird, space before revert should be removed if tuple |
 | simpleComments                        |         |                                                                     |
 | sortedImports                         |         |                                                                     |
-| statementBlock                        |         |                                                                     |
+| statementBlock                        |     YES |                                                                     |
 | structDefinition                      |         |                                                                     |
 | thisExpression                        |         |                                                                     |
 | trailingComma                         |         |                                                                     |
