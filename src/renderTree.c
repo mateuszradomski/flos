@@ -1738,9 +1738,11 @@ pushStatementDocument(Render *r, ASTNode *node) {
             pushCommentsAfterToken(r, node->endToken);
         } break;
         case ASTNodeType_TryStatement: {
+            pushGroup(r);
+
+            pushGroup(r);
             ASTNodeTryStatement *statement = &node->tryStatementNode;
             assert(stringMatch(LIT_TO_STR("try"), r->tokens.tokenStrings[node->startToken]));
-            pushGroup(r);
             pushTokenWord(r, node->startToken);
 
             pushWord(r, wordSpace());
@@ -1797,6 +1799,8 @@ pushStatementDocument(Render *r, ASTNode *node) {
                 pushWord(r, wordSpace());
                 pushStatementDocument(r, catch->body);
             }
+
+            popGroup(r);
         } break;
         case ASTNodeType_BreakStatement: {
             pushTokenWord(r, node->startToken);

@@ -44,7 +44,7 @@
 | structDefinition                      |     YES |                                                                     |
 | thisExpression                        |     YES |                                            Comments are weird again |
 | trailingComma                         |         |                                                                     |
-| tryStatement                          |         |                                                                     |
+| tryStatement                          |     YES |                                                            Comments |
 | typeDefinition                        |     YES |                                                                     |
 | unitExpression                        |     YES |                                                            Comments |
 | usingDirective                        |     YES |                                                                     |
