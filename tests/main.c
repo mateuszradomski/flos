@@ -401,5 +401,6 @@ UTEST_F(SolFmtFixture, variableDefinition) { utest_fixture->path = "tests/foundr
 UTEST_F(SolFmtFixture, whileStatement) { utest_fixture->path = "tests/foundry/whileStatement.sol"; }
 UTEST_F(SolFmtFixture, yul) { utest_fixture->path = "tests/foundry/yul.sol"; }
 UTEST_F(SolFmtFixture, yulStrings) { utest_fixture->path = "tests/foundry/yulStrings.sol"; }
+UTEST_F(SolFmtFixture, contractDefinitionFoundry) { utest_fixture->path = "tests/foundry/contractDefinition.sol"; }
 
 UTEST_MAIN();
