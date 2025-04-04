@@ -50,6 +50,6 @@
 | usingDirective                        |     YES |                                                                     |
 | variableAssignment                    |     YES |                                                                     |
 | variableDefinition                    |     YES |                                                                     |
-| whileStatement                        |         |                                                                     |
+| whileStatement                        |     YES |    While and For statements that are inlined (not block statements) |
 | yul                                   |         |                                                                     |
 | yulStrings                            |         |                                                                     |
