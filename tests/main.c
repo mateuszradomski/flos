@@ -391,5 +391,6 @@ UTEST_F(SolFmtFixture, pragmaDirective) { utest_fixture->path = "tests/foundry/p
 UTEST_F(SolFmtFixture, revertStatement) { utest_fixture->path = "tests/foundry/revertStatement.sol"; }
 UTEST_F(SolFmtFixture, statementBlock) { utest_fixture->path = "tests/foundry/statementBlock.sol"; }
 UTEST_F(SolFmtFixture, structDefinition) { utest_fixture->path = "tests/foundry/structDefinition.sol"; }
+UTEST_F(SolFmtFixture, thisExpression) { utest_fixture->path = "tests/foundry/thisExpression.sol"; }
 
 UTEST_MAIN();

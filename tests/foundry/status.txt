@@ -42,7 +42,7 @@
 | sortedImports                         |         |                                                                     |
 | statementBlock                        |     YES |                                                                     |
 | structDefinition                      |     YES |                                                                     |
-| thisExpression                        |         |                                                                     |
+| thisExpression                        |     YES |                                            Comments are weird again |
 | trailingComma                         |         |                                                                     |
 | tryStatement                          |         |                                                                     |
 | typeDefinition                        |         |                                                                     |
