@@ -52,4 +52,4 @@
 | variableDefinition                    |     YES |                                                                     |
 | whileStatement                        |     YES |    While and For statements that are inlined (not block statements) |
 | yul                                   |         |                                                                     |
-| yulStrings                            |         |                                                                     |
+| yulStrings                            |     YES |                             Weird syntax not defined in the grammar |

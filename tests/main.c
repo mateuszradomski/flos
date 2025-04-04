@@ -398,5 +398,6 @@ UTEST_F(SolFmtFixture, usingDirective) { utest_fixture->path = "tests/foundry/us
 UTEST_F(SolFmtFixture, variableAssignment) { utest_fixture->path = "tests/foundry/variableAssignment.sol"; }
 UTEST_F(SolFmtFixture, variableDefinition) { utest_fixture->path = "tests/foundry/variableDefinition.sol"; }
 UTEST_F(SolFmtFixture, whileStatement) { utest_fixture->path = "tests/foundry/whileStatement.sol"; }
+UTEST_F(SolFmtFixture, yulStrings) { utest_fixture->path = "tests/foundry/yulStrings.sol"; }
 
 UTEST_MAIN();
