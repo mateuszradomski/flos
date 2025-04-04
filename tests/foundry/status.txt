@@ -41,7 +41,7 @@
 | simpleComments                        |         |                                                                     |
 | sortedImports                         |         |                                                                     |
 | statementBlock                        |     YES |                                                                     |
-| structDefinition                      |         |                                                                     |
+| structDefinition                      |     YES |                                                                     |
 | thisExpression                        |         |                                                                     |
 | trailingComma                         |         |                                                                     |
 | tryStatement                          |         |                                                                     |
