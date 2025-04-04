@@ -49,7 +49,7 @@
 | unitExpression                        |     YES |                                                            Comments |
 | usingDirective                        |     YES |                                                                     |
 | variableAssignment                    |     YES |                                                                     |
-| variableDefinition                    |         |                                                                     |
+| variableDefinition                    |     YES |                                                                     |
 | whileStatement                        |         |                                                                     |
 | yul                                   |         |                                                                     |
 | yulStrings                            |         |                                                                     |
