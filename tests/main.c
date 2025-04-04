@@ -365,6 +365,7 @@ UTEST_F(SolFmtFixture, blockCommentsFunctionFoundry) { utest_fixture->path = "te
 UTEST_F(SolFmtFixture, conditionalOperatorExpression) { utest_fixture->path = "tests/foundry/conditionalOperatorExpression.sol"; }
 UTEST_F(SolFmtFixture, constructorDefinition) { utest_fixture->path = "tests/foundry/constructorDefinition.sol"; }
 UTEST_F(SolFmtFixture, constructorModifierStyle) { utest_fixture->path = "tests/foundry/constructorModifierStyle.sol"; }
+UTEST_F(SolFmtFixture, contractDefinitionFoundry) { utest_fixture->path = "tests/foundry/contractDefinition.sol"; }
 UTEST_F(SolFmtFixture, doWhileStatement) { utest_fixture->path = "tests/foundry/doWhileStatement.sol"; }
 UTEST_F(SolFmtFixture, docComments) { utest_fixture->path = "tests/foundry/docComments.sol"; }
 UTEST_F(SolFmtFixture, emitStatement) { utest_fixture->path = "tests/foundry/emitStatement.sol"; }
@@ -375,6 +376,7 @@ UTEST_F(SolFmtFixture, eventDefinition) { utest_fixture->path = "tests/foundry/e
 UTEST_F(SolFmtFixture, forStatementFoundry) { utest_fixture->path = "tests/foundry/forStatement.sol"; }
 UTEST_F(SolFmtFixture, functionCallFoundry) { utest_fixture->path = "tests/foundry/functionCall.sol"; }
 UTEST_F(SolFmtFixture, functionCallArgsStatement) { utest_fixture->path = "tests/foundry/functionCallArgsStatement.sol"; }
+UTEST_F(SolFmtFixture, functionDefinitionFoundry) { utest_fixture->path = "tests/foundry/functionDefinition.sol"; }
 UTEST_F(SolFmtFixture, functionDefinitionWithFunctionReturns) { utest_fixture->path = "tests/foundry/functionDefinitionWithFunctionReturns.sol"; }
 UTEST_F(SolFmtFixture, functionType) { utest_fixture->path = "tests/foundry/functionType.sol"; }
 UTEST_F(SolFmtFixture, hexUnderscore) { utest_fixture->path = "tests/foundry/hexUnderscore.sol"; }
@@ -401,6 +403,5 @@ UTEST_F(SolFmtFixture, variableDefinition) { utest_fixture->path = "tests/foundr
 UTEST_F(SolFmtFixture, whileStatement) { utest_fixture->path = "tests/foundry/whileStatement.sol"; }
 UTEST_F(SolFmtFixture, yul) { utest_fixture->path = "tests/foundry/yul.sol"; }
 UTEST_F(SolFmtFixture, yulStrings) { utest_fixture->path = "tests/foundry/yulStrings.sol"; }
-UTEST_F(SolFmtFixture, contractDefinitionFoundry) { utest_fixture->path = "tests/foundry/contractDefinition.sol"; }
 
 UTEST_MAIN();

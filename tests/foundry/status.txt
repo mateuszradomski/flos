@@ -18,7 +18,7 @@
 | forStatement                          |     YES |                                                                     |
 | functionCall                          |     YES |                 One line with comment should be broken but it's not |
 | functionCallArgsStatement             |     YES |                                                                     |
-| functionDefinition                    |         |                                                                     |
+| functionDefinition                    |     YES |                                                                     |
 | functionDefinitionWithFunctionReturns |     YES |                                                                     |
 | functionType                          |     YES |                                                                     |
 | hexUnderscore                         |     YES |                                                                     |
