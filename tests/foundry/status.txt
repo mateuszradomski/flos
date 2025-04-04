@@ -47,7 +47,7 @@
 | tryStatement                          |         |                                                                     |
 | typeDefinition                        |     YES |                                                                     |
 | unitExpression                        |     YES |                                                            Comments |
-| usingDirective                        |         |                                                                     |
+| usingDirective                        |     YES |                                                                     |
 | variableAssignment                    |         |                                                                     |
 | variableDefinition                    |         |                                                                     |
 | whileStatement                        |         |                                                                     |
