@@ -35,7 +35,7 @@
 | operatorExpressions                   |     YES |                                        Nesting of binary expression |
 | pragmaDirective                       |     YES |                                                                     |
 | repros                                |         |                                                                     |
-| returnStatement                       |         |                                                                     |
+| returnStatement                       |     YES |                                                                     |
 | revertNamedArgsStatement              |         |                                                                     |
 | revertStatement                       |     YES |  Comments are weird, space before revert should be removed if tuple |
 | simpleComments                        |         |                                                                     |
