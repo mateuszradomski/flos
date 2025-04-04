@@ -1589,6 +1589,12 @@ pushStatementDocument(Render *r, ASTNode *node) {
                         pushTokenWord(r, decl->name + 1);
                         pushWord(r, wordLine());
                     }
+                } else {
+                    if(i < statement->declarations.count - 1) {
+                        assert(stringMatch(LIT_TO_STR(","), r->tokens.tokenStrings[it->node.endToken + 1]));
+                        pushTokenWord(r, it->node.endToken + 1);
+                        pushWord(r, wordLine());
+                    }
                 }
             }
             assert(stringMatch(LIT_TO_STR(")"), r->tokens.tokenStrings[statement->initialValue->startToken - 2]));

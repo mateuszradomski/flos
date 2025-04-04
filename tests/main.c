@@ -395,5 +395,6 @@ UTEST_F(SolFmtFixture, thisExpression) { utest_fixture->path = "tests/foundry/th
 UTEST_F(SolFmtFixture, typeDefinition) { utest_fixture->path = "tests/foundry/typeDefinition.sol"; }
 UTEST_F(SolFmtFixture, unitExpression) { utest_fixture->path = "tests/foundry/unitExpression.sol"; }
 UTEST_F(SolFmtFixture, usingDirective) { utest_fixture->path = "tests/foundry/usingDirective.sol"; }
+UTEST_F(SolFmtFixture, variableAssignment) { utest_fixture->path = "tests/foundry/variableAssignment.sol"; }
 
 UTEST_MAIN();

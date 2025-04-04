@@ -48,7 +48,7 @@
 | typeDefinition                        |     YES |                                                                     |
 | unitExpression                        |     YES |                                                            Comments |
 | usingDirective                        |     YES |                                                                     |
-| variableAssignment                    |         |                                                                     |
+| variableAssignment                    |     YES |                                                                     |
 | variableDefinition                    |         |                                                                     |
 | whileStatement                        |         |                                                                     |
 | yul                                   |         |                                                                     |
