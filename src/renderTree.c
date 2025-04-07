@@ -15,6 +15,8 @@ typedef enum WordType {
     WordType_Space,
     WordType_Softline,
     WordType_Hardline,
+    WordType_GroupPush,
+    WordType_GroupPop,
     WordType_NestPush,
     WordType_NestPop,
     WordType_Count,
@@ -259,20 +261,6 @@ renderComments(Render *r, u32 startOffset, u32 endOffset) {
 static u32 renderDocumentWord(Render *r, Word *word, u32 nest, WordRenderLineType lineType);
 
 static bool
-hasHardline(Word *words, u32 count, u32 group) {
-    for (u32 i = 0; i < count; i++) {
-        Word *word = &words[i];
-        if (word->group < group) {
-            break;
-        }
-        if (word->group == group && word->type == WordType_Hardline) {
-            return true;
-        }
-    }
-    return false;
-}
-
-static bool
 fits(Render *r, Word *words, s32 count, u32 group, u32 remainingWidth) {
     u32 width = 0;
     for (u32 i = 0; i < count && words[i].group >= group; i++) {
@@ -392,11 +380,6 @@ renderGroup(Render *r, Word *words, s32 count, u32 group, u32 nest) {
 
     Writer *w = r->writer;
 
-    // Early exit for hardline groups
-    if (hasHardline(words, count, group)) {
-        return processGroupWords(r, words, count, group, nest, WordRenderLineType_Newline);
-    }
-
     // Try fitting everything on one line
     u32 baseLineSize = w->lineSize;
     u32 baseWritten = w->size;
@@ -440,6 +423,8 @@ renderDocumentWord(Render *r, Word *word, u32 nest, WordRenderLineType lineType)
             }
         } break;
         case WordType_Hardline: { finishLine(w); } break;
+        case WordType_GroupPush: { } break;
+        case WordType_GroupPop: { } break;
         case WordType_NestPush: { nest += nestActive; } break;
         case WordType_NestPop: { nest -= nestActive; } break;
         case WordType_None: {} break;
@@ -472,14 +457,14 @@ static void pushWord(Render *r, Word w);
 
 static void
 pushGroup(Render *r) {
+    pushWord(r, (Word){ .type = WordType_GroupPush });
     r->group += 1;
-    pushWord(r, (Word){ .type = WordType_None });
 }
 
 static void
 popGroup(Render *r) {
     r->group -= 1;
-    pushWord(r, (Word){ .type = WordType_None });
+    pushWord(r, (Word){ .type = WordType_GroupPop });
 }
 
 static void
