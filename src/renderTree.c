@@ -1347,10 +1347,13 @@ pushExpressionDocument(Render *r, ASTNode *node) {
     }
 }
 
+// TODO(radomski): Array access?
 static Word
 expressionLinkWord(ASTNode *node) {
     switch(node->type){
         case ASTNodeType_InlineArrayExpression: return wordSpace();
+        case ASTNodeType_TerneryExpression: return wordSpace();
+        case ASTNodeType_FunctionCallExpression: return wordSpace();
         default: return wordLine();
     }
 }
@@ -1359,6 +1362,8 @@ static s32
 expressionNest(ASTNode *node) {
     switch(node->type){
         case ASTNodeType_InlineArrayExpression: return 0;
+        case ASTNodeType_TerneryExpression: return 0;
+        case ASTNodeType_FunctionCallExpression: return 0;
         default: return 1;
     }
 }
@@ -1556,12 +1561,18 @@ pushStatementDocument(Render *r, ASTNode *node) {
                 assert(stringMatch(LIT_TO_STR("="), r->tokens.tokenStrings[statement->initialValue->startToken - 1]));
 
                 pushTokenWord(r, statement->initialValue->startToken - 1);
-                pushWord(r, wordSpace()); // TODO(radomski): Line?
+                pushWord(r, expressionLinkWord(statement->initialValue));
+
+                addNest(r, expressionNest(statement->initialValue));
+                pushGroup(r);
                 pushExpressionDocument(r, statement->initialValue);
+                popGroup(r);
+                addNest(r, -expressionNest(statement->initialValue));
             }
 
-            pushTokenWord(r, node->endToken);
+            pushTokenWordOnly(r, node->endToken);
             popGroup(r);
+            pushCommentsAfterToken(r, node->endToken);
         } break;
         case ASTNodeType_VariableDeclarationTupleStatement: {
             ASTNodeVariableDeclarationTupleStatement *statement = &node->variableDeclarationTupleStatementNode;
