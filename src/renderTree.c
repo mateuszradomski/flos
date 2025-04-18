@@ -524,9 +524,9 @@ isWordWhitespace(Word w) {
 static void
 pushWord(Render *r, Word w) {
     Word tw = r->trailingWhitespace;
-    bool isHardline = tw.type == WordType_Hardline;
+    bool hasTrailingWhitespace = tw.type != WordType_None;
 
-    if(isHardline) {
+    if(hasTrailingWhitespace) {
         tw.group = r->group;
 
         if(isWordWhitespace(w)) {
@@ -610,14 +610,6 @@ pushCommentsAfterToken(Render *r, TokenId token) {
         .data = r->sourceBaseAddress + startOffset,
         .size = endOffset - startOffset,
     };
-
-    if(r->wordCount > 0 &&
-       r->words[r->wordCount - 1].type != WordType_Text &&
-       r->words[r->wordCount - 1].type != WordType_NestPush &&
-       r->words[r->wordCount - 1].type != WordType_NestPop) {
-        r->trailingWhitespace = r->words[r->wordCount - 1];
-        r->wordCount -= 1;
-    }
 
     if(input.size >= 2) {
         u32 cursor = 0;
@@ -751,11 +743,11 @@ pushCommentsAfterToken(Render *r, TokenId token) {
             pushWord(r, wordHardline());
         }
 
-        if(r->wordCount > 0 &&
-           r->words[r->wordCount - 1].type != WordType_Text &&
-           r->words[r->wordCount - 1].type != WordType_NestPush &&
-           r->words[r->wordCount - 1].type != WordType_NestPop) {
-            r->trailingWhitespace = r->words[r->wordCount - 1];
+        if(r->wordCount > 0 && isWordWhitespace(r->words[r->wordCount - 1])) {
+            if(r->words[r->wordCount - 1].type == WordType_Hardline) {
+                r->trailingWhitespace = r->words[r->wordCount - 1];
+            }
+
             r->wordCount -= 1;
         }
     }
@@ -843,9 +835,9 @@ pushCallArgumentListDocument(Render *r, TokenId startingToken, ASTNodeListRanged
         pushTokenWordOnly(r, listGetTokenId(names, 0) - 1);
     }
     pushNest(r);
-    pushWord(r, wordSoftline());
 
     if(names->count == 0) {
+        pushWord(r, wordSoftline());
         ASTNodeLink *argument = expressions->head;
         for(u32 i = 0; i < expressions->count; i++, argument = argument->next) {
             pushExpressionDocument(r, &argument->node);
