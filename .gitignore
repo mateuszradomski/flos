@@ -8,3 +8,6 @@ test.dSYM/Contents
 solfmt
 test
 solfmt.dSYM/Contents
+tags
+expected.sol
+result.sol
