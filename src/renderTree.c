@@ -523,21 +523,16 @@ isWordWhitespace(Word w) {
 
 static void
 pushWord(Render *r, Word w) {
-    Word tw = r->trailingWhitespace;
-    bool hasTrailingWhitespace = tw.type != WordType_None;
-
-    if(hasTrailingWhitespace) {
-        tw.group = r->group;
-
+    if(r->trailingWhitespace.type != WordType_None) {
         if(isWordWhitespace(w)) {
-            w = tw;
+            w = r->trailingWhitespace;
         } else {
             assert(w.type == WordType_Text);
-            r->words[r->wordCount++] = tw;
+            r->words[r->wordCount++] = r->trailingWhitespace;
         }
-
-        r->trailingWhitespace = (Word){};
     }
+
+    r->trailingWhitespace = (Word){};
 
     w.group = r->group;
     r->words[r->wordCount++] = w;
