@@ -113,8 +113,7 @@ contract TryStatement {
         returns (
             uint256
         ) // comment4
-        {
-        } // comment5
+        { } // comment5
         catch /* comment6 */ { }
 
         // comment7

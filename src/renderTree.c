@@ -22,6 +22,23 @@ typedef enum WordType {
     WordType_Count,
 } WordType;
 
+static char *
+WordTypeToString(WordType t) {
+    switch(t) {
+        case WordType_None: return "None";
+        case WordType_Text: return "Text";
+        case WordType_Line: return "Line";
+        case WordType_Space: return "Space";
+        case WordType_Softline: return "Softline";
+        case WordType_Hardline: return "Hardline";
+        case WordType_GroupPush: return "+Group";
+        case WordType_GroupPop: return "-Group";
+        case WordType_NestPush: return "+Nest";
+        case WordType_NestPop: return "-Nest";
+        case WordType_Count: return "Count";
+    }
+}
+
 typedef struct Word {
     WordType type;
     u8 group;
@@ -487,6 +504,7 @@ addNest(Render *r, s32 nest) {
 static bool
 isWordWhitespace(Word w) {
     return (
+        w.type == WordType_Space ||
         w.type == WordType_Line ||
         w.type == WordType_Softline ||
         w.type == WordType_Hardline
@@ -495,12 +513,29 @@ isWordWhitespace(Word w) {
 
 static void
 pushWord(Render *r, Word w) {
-    bool isHardline = r->trailingWhitespace.type == WordType_Hardline;
+    Word tw = r->trailingWhitespace;
+    bool isHardline = tw.type == WordType_Hardline;
 
-    if(isHardline && isWordWhitespace(w)) {
-        w = r->trailingWhitespace;
-        r->trailingWhitespace = (Word){};
-    }
+    if(isHardline) {
+        if(isWordWhitespace(w)) {
+            w = tw;
+        } else if(w.type == WordType_Text) {
+            tw.group = r->group;
+            r->words[r->wordCount++] = tw;
+        }
+
+        if(isWordWhitespace(w) || w.type == WordType_Text) {
+            r->trailingWhitespace = (Word){};
+        } else {
+            assert(w.type != WordType_None);
+            assert(
+               w.type == WordType_GroupPush ||
+               w.type == WordType_GroupPop ||
+               w.type == WordType_NestPush ||
+               w.type == WordType_NestPop
+            );
+        }
+    } 
 
     w.group = r->group;
     r->words[r->wordCount++] = w;
@@ -718,14 +753,14 @@ pushCommentsAfterToken(Render *r, TokenId token) {
         if(cursor != 0 && preceedingNewlines >= 2) {
             pushWord(r, wordHardline());
         }
-    }
 
-    if(r->wordCount > 0 &&
-       r->words[r->wordCount - 1].type != WordType_Text &&
-       r->words[r->wordCount - 1].type != WordType_NestPush &&
-       r->words[r->wordCount - 1].type != WordType_NestPop) {
-        r->trailingWhitespace = r->words[r->wordCount - 1];
-        r->wordCount -= 1;
+        if(r->wordCount > 0 &&
+           r->words[r->wordCount - 1].type != WordType_Text &&
+           r->words[r->wordCount - 1].type != WordType_NestPush &&
+           r->words[r->wordCount - 1].type != WordType_NestPop) {
+            r->trailingWhitespace = r->words[r->wordCount - 1];
+            r->wordCount -= 1;
+        }
     }
 }
 
@@ -736,14 +771,6 @@ pushTokenWordOnly(Render *r, TokenId token) {
         .text = getTokenString(r->tokens, token),
         .group = r->group,
     };
-
-    if(r->trailingWhitespace.type != WordType_None) {
-        Word tw = r->trailingWhitespace;
-        r->trailingWhitespace = (Word){};
-
-        tw.group = r->group;
-        r->words[r->wordCount++] = tw;
-    }
 
     pushWord(r, w);
 }
