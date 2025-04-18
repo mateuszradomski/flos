@@ -211,7 +211,7 @@ showDifferences(Arena *arena, String result, String expected) {
 
     u32 width = consoleWidth();
     u32 oddWidth = width % 2 == 1;
-    u32 dividerChars = 4 - oddWidth; 
+    u32 dividerChars = 4 - oddWidth;
     u32 charsInPanel = (width - dividerChars) / 2;
 
     DiffResult diffResult = { 0 };
