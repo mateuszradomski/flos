@@ -474,24 +474,34 @@ static void pushWord(Render *r, Word w);
 
 static void
 pushGroup(Render *r) {
-    pushWord(r, (Word){ .type = WordType_GroupPush });
+    Word w = { .type = WordType_GroupPush };
+    w.group = r->group;
+    r->words[r->wordCount++] = w;
+
     r->group += 1;
 }
 
 static void
 popGroup(Render *r) {
     r->group -= 1;
-    pushWord(r, (Word){ .type = WordType_GroupPop });
+
+    Word w = { .type = WordType_GroupPop };
+    w.group = r->group;
+    r->words[r->wordCount++] = w;
 }
 
 static void
 pushNest(Render *r) {
-    pushWord(r, (Word){ .type = WordType_NestPush });
+    Word w = { .type = WordType_NestPush };
+    w.group = r->group;
+    r->words[r->wordCount++] = w;
 }
 
 static void
 popNest(Render *r) {
-    pushWord(r, (Word){ .type = WordType_NestPop });
+    Word w = { .type = WordType_NestPop };
+    w.group = r->group;
+    r->words[r->wordCount++] = w;
 }
 
 static void
@@ -517,25 +527,17 @@ pushWord(Render *r, Word w) {
     bool isHardline = tw.type == WordType_Hardline;
 
     if(isHardline) {
+        tw.group = r->group;
+
         if(isWordWhitespace(w)) {
             w = tw;
-        } else if(w.type == WordType_Text) {
-            tw.group = r->group;
+        } else {
+            assert(w.type == WordType_Text);
             r->words[r->wordCount++] = tw;
         }
 
-        if(isWordWhitespace(w) || w.type == WordType_Text) {
-            r->trailingWhitespace = (Word){};
-        } else {
-            assert(w.type != WordType_None);
-            assert(
-               w.type == WordType_GroupPush ||
-               w.type == WordType_GroupPop ||
-               w.type == WordType_NestPush ||
-               w.type == WordType_NestPop
-            );
-        }
-    } 
+        r->trailingWhitespace = (Word){};
+    }
 
     w.group = r->group;
     r->words[r->wordCount++] = w;
@@ -544,11 +546,6 @@ pushWord(Render *r, Word w) {
 static Word
 wordText(String text) {
     return (Word) { .type = WordType_Text, .text = text };
-}
-
-static Word
-wordNone() {
-    return (Word) { .type = WordType_None };
 }
 
 static Word
@@ -1142,7 +1139,7 @@ pushExpressionDocument(Render *r, ASTNode *node) {
             pushGroup(r);
             Word w = (node->type == ASTNodeType_HexStringLitExpression) ? wordText(LIT_TO_STR("hex")) :
                      (node->type == ASTNodeType_UnicodeStringLitExpression) ? wordText(LIT_TO_STR("unicode")) :
-                     wordNone();
+                     wordText(LIT_TO_STR(""));
 
             for(u32 i = 0; i < expression->values.count; i++) {
                 if(i > 0) {
