@@ -66,7 +66,9 @@ typedef struct Render {
     s32 wordCount;
     u32 wordCapacity;
     u8 group;
-    Word trailingWhitespace;
+
+    u32 trailingCount;
+    Word trailing[128];
 } Render;
 
 static void
@@ -522,20 +524,26 @@ isWordWhitespace(Word w) {
 }
 
 static void
+pushTrailing(Render *r, Word w) {
+    assert(r->trailingCount < ARRAY_LENGTH(r->trailing));
+    r->trailing[r->trailingCount++] = w;
+}
+
+static void
 pushWord(Render *r, Word w) {
-    if(r->trailingWhitespace.type != WordType_None) {
-        if(isWordWhitespace(w)) {
-            w = r->trailingWhitespace;
-        } else {
-            assert(w.type == WordType_Text);
-            r->words[r->wordCount++] = r->trailingWhitespace;
-        }
+    for(u32 i = 0; i < r->trailingCount; i++) {
+        Word *out = r->words + r->wordCount++;
+        *out = r->trailing[i];
+        out->group = r->group;
     }
 
-    r->trailingWhitespace = (Word){};
+    bool pushPassed = r->trailingCount == 0 || !isWordWhitespace(w);
+    if(pushPassed) {
+        w.group = r->group;
+        r->words[r->wordCount++] = w;
+    }
 
-    w.group = r->group;
-    r->words[r->wordCount++] = w;
+    r->trailingCount = 0;
 }
 
 static Word
@@ -740,7 +748,7 @@ pushCommentsAfterToken(Render *r, TokenId token) {
 
         if(r->wordCount > 0 && isWordWhitespace(r->words[r->wordCount - 1])) {
             if(r->words[r->wordCount - 1].type == WordType_Hardline) {
-                r->trailingWhitespace = r->words[r->wordCount - 1];
+                pushTrailing(r, r->words[r->wordCount - 1]);
             }
 
             r->wordCount -= 1;
