@@ -58,9 +58,8 @@ contract TernaryExpression {
             // comment9
             : parseAmount(IERC20(asset).balanceOf(msg.sender), msg.data);
 
-        uint amount = msg.value >
-        0
-        // comment10
+        uint amount = msg.value > 0
+            // comment10
             ? msg.value
             : parseAmount(IERC20(asset).balanceOf(msg.sender), msg.data);
     }

@@ -211,7 +211,7 @@ contract Comments8 {
 contract Comments9 {
     function someFunction() {
         if(something)
-        // a comment
+            // a comment
             f();
         else { }
     }

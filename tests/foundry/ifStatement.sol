@@ -202,20 +202,16 @@ contract IfStatement {
         if(condition) executeWithMultipleParameters(condition, anotherLongCondition);
         else if(anotherLongCondition) execute();
 
-        if(condition && ((condition || anotherLongCondition)))
-            execute();
+        if(condition && ((condition || anotherLongCondition))) execute();
 
-            // if statement
-        if(condition)
-            execute();
-            // else statement
-        else
-            execute();
+        // if statement
+        if(condition) execute();
+        // else statement
+        else execute();
 
-            // if statement
-        if(condition)
-            execute();
-            // else statement
+        // if statement
+        if(condition) execute();
+        // else statement
         else executeWithMultipleParameters(anotherLongCondition, andAnotherVeryVeryLongCondition);
 
         if(condition) execute();

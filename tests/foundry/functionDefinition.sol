@@ -238,7 +238,7 @@ interface FunctionInterfaces {
         */
         uint256 x3 // x3 postfix
     )
-    // pure prefix
+        // pure prefix
         public // public postfix
         // modifier2 prefix
         pure // pure postfix

@@ -39,7 +39,7 @@ contract Mapping {
 
         // comment1
         uint256 key => uint256 value
-        // comment2
+    // comment2
     ) mapping6;
     mapping( /* comment3 */
         uint256 /* comment4 */ key /* comment5 */ => /* comment6 */ uint256 /* comment7 */ value /* comment8 */ /* comment9 */

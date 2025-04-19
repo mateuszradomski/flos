@@ -537,8 +537,12 @@ pushWord(Render *r, Word w) {
         out->group = r->group;
     }
 
-    bool pushPassed = r->trailingCount == 0 || !isWordWhitespace(w);
-    if(pushPassed) {
+    bool skipPassedWord =
+        r->trailingCount > 0 &&
+        r->trailing[r->trailingCount - 1].type == WordType_Hardline &&
+        isWordWhitespace(w);
+
+    if(!skipPassedWord) {
         w.group = r->group;
         r->words[r->wordCount++] = w;
     }
@@ -670,14 +674,14 @@ pushCommentsAfterToken(Render *r, TokenId token) {
                     for(u32 j = cursor; j < commentStart; j++) { preceedingNewlines += input.data[j] == '\n'; }
 
                     if(cursor == 0 && preceedingNewlines >= 2) {
-                        pushWord(r, wordHardline());
-                        pushWord(r, wordHardline());
+                        pushTrailing(r, wordHardline());
+                        pushTrailing(r, wordHardline());
                     } else if(preceedingNewlines > 0) {
-                        pushWord(r, wordHardline());
+                        pushTrailing(r, wordHardline());
                     } else if(cursor == 0) {
-                        pushWord(r, wordSpace());
+                        pushTrailing(r, wordSpace());
                     } else if(commentType != CommentType_SingleLine) {
-                        pushWord(r, wordSpace());
+                        pushTrailing(r, wordSpace());
                     }
 
                     cursor = commentEnd;
@@ -685,17 +689,17 @@ pushCommentsAfterToken(Render *r, TokenId token) {
 
                     // Write comment out
                     if(commentType == CommentType_SingleLine) {
-                        pushWord(r, wordText(stringTrim(comment)));
-                        pushWord(r, wordHardline());
+                        pushTrailing(r, wordText(stringTrim(comment)));
+                        pushTrailing(r, wordHardline());
                     } else if(commentType == CommentType_StarAligned) {
                         String line = { .data = comment.data, .size = 0 };
                         u32 lineCount = 0;
                         for(u32 i = 0; i < comment.size; i++) {
                             if(comment.data[i] == '\n') {
                                 lineCount += 1;
-                                if(lineCount > 1) { pushWord(r, wordSpace()); }
-                                pushWord(r, wordText(stringTrim(line)));
-                                pushWord(r, wordHardline());
+                                if(lineCount > 1) { pushTrailing(r, wordSpace()); }
+                                pushTrailing(r, wordText(stringTrim(line)));
+                                pushTrailing(r, wordHardline());
                                 line = (String){ .data = line.data + line.size + 1, .size = 0 };
                             } else {
                                 line.size += 1;
@@ -703,25 +707,25 @@ pushCommentsAfterToken(Render *r, TokenId token) {
                         }
 
                         if(line.size > 0) {
-                            if(lineCount > 1) { pushWord(r, wordSpace()); }
-                            pushWord(r, wordText(stringTrim(line)));
+                            if(lineCount > 1) { pushTrailing(r, wordSpace()); }
+                            pushTrailing(r, wordText(stringTrim(line)));
                         }
 
                         u8 *head = comment.data + comment.size;
                         while(isWhitespace(*head)) {
                             if(*head == '\n') {
-                                pushWord(r, wordHardline());
+                                pushTrailing(r, wordHardline());
                                 break;
                             }
                             head++;
                         }
                     } else {
-                        pushWord(r, wordText(stringTrim(comment)));
+                        pushTrailing(r, wordText(stringTrim(comment)));
 
                         u8 *head = comment.data + comment.size;
                         while(isWhitespace(*head)) {
                             if(*head == '\n') {
-                                pushWord(r, wordHardline());
+                                pushTrailing(r, wordHardline());
                                 break;
                             }
                             head++;
@@ -743,15 +747,7 @@ pushCommentsAfterToken(Render *r, TokenId token) {
         }
 
         if(cursor != 0 && preceedingNewlines >= 2) {
-            pushWord(r, wordHardline());
-        }
-
-        if(r->wordCount > 0 && isWordWhitespace(r->words[r->wordCount - 1])) {
-            if(r->words[r->wordCount - 1].type == WordType_Hardline) {
-                pushTrailing(r, r->words[r->wordCount - 1]);
-            }
-
-            r->wordCount -= 1;
+            pushTrailing(r, wordHardline());
         }
     }
 }

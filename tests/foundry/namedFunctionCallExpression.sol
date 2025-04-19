@@ -58,7 +58,7 @@ contract NamedFunctionCallExpression {
             // comment5
             val: // comment6
             0 // comment7
-            // comment8
+        // comment8
         });
     }
 }

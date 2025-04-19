@@ -29,7 +29,7 @@ function emitEvent() {
     emit NewEvent(beneficiary, _vestingBeneficiaries.length - 1, uint64(block.timestamp), endTimestamp);
 
     emit NewEvent(
-    /* beneficiary */
+        /* beneficiary */
         beneficiary,
         /* index */
         _vestingBeneficiaries.length - 1,
