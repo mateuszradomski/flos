@@ -29,7 +29,7 @@ contract ThisExpression {
 
         address thisAddress = address(
             // comment2
-             /* comment3 */
+            /* comment3 */
             this // comment 4
         );
     }

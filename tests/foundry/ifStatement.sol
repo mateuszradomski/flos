@@ -15,9 +15,9 @@ function executeWithVeryVeryVeryLongNameAndSomeParameter(bool parameter) {}
 contract IfStatement {
 
     function test() external {
-        if(  true) 
+        if(  true)
     {
-            execute() ; 
+            execute() ;
         }
 
     bool condition; bool anotherLongCondition; bool andAnotherVeryVeryLongCondition ;
@@ -51,7 +51,7 @@ contract IfStatement {
           /* comment14 */ else { } // comment15
 
           if (
-            // comment16 
+            // comment16
             condition       /* comment17 */
         )
         {
@@ -162,13 +162,13 @@ contract IfStatement {
         if(condition) {
             execute();
         } // comment7
-         /* comment8 */
+        /* comment8 */
 
         /* comment9 */ else if /* comment10 */(anotherLongCondition) // comment11
-         /* comment12 */ {
+        /* comment12 */ {
             execute();
         } // comment13
-         /* comment14 */ else { } // comment15
+        /* comment14 */ else { } // comment15
 
         if(
             // comment16

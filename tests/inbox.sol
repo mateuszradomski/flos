@@ -60,6 +60,6 @@ contract Inbox {
     function nothingHereMultipleComments() public {
         // to be defined
         // to be defined 2
-         /* to be defined 3 */
+        /* to be defined 3 */
     }
 }

@@ -74,7 +74,7 @@ contract LiteralExpressions {
         -1;
         2e-10;
         // comment5
-         /* comment6 */
+        /* comment6 */
         -1 /* comment7 */;
 
         // hex number literals

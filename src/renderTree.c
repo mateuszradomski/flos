@@ -432,6 +432,7 @@ pushCommentsInRange(Render *r, u32 startOffset, u32 endOffset) {
 
     if(input.size >= 2) {
         u32 cursor = 0;
+        u32 previousCommentType = CommentType_None;
 
         while(true) {
             u32 finished = true;
@@ -492,7 +493,7 @@ pushCommentsInRange(Render *r, u32 startOffset, u32 endOffset) {
                         pushTrailing(r, wordHardline());
                     } else if(cursor == 0) {
                         pushTrailing(r, wordSpace());
-                    } else if(commentType != CommentType_SingleLine) {
+                    } else if(commentType != CommentType_SingleLine && previousCommentType != CommentType_SingleLine) {
                         pushTrailing(r, wordSpace());
                     }
 
@@ -501,9 +502,11 @@ pushCommentsInRange(Render *r, u32 startOffset, u32 endOffset) {
 
                     // Write comment out
                     if(commentType == CommentType_SingleLine) {
+                        previousCommentType = commentType;
                         pushTrailing(r, wordText(stringTrim(comment)));
                         pushTrailing(r, wordHardline());
                     } else if(commentType == CommentType_StarAligned) {
+                        previousCommentType = commentType;
                         String line = { .data = comment.data, .size = 0 };
                         u32 lineCount = 0;
                         for(u32 k = 0; k < comment.size; k++) {
@@ -532,6 +535,7 @@ pushCommentsInRange(Render *r, u32 startOffset, u32 endOffset) {
                             head++;
                         }
                     } else {
+                        previousCommentType = commentType;
                         pushTrailing(r, wordText(stringTrim(comment)));
 
                         u8 *head = comment.data + comment.size;
