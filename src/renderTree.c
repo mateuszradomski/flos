@@ -472,7 +472,22 @@ renderDocument(Render *r) {
     r->wordCount = 0;
 }
 
-static void pushWord(Render *r, Word w);
+static void
+pushTrailing(Render *r, Word w) {
+    assert(r->trailingCount < ARRAY_LENGTH(r->trailing));
+    r->trailing[r->trailingCount++] = w;
+}
+
+static void
+flushTrailing(Render *r) {
+    for(u32 i = 0; i < r->trailingCount; i++) {
+        Word *out = r->words + r->wordCount++;
+        *out = r->trailing[i];
+        out->group = r->group;
+    }
+
+    r->trailingCount = 0;
+}
 
 static void
 pushGroup(Render *r) {
@@ -524,30 +539,17 @@ isWordWhitespace(Word w) {
 }
 
 static void
-pushTrailing(Render *r, Word w) {
-    assert(r->trailingCount < ARRAY_LENGTH(r->trailing));
-    r->trailing[r->trailingCount++] = w;
-}
-
-static void
 pushWord(Render *r, Word w) {
-    for(u32 i = 0; i < r->trailingCount; i++) {
-        Word *out = r->words + r->wordCount++;
-        *out = r->trailing[i];
-        out->group = r->group;
-    }
-
     bool skipPassedWord =
         r->trailingCount > 0 &&
         r->trailing[r->trailingCount - 1].type == WordType_Hardline &&
         isWordWhitespace(w);
 
+    flushTrailing(r);
     if(!skipPassedWord) {
         w.group = r->group;
         r->words[r->wordCount++] = w;
     }
-
-    r->trailingCount = 0;
 }
 
 static Word
@@ -940,8 +942,8 @@ pushTypeDocument(Render *r, ASTNode *node) {
                 pushTokenWord(r, node->mappingNode.valueIdentifier);
             }
             popNest(r);
-            popGroup(r);
             pushTokenWord(r, node->endToken);
+            popGroup(r);
         } break;
         case ASTNodeType_ArrayType: {
             assert(stringMatch(LIT_TO_STR("["), r->tokens.tokenStrings[node->arrayTypeNode.elementType->endToken + 1]));
