@@ -1176,10 +1176,10 @@ expressionNest(ASTNode *node) {
     }
 }
 
-static void renderYulExpression(Render *r, ASTNode *node);
+static void pushYulExpressionDocument(Render *r, ASTNode *node);
 
 static void
-renderYulFunctionCall(Render *r, ASTNode *node) {
+pushYulFunctionCallDocument(Render *r, ASTNode *node) {
     ASTNodeYulFunctionCallExpression *function = &node->yulFunctionCallExpressionNode;
 
     pushGroup(r);
@@ -1194,7 +1194,7 @@ renderYulFunctionCall(Render *r, ASTNode *node) {
 
         ASTNodeLink *argument = function->arguments.head;
         for(u32 i = 0; i < function->arguments.count; i++, argument = argument->next) {
-            renderYulExpression(r, &argument->node);
+            pushYulExpressionDocument(r, &argument->node);
             if(i < function->arguments.count - 1) {
                 pushTokenWord(r, argument->node.endToken + 1); // comma
                 pushWord(r, wordLine());
@@ -1211,7 +1211,7 @@ renderYulFunctionCall(Render *r, ASTNode *node) {
 }
 
 static void
-renderYulExpression(Render *r, ASTNode *node) {
+pushYulExpressionDocument(Render *r, ASTNode *node) {
     switch(node->type) {
         case ASTNodeType_YulNumberLitExpression: {
             pushTokenWord(r, node->yulNumberLitExpressionNode.value);
@@ -1243,7 +1243,7 @@ renderYulExpression(Render *r, ASTNode *node) {
 
         } break;
         case ASTNodeType_YulFunctionCallExpression: {
-            renderYulFunctionCall(r, node);
+            pushYulFunctionCallDocument(r, node);
         } break;
         default: {
             assert(0);
@@ -1695,7 +1695,7 @@ pushStatementDocument(Render *r, ASTNode *node) {
                 pushTokenWord(r, statement->value->startToken - 2);
                 pushTokenWord(r, statement->value->startToken - 1);
                 pushWord(r, wordSpace());
-                renderYulExpression(r, statement->value);
+                pushYulExpressionDocument(r, statement->value);
             }
             popGroup(r);
         } break;
@@ -1705,7 +1705,7 @@ pushStatementDocument(Render *r, ASTNode *node) {
 
             ASTNodeLink *it = statement->paths.head;
             for(u32 i = 0; i < statement->paths.count; i++, it = it->next) {
-                renderYulExpression(r, &it->node);
+                pushYulExpressionDocument(r, &it->node);
                 if (i < statement->paths.count - 1) {
                     pushTokenWord(r, it->node.endToken + 1); // ,
                     pushWord(r, wordSpace());
@@ -1719,12 +1719,12 @@ pushStatementDocument(Render *r, ASTNode *node) {
                 pushTokenWord(r, statement->value->startToken - 2); // :=
                 pushTokenWord(r, statement->value->startToken - 1); // :=
                 pushWord(r, wordSpace());
-                renderYulExpression(r, statement->value);
+                pushYulExpressionDocument(r, statement->value);
             }
             popGroup(r);
         } break;
         case ASTNodeType_YulFunctionCallExpression: {
-            renderYulFunctionCall(r, node);
+            pushYulFunctionCallDocument(r, node);
         } break;
         case ASTNodeType_YulIfStatement: {
             ASTNodeYulIfStatement *statement = &node->yulIfStatementNode;
@@ -1732,7 +1732,7 @@ pushStatementDocument(Render *r, ASTNode *node) {
 
             pushTokenWord(r, node->startToken); // if
             pushWord(r, wordSpace());
-            renderYulExpression(r, statement->expression);
+            pushYulExpressionDocument(r, statement->expression);
             pushWord(r, wordSpace());
             pushStatementDocument(r, statement->body);
             popGroup(r);
@@ -1746,7 +1746,7 @@ pushStatementDocument(Render *r, ASTNode *node) {
             pushWord(r, wordSpace());
             pushStatementDocument(r, statement->variableDeclaration);
             pushWord(r, wordSpace());
-            renderYulExpression(r, statement->condition);
+            pushYulExpressionDocument(r, statement->condition);
             pushWord(r, wordSpace());
             pushStatementDocument(r, statement->increment);
             pushWord(r, wordSpace());
@@ -1833,14 +1833,14 @@ pushStatementDocument(Render *r, ASTNode *node) {
 
             pushTokenWord(r, node->startToken); // switch
             pushWord(r, wordSpace());
-            renderYulExpression(r, statement->expression);
+            pushYulExpressionDocument(r, statement->expression);
 
             ASTNodeLink *it = statement->cases.head;
             for(u32 i = 0; i < statement->cases.count; i++, it = it->next) {
                 pushWord(r, wordLine());
                 pushTokenWord(r, it->node.yulCaseNode.literal->startToken - 1); // case
                 pushWord(r, wordSpace());
-                renderYulExpression(r, it->node.yulCaseNode.literal);
+                pushYulExpressionDocument(r, it->node.yulCaseNode.literal);
                 pushWord(r, wordSpace());
                 pushStatementDocument(r, it->node.yulCaseNode.block);
             }
@@ -2487,14 +2487,13 @@ pushMemberDocument(Render *r, ASTNode *member) {
                 popGroup(r);
                 popGroup(r);
                 pushStatementDocument(r, function->body);
-                pushWord(r, wordHardline());
             } else {
                 pushTokenWord(r, member->endToken);
                 popGroup(r);
                 popGroup(r);
-
-                pushWord(r, wordHardline());
             }
+
+            pushWord(r, wordHardline());
         } break;
         case ASTNodeType_ConstructorDefinition: {
             ASTNodeConstructorDefinition *constructor = &member->constructorDefinitionNode;
@@ -2582,11 +2581,11 @@ pushMemberDocument(Render *r, ASTNode *member) {
             if(modifier->body != 0x0) {
                 pushWord(r, wordSpace());
                 pushStatementDocument(r, modifier->body);
-                pushWord(r, wordHardline());
             } else {
                 pushTokenWord(r, member->endToken);
-                pushWord(r, wordHardline());
             }
+
+            pushWord(r, wordHardline());
         } break;
         case ASTNodeType_LibraryDefinition:
         case ASTNodeType_ContractDefinition:
