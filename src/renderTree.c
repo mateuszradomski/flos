@@ -577,7 +577,7 @@ pushCommentsAfterToken(Render *r, TokenId token) {
 }
 
 static void
-pushTokenWordOnly(Render *r, TokenId token) {
+pushTokenWord(Render *r, TokenId token) {
     Word w = {
         .type = WordType_Text,
         .text = getTokenString(r->tokens, token),
@@ -585,16 +585,12 @@ pushTokenWordOnly(Render *r, TokenId token) {
     };
 
     pushWord(r, w);
-}
 
-static void
-pushTokenWord(Render *r, TokenId token) {
-    pushTokenWordOnly(r, token);
     pushCommentsAfterToken(r, token);
 }
 
 static void
-pushTokenAsStringWordOnly(Render *r, TokenId token) {
+pushTokenAsStringWord(Render *r, TokenId token) {
     String text = getTokenString(r->tokens, token);
 
     if(text.data[-1] == '"' && text.data[text.size] == '"') {
@@ -633,11 +629,7 @@ pushTokenAsStringWordOnly(Render *r, TokenId token) {
         .group = r->group,
     };
     pushWord(r, w);
-}
 
-static void
-pushTokenAsStringWord(Render *r, TokenId token) {
-    pushTokenAsStringWordOnly(r, token);
     pushCommentsAfterToken(r, token);
 }
 
@@ -650,7 +642,7 @@ pushCallArgumentListDocument(Render *r, TokenId startingToken, ASTNodeListRanged
     pushGroup(r);
     pushTokenWord(r, startingToken);
     if(names->count > 0) {
-        pushTokenWordOnly(r, listGetTokenId(names, 0) - 1);
+        pushTokenWord(r, listGetTokenId(names, 0) - 1);
     }
     pushNest(r);
 
@@ -666,7 +658,6 @@ pushCallArgumentListDocument(Render *r, TokenId startingToken, ASTNodeListRanged
             }
         }
     } else {
-        pushCommentsAfterToken(r, listGetTokenId(names, 0) - 1);
         pushWord(r, wordLine());
         ASTNodeLink *argument = expressions->head;
         assert(names->count == expressions->count);
@@ -703,9 +694,8 @@ pushCallArgumentListDocument(Render *r, TokenId startingToken, ASTNodeListRanged
         pushWord(r, wordSoftline());
     }
 
-    pushTokenWordOnly(r, endToken);
+    pushTokenWord(r, endToken);
     popGroup(r);
-    pushCommentsAfterToken(r, endToken);
 
     assert(stringMatch(LIT_TO_STR("("), r->tokens.tokenStrings[startingToken]));
     assert(stringMatch(LIT_TO_STR(")"), r->tokens.tokenStrings[endToken]));
@@ -1216,10 +1206,8 @@ renderYulFunctionCall(Render *r, ASTNode *node) {
     }
 
     assert(stringMatch(LIT_TO_STR(")"), r->tokens.tokenStrings[node->endToken]));
-    pushTokenWordOnly(r, node->endToken);
+    pushTokenWord(r, node->endToken);
     popGroup(r);
-
-    pushCommentsAfterToken(r, node->endToken);
 }
 
 static void
@@ -1270,10 +1258,9 @@ pushStatementDocument(Render *r, ASTNode *node) {
             ASTNodeBlockStatement *block = &node->blockStatementNode;
 
             pushGroup(r);
-            pushTokenWordOnly(r, node->startToken);
+            pushTokenWord(r, node->startToken);
             pushNest(r);
 
-            pushCommentsAfterToken(r, node->startToken);
             pushWord(r, wordLine());
 
             ASTNodeLink *statement = block->statements.head;
@@ -1285,10 +1272,8 @@ pushStatementDocument(Render *r, ASTNode *node) {
             }
 
             popNest(r);
-            pushTokenWordOnly(r, node->endToken);
+            pushTokenWord(r, node->endToken);
             popGroup(r);
-
-            pushCommentsAfterToken(r, node->endToken);
         } break;
         case ASTNodeType_UncheckedBlockStatement: {
             ASTNodeUncheckedBlockStatement *unchecked = &node->uncheckedBlockStatementNode;
@@ -1314,9 +1299,7 @@ pushStatementDocument(Render *r, ASTNode *node) {
                 pushGroup(r);
                 pushExpressionDocument(r, node->expressionStatementNode.expression);
                 popGroup(r);
-                pushTokenWordOnly(r, node->endToken);
-
-                pushCommentsAfterToken(r, node->endToken);
+                pushTokenWord(r, node->endToken);
             }
         } break;
         case ASTNodeType_IfStatement: {
@@ -1385,9 +1368,8 @@ pushStatementDocument(Render *r, ASTNode *node) {
                 addNest(r, -expressionNest(statement->initialValue));
             }
 
-            pushTokenWordOnly(r, node->endToken);
+            pushTokenWord(r, node->endToken);
             popGroup(r);
-            pushCommentsAfterToken(r, node->endToken);
         } break;
         case ASTNodeType_VariableDeclarationTupleStatement: {
             ASTNodeVariableDeclarationTupleStatement *statement = &node->variableDeclarationTupleStatementNode;
@@ -1560,10 +1542,8 @@ pushStatementDocument(Render *r, ASTNode *node) {
             pushTokenWord(r, node->startToken);
             pushWord(r, wordSpace());
             pushExpressionDocument(r, statement->expression);
-            pushTokenWordOnly(r, node->endToken);
+            pushTokenWord(r, node->endToken);
             popGroup(r);
-
-            pushCommentsAfterToken(r, node->endToken);
         } break;
         case ASTNodeType_TryStatement: {
             pushGroup(r);
@@ -1673,10 +1653,9 @@ pushStatementDocument(Render *r, ASTNode *node) {
         case ASTNodeType_YulBlockStatement: {
             ASTNodeBlockStatement *block = &node->blockStatementNode;
             pushGroup(r);
-            pushTokenWordOnly(r, node->startToken); // {
+            pushTokenWord(r, node->startToken); // {
             pushNest(r);
 
-            pushCommentsAfterToken(r, node->startToken);
             pushWord(r, wordLine());
 
             ASTNodeLink *statement = block->statements.head;
@@ -1688,9 +1667,8 @@ pushStatementDocument(Render *r, ASTNode *node) {
             }
 
             popNest(r);
-            pushTokenWordOnly(r, node->endToken); // }
+            pushTokenWord(r, node->endToken); // }
             popGroup(r);
-            pushCommentsAfterToken(r, node->endToken);
         } break;
         case ASTNodeType_YulVariableDeclaration: {
             ASTNodeYulVariableDeclaration *statement = &node->yulVariableDeclarationNode;
@@ -2045,10 +2023,9 @@ pushMemberDocument(Render *r, ASTNode *member) {
             };
 
             pushWord(r, wordText(string));
-            pushTokenWordOnly(r, member->endToken);
+            pushTokenWord(r, member->endToken);
             popGroup(r);
 
-            pushCommentsAfterToken(r, member->endToken);
             pushWord(r, wordHardline());
         } break;
         case ASTNodeType_Import: {
@@ -2105,10 +2082,9 @@ pushMemberDocument(Render *r, ASTNode *member) {
                 pushTokenWord(r, member->unitAliasTokenId);
             }
 
-            pushTokenWordOnly(r, member->endToken);
+            pushTokenWord(r, member->endToken);
             popGroup(r);
 
-            pushCommentsAfterToken(r, member->endToken);
             pushWord(r, wordHardline());
         } break;
         case ASTNodeType_Using: {
@@ -2167,10 +2143,9 @@ pushMemberDocument(Render *r, ASTNode *member) {
                 pushTokenWord(r, using->global);
             }
 
-            pushTokenWordOnly(r, member->endToken);
+            pushTokenWord(r, member->endToken);
             popGroup(r);
 
-            pushCommentsAfterToken(r, member->endToken);
             pushWord(r, wordHardline());
         } break;
         case ASTNodeType_EnumDefinition: {
@@ -2194,10 +2169,9 @@ pushMemberDocument(Render *r, ASTNode *member) {
             }
             popNest(r);
 
-            pushTokenWordOnly(r, member->endToken);
+            pushTokenWord(r, member->endToken);
             popGroup(r);
 
-            pushCommentsAfterToken(r, member->endToken);
             pushWord(r, wordHardline());
         } break;
         case ASTNodeType_Struct: {
@@ -2231,10 +2205,9 @@ pushMemberDocument(Render *r, ASTNode *member) {
 
             popNest(r);
 
-            pushTokenWordOnly(r, member->endToken);
+            pushTokenWord(r, member->endToken);
             popGroup(r);
 
-            pushCommentsAfterToken(r, member->endToken);
             pushWord(r, wordHardline());
         } break;
         case ASTNodeType_Error: {
@@ -2278,10 +2251,9 @@ pushMemberDocument(Render *r, ASTNode *member) {
             popNest(r);
 
             pushTokenWord(r, member->endToken - 1);
-            pushTokenWordOnly(r, member->endToken);
+            pushTokenWord(r, member->endToken);
             popGroup(r);
 
-            pushCommentsAfterToken(r, member->endToken);
             pushWord(r, wordHardline());
         } break;
         case ASTNodeType_Event: {
@@ -2332,10 +2304,9 @@ pushMemberDocument(Render *r, ASTNode *member) {
             }
 
 
-            pushTokenWordOnly(r, member->endToken);
+            pushTokenWord(r, member->endToken);
             popGroup(r);
 
-            pushCommentsAfterToken(r, member->endToken);
             pushWord(r, wordHardline());
         } break;
         case ASTNodeType_Typedef: {
@@ -2350,10 +2321,9 @@ pushMemberDocument(Render *r, ASTNode *member) {
             pushWord(r, wordSpace());
             pushTypeDocument(r, typedefNode->type);
 
-            pushTokenWordOnly(r, member->endToken);
+            pushTokenWord(r, member->endToken);
             popGroup(r);
 
-            pushCommentsAfterToken(r, member->endToken);
             pushWord(r, wordHardline());
         } break;
         case ASTNodeType_ConstVariable: {
@@ -2378,10 +2348,9 @@ pushMemberDocument(Render *r, ASTNode *member) {
             popGroup(r);
             addNest(r, -expressionNest(constNode->expression));
 
-            pushTokenWordOnly(r, member->endToken);
+            pushTokenWord(r, member->endToken);
             popGroup(r);
 
-            pushCommentsAfterToken(r, member->endToken);
             pushWord(r, wordHardline());
         } break;
         case ASTNodeType_StateVariableDeclaration: {
@@ -2423,10 +2392,9 @@ pushMemberDocument(Render *r, ASTNode *member) {
                 addNest(r, -expressionNest(decl->expression));
             }
 
-            pushTokenWordOnly(r, member->endToken);
+            pushTokenWord(r, member->endToken);
             popGroup(r);
 
-            pushCommentsAfterToken(r, member->endToken);
             pushWord(r, wordHardline());
         } break;
         case ASTNodeType_FallbackFunction:
@@ -2521,11 +2489,10 @@ pushMemberDocument(Render *r, ASTNode *member) {
                 pushStatementDocument(r, function->body);
                 pushWord(r, wordHardline());
             } else {
-                pushTokenWordOnly(r, member->endToken);
+                pushTokenWord(r, member->endToken);
                 popGroup(r);
                 popGroup(r);
 
-                pushCommentsAfterToken(r, member->endToken);
                 pushWord(r, wordHardline());
             }
         } break;
@@ -2575,10 +2542,9 @@ pushMemberDocument(Render *r, ASTNode *member) {
                 pushStatementDocument(r, constructor->body);
                 pushWord(r, wordHardline());
             } else {
-                pushTokenWordOnly(r, member->endToken);
+                pushTokenWord(r, member->endToken);
                 popGroup(r);
 
-                pushCommentsAfterToken(r, member->endToken);
                 pushWord(r, wordHardline());
             }
         } break;
@@ -2618,9 +2584,7 @@ pushMemberDocument(Render *r, ASTNode *member) {
                 pushStatementDocument(r, modifier->body);
                 pushWord(r, wordHardline());
             } else {
-                pushTokenWordOnly(r, member->endToken);
-
-                pushCommentsAfterToken(r, member->endToken);
+                pushTokenWord(r, member->endToken);
                 pushWord(r, wordHardline());
             }
         } break;
@@ -2682,9 +2646,8 @@ pushMemberDocument(Render *r, ASTNode *member) {
                 : member->endToken - 1;
 
             assert(stringMatch(LIT_TO_STR("{"), r->tokens.tokenStrings[openParenToken]));
-            pushTokenWordOnly(r, openParenToken);
+            pushTokenWord(r, openParenToken);
             pushNest(r);
-            pushCommentsAfterToken(r, openParenToken);
             pushWord(r, wordLine());
 
             ASTNodeLink *element = contract->elements.head;
@@ -2697,9 +2660,8 @@ pushMemberDocument(Render *r, ASTNode *member) {
             popNest(r);
 
             assert(stringMatch(LIT_TO_STR("}"), r->tokens.tokenStrings[member->endToken]));
-            pushTokenWordOnly(r, member->endToken);
+            pushTokenWord(r, member->endToken);
             popGroup(r);
-            pushCommentsAfterToken(r, member->endToken);
             popGroup(r);
             pushWord(r, wordHardline());
         } break;
