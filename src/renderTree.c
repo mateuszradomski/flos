@@ -690,12 +690,13 @@ pushCallArgumentListDocument(Render *r, TokenId startingToken, ASTNodeListRanged
         endToken = startingToken + 1;
     }
 
-    popNest(r);
     if(names->count > 0) {
         pushWord(r, wordLine());
+        popNest(r);
         pushTokenWord(r, expressions->last->node.endToken + 1);
     } else {
         pushWord(r, wordSoftline());
+        popNest(r);
     }
 
     pushTokenWord(r, endToken);
