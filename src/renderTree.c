@@ -151,47 +151,6 @@ fits(Render *r, Word *words, s32 count, u32 group, u32 remainingWidth) {
     return true;
 }
 
-static bool
-debugDocumentEnabled() {
-    // Check for env
-    return getenv("DEBUG_DOCUMENT") != 0;
-}
-
-static void
-debugPrintDocument(Word *words, u32 count, u32 group) {
-    printf("G%2d:", group);
-
-    for(u32 i = 0; i < count; i++) {
-        Word *w = &words[i];
-
-        if(w->group == group) {
-            switch(w->type) {
-                case WordType_Text:     { printf("%.*s", (int)w->text.size, w->text.data); } break;
-                case WordType_Space:    { printf(" "); } break;
-                case WordType_Line:     { printf("·"); } break;
-                case WordType_Hardline: { printf("¶"); } break;
-                case WordType_Softline: { printf("¬"); } break;
-                default: break;
-            }
-        } else {
-            switch(w->type) {
-                case WordType_Text: {
-                    for(u32 j = 0; j < w->text.size; j++) {
-                        printf(" ");
-                    }
-                } break;
-                case WordType_Space:    { printf(" "); } break;
-                case WordType_Line:     { printf(" "); } break;
-                case WordType_Hardline: { printf(" "); } break;
-                case WordType_Softline: { printf(" "); } break;
-                default: break;
-            }
-        }
-    }
-
-    printf("\n");
-}
-
 static u32 renderGroup(Render *r, Word *words, s32 count, u32 group, u32 nest);
 static u32 processGroupWords(Render *r, Word *words, s32 count, u32 group, u32 nest, WordRenderLineType lineType) {
     u32 processed = 0;
@@ -272,17 +231,6 @@ renderDocumentWord(Render *r, Word *word, u32 nest, WordRenderLineType lineType)
 
 static void
 renderDocument(Render *r) {
-    if(debugDocumentEnabled()) {
-        u32 maxGroup = 0;
-        for(u32 i = 0; i < r->wordCount; i++) {
-            maxGroup = MAX(maxGroup, r->words[i].group);
-        }
-
-        for(u32 i = 0; i <= maxGroup; i++) {
-            debugPrintDocument(r->words, r->wordCount, i);
-        }
-    }
-
     u32 group = 0;
     u32 nest = 0;
     renderGroup(r, r->words, r->wordCount, group, nest);
