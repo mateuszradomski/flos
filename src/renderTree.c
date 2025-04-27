@@ -822,6 +822,9 @@ getOperatorPrecedence2(TokenType type) {
     }
 }
 
+static Word expressionLinkWord(ASTNode *node);
+static s32 expressionNest(ASTNode *node);
+
 static void
 pushBinaryExpressionDocument(Render *r, ASTNode *node, TokenId outerOperator) {
     ASTNodeBinaryExpression *binary = &node->binaryExpressionNode;
@@ -866,10 +869,16 @@ pushBinaryExpressionDocument(Render *r, ASTNode *node, TokenId outerOperator) {
 
     pushWord(r, wordSpace());
     pushTokenWord(r, binary->right->startToken - 1);
-    pushWord(r, wordLine());
+    if(binary->operator >= TokenType_Equal && binary->operator <= TokenType_PercentEqual) {
+        pushWord(r, expressionLinkWord(binary->right));
+    } else {
+        pushWord(r, wordLine());
+    }
 
     // only indent for the outermost binary expression
-    if(outerOperator == TokenType_None && binary->operator >= TokenType_Equal && binary->operator <= TokenType_PercentEqual) { pushNest(r); }
+    if(outerOperator == TokenType_None && binary->operator >= TokenType_Equal && binary->operator <= TokenType_PercentEqual) {
+        addNest(r, expressionNest(binary->right));
+    }
 
     if(binary->right->type == ASTNodeType_BinaryExpression) {
         pushBinaryExpressionDocument(r, binary->right, binary->operator);
@@ -877,7 +886,9 @@ pushBinaryExpressionDocument(Render *r, ASTNode *node, TokenId outerOperator) {
         pushExpressionDocument(r, binary->right);
     }
 
-    if(outerOperator == TokenType_None && binary->operator >= TokenType_Equal && binary->operator <= TokenType_PercentEqual) { popNest(r); }
+    if(outerOperator == TokenType_None && binary->operator >= TokenType_Equal && binary->operator <= TokenType_PercentEqual) {
+        addNest(r, -expressionNest(binary->right));
+    }
     if(addParens) { pushWord(r, wordText(LIT_TO_STR(")"))); }
     if(openGroup || addParens) { popGroup(r); }
 }
@@ -1122,7 +1133,10 @@ static Word
 expressionLinkWord(ASTNode *node) {
     switch(node->type){
         case ASTNodeType_InlineArrayExpression: return wordSpace();
-        case ASTNodeType_TerneryExpression: return wordSpace();
+        case ASTNodeType_TerneryExpression: {
+            bool complexCondition = node->terneryExpressionNode.condition->type == ASTNodeType_BinaryExpression;
+            return complexCondition ? wordLine() : wordSpace();
+        }
         case ASTNodeType_FunctionCallExpression: return wordSpace();
         default: return wordLine();
     }
@@ -1132,7 +1146,10 @@ static s32
 expressionNest(ASTNode *node) {
     switch(node->type){
         case ASTNodeType_InlineArrayExpression: return 0;
-        case ASTNodeType_TerneryExpression: return 0;
+        case ASTNodeType_TerneryExpression: {
+            bool complexCondition = node->terneryExpressionNode.condition->type == ASTNodeType_BinaryExpression;
+            return complexCondition ? 1 : 0;
+        }
         case ASTNodeType_FunctionCallExpression: return 0;
         default: return 1;
     }

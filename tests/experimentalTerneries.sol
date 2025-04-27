@@ -19,7 +19,7 @@ contract Conditional {
         : pet.canBark() ? 'dog'
         : pet.canMeow() ? 'cat'
         : 'probably a bunny';
-      
+
       // fluidity between "case-style" and "curious" ternaries
       string storage animalName =
         pet.canSqueak() ? 'mouse'
@@ -320,25 +320,25 @@ contract Conditional {
                     : someReallyLargeExpression.thatWouldCauseALineBreak().willCauseAnIndentButNotParens();
 
         // Assignment also groups and indents as Variable Declaration:
-        assignment =
-            (isAnAdorableKittyCat() && (someReallyLongCondition || moreInThisLongCondition))
-                ? someReallyLargeExpression.thatWouldCauseALineBreak().willCauseAnIndentButNotParens()
-                : (isNotAnAdorableKittyCat() && (someReallyLongCondition || moreInThisLongCondition))
-                    ? bark()
-                    : shortCondition()
-                        ? shortConsequent()
-                        : someReallyLargeExpression.thatWouldCauseALineBreak().willCauseAnIndentButNotParens();
+        assignment = (isAnAdorableKittyCat() && (someReallyLongCondition || moreInThisLongCondition))
+            ? someReallyLargeExpression.thatWouldCauseALineBreak().willCauseAnIndentButNotParens()
+            : (isNotAnAdorableKittyCat() && (someReallyLongCondition || moreInThisLongCondition))
+                ? bark()
+                : shortCondition()
+                    ? shortConsequent()
+                    : someReallyLargeExpression.thatWouldCauseALineBreak().willCauseAnIndentButNotParens();
 
         // illustrating case of mostly short conditionals
-        string storage mostlyShort = x == 1
-            ? "one"
-            : x == 2
-                ? "two"
-                : x == 3
-                    ? "three"
-                    : (x == 5 && y == 7 && someOtherThing.thatIsSoLong.thatItBreaksTheTestCondition())
-                        ? "four"
-                        : x == 6 ? "six" : "idk";
+        string storage mostlyShort =
+            x == 1
+                ? "one"
+                : x == 2
+                    ? "two"
+                    : x == 3
+                        ? "three"
+                        : (x == 5 && y == 7 && someOtherThing.thatIsSoLong.thatItBreaksTheTestCondition())
+                            ? "four"
+                            : x == 6 ? "six" : "idk";
 
         // long conditional, short consequent/alternate, not chained - do indent after ?
         string storage longConditional = (
@@ -375,29 +375,30 @@ contract Conditional {
     }
 
     function examples2() {
-        string storage message = i % 3 == 0 && i % 5 == 0
-            ? "fizzbuzz"
-            : i % 3 == 0 ? "fizz" : i % 5 == 0 ? "buzz" : String(i);
+        string storage message =
+            i % 3 == 0 && i % 5 == 0 ? "fizzbuzz" : i % 3 == 0 ? "fizz" : i % 5 == 0 ? "buzz" : String(i);
 
-        string storage paymentMessageShort = state == "success"
-            ? "Payment completed successfully"
-            : state == "processing"
-                ? "Payment processing"
-                : state == "invalid_cvc"
-                    ? "There was an issue with your CVC number"
-                    : state == "invalid_expiry"
-                        ? "Expiry must be sometime in the past."
-                        : "There was an issue with the payment.  Please contact support.";
+        string storage paymentMessageShort =
+            state == "success"
+                ? "Payment completed successfully"
+                : state == "processing"
+                    ? "Payment processing"
+                    : state == "invalid_cvc"
+                        ? "There was an issue with your CVC number"
+                        : state == "invalid_expiry"
+                            ? "Expiry must be sometime in the past."
+                            : "There was an issue with the payment.  Please contact support.";
 
-        string storage paymentMessageWithABreak = state == "success"
-            ? "Payment completed successfully"
-            : state == "processing"
-                ? "Payment processing"
-                : state == "invalid_cvc"
-                    ? "There was an issue with your CVC number, and you need to take a prompt action on it."
-                    : state == "invalid_expiry"
-                        ? "Expiry must be sometime in the past."
-                        : "There was an issue with the payment.  Please contact support.";
+        string storage paymentMessageWithABreak =
+            state == "success"
+                ? "Payment completed successfully"
+                : state == "processing"
+                    ? "Payment processing"
+                    : state == "invalid_cvc"
+                        ? "There was an issue with your CVC number, and you need to take a prompt action on it."
+                        : state == "invalid_expiry"
+                            ? "Expiry must be sometime in the past."
+                            : "There was an issue with the payment.  Please contact support.";
 
         string storage typeofExample = definition.encode
             ? definition.encode(

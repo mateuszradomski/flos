@@ -59,14 +59,13 @@ contract FunctionCalls {
         )._hashTypedDataV3(
             keccak256(abi.encode(TYPEHASH, req.from, req.to, req.value, req.gas, req.nonce, keccak256(req.data)))
         ).recover(signature);
-        signer =
-            _hashTypedDataV1(
-                keccak256(abi.encode(TYPEHASH, req.from, req.to, req.value, req.gas, req.nonce, keccak256(req.data)))
-            )._hashTypedDataV2(
-                keccak256(abi.encode(TYPEHASH, req.from, req.to, req.value, req.gas, req.nonce, keccak256(req.data)))
-            )._hashTypedDataV3(
-                keccak256(abi.encode(TYPEHASH, req.from, req.to, req.value, req.gas, req.nonce, keccak256(req.data)))
-            ).recover(signature);
+        signer = _hashTypedDataV1(
+            keccak256(abi.encode(TYPEHASH, req.from, req.to, req.value, req.gas, req.nonce, keccak256(req.data)))
+        )._hashTypedDataV2(
+            keccak256(abi.encode(TYPEHASH, req.from, req.to, req.value, req.gas, req.nonce, keccak256(req.data)))
+        )._hashTypedDataV3(
+            keccak256(abi.encode(TYPEHASH, req.from, req.to, req.value, req.gas, req.nonce, keccak256(req.data)))
+        ).recover(signature);
         return _nonces[req.from] == req.nonce && signer == req.from;
     }
 }
