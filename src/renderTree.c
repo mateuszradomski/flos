@@ -403,6 +403,7 @@ pushCommentsInRange(Render *r, u32 startOffset, u32 endOffset) {
                     };
                     commentEnd = newlineIndex + 1;
                 } else if(input.data[i] == '/' && input.data[i + 1] == '*') {
+                    commentEnd = i + 2;
                     bool isStarAligned = true;
                     bool checkStarAlignment = false;
 
