@@ -321,13 +321,13 @@ contract Conditional {
 
         // Assignment also groups and indents as Variable Declaration:
         assignment =
-        (isAnAdorableKittyCat() && (someReallyLongCondition || moreInThisLongCondition))
-            ? someReallyLargeExpression.thatWouldCauseALineBreak().willCauseAnIndentButNotParens()
-            : (isNotAnAdorableKittyCat() && (someReallyLongCondition || moreInThisLongCondition))
-                ? bark()
-                : shortCondition()
-                    ? shortConsequent()
-                    : someReallyLargeExpression.thatWouldCauseALineBreak().willCauseAnIndentButNotParens();
+            (isAnAdorableKittyCat() && (someReallyLongCondition || moreInThisLongCondition))
+                ? someReallyLargeExpression.thatWouldCauseALineBreak().willCauseAnIndentButNotParens()
+                : (isNotAnAdorableKittyCat() && (someReallyLongCondition || moreInThisLongCondition))
+                    ? bark()
+                    : shortCondition()
+                        ? shortConsequent()
+                        : someReallyLargeExpression.thatWouldCauseALineBreak().willCauseAnIndentButNotParens();
 
         // illustrating case of mostly short conditionals
         string storage mostlyShort = x == 1

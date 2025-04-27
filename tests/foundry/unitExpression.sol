@@ -41,8 +41,8 @@ contract UnitExpression {
         value = someVeryVeryVeryLongVariableNameForTheMultiplierForEtherValue * 1 /* comment1 */ ether; // comment2
 
         value =
-        1 // comment3
-        // comment4
-        ether; // comment5
+            1 // comment3
+            // comment4
+            ether; // comment5
     }
 }

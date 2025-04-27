@@ -853,6 +853,7 @@ pushBinaryExpressionDocument(Render *r, ASTNode *node, TokenId outerOperator) {
 
     if(openGroup || addParens) { pushGroup(r); }
     if(addParens) { pushWord(r, wordText(LIT_TO_STR("("))); }
+
     if(binary->left->type == ASTNodeType_BinaryExpression) {
         pushBinaryExpressionDocument(r, binary->left, binary->operator);
     } else {
@@ -863,12 +864,16 @@ pushBinaryExpressionDocument(Render *r, ASTNode *node, TokenId outerOperator) {
     pushTokenWord(r, binary->right->startToken - 1);
     pushWord(r, wordLine());
 
+    // only indent for the outermost binary expression
+    if(outerOperator == TokenType_None && binary->operator >= TokenType_Equal && binary->operator <= TokenType_PercentEqual) { pushNest(r); }
+
     if(binary->right->type == ASTNodeType_BinaryExpression) {
         pushBinaryExpressionDocument(r, binary->right, binary->operator);
     } else {
         pushExpressionDocument(r, binary->right);
     }
 
+    if(outerOperator == TokenType_None && binary->operator >= TokenType_Equal && binary->operator <= TokenType_PercentEqual) { popNest(r); }
     if(addParens) { pushWord(r, wordText(LIT_TO_STR(")"))); }
     if(openGroup || addParens) { popGroup(r); }
 }
