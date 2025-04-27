@@ -152,6 +152,8 @@ typedef struct TokenizeResult {
     String *tokenStrings;
     u32 count;
     u32 capacity;
+
+    u32 sourceSize;
 } TokenizeResult;
 
 static String
@@ -319,11 +321,12 @@ listGetTokenId(TokenIdList *list, u32 index) {
 }
 
 static TokenizeResult
-allocateTokenSpace(Arena *arena, u32 capacity) {
+allocateTokenSpace(Arena *arena, u32 capacity, u32 sourceSize) {
     TokenizeResult result = {0};
     result.tokenTypes = arrayPush(arena, TokenType, capacity);
     result.tokenStrings = arrayPush(arena, String, capacity);
     result.capacity = capacity;
+    result.sourceSize = capacity;
     return result;
 }
 
@@ -689,7 +692,7 @@ consumeUntilMultilineCommentEnd(ByteConsumer *c) {
 
 static TokenizeResult
 tokenize(String source, Arena *arena) {
-    TokenizeResult result = allocateTokenSpace(arena, source.size);
+    TokenizeResult result = allocateTokenSpace(arena, source.size, source.size);
 
     ByteConsumer c = createByteConsumer(source.data, source.size);
     while(consumerGood(&c)) {

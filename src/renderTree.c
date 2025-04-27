@@ -89,6 +89,23 @@ setIndent(Writer *w, u32 indentCount) {
     w->indentCount = indentCount;
 }
 
+static void
+pushTrailing(Render *r, Word w) {
+    assert(r->trailingCount < ARRAY_LENGTH(r->trailing));
+    r->trailing[r->trailingCount++] = w;
+}
+
+static void
+flushTrailing(Render *r) {
+    for(u32 i = 0; i < r->trailingCount; i++) {
+        Word *out = r->words + r->wordCount++;
+        *out = r->trailing[i];
+        out->group = r->group;
+    }
+
+    r->trailingCount = 0;
+}
+
 enum CommentType {
     CommentType_None,
     CommentType_SingleLine,
@@ -231,27 +248,12 @@ renderDocumentWord(Render *r, Word *word, u32 nest, WordRenderLineType lineType)
 
 static void
 renderDocument(Render *r) {
+    flushTrailing(r);
+
     u32 group = 0;
     u32 nest = 0;
     renderGroup(r, r->words, r->wordCount, group, nest);
     r->wordCount = 0;
-}
-
-static void
-pushTrailing(Render *r, Word w) {
-    assert(r->trailingCount < ARRAY_LENGTH(r->trailing));
-    r->trailing[r->trailingCount++] = w;
-}
-
-static void
-flushTrailing(Render *r) {
-    for(u32 i = 0; i < r->trailingCount; i++) {
-        Word *out = r->words + r->wordCount++;
-        *out = r->trailing[i];
-        out->group = r->group;
-    }
-
-    r->trailingCount = 0;
 }
 
 static void
@@ -518,12 +520,13 @@ pushCommentsInRange(Render *r, u32 startOffset, u32 endOffset) {
 
 static void
 pushCommentsAfterToken(Render *r, TokenId token) {
-    TokenId nextToken = token == r->tokens.count - 1 ? token : token + 1;
-    String next = getTokenString(r->tokens, nextToken);
     String current = getTokenString(r->tokens, token);
 
+    assert(token < r->tokens.count);
+    String next = getTokenString(r->tokens, token + 1);
+
     u32 startOffset = (current.data - r->sourceBaseAddress) + current.size;
-    u32 endOffset = next.data ? next.data - r->sourceBaseAddress : startOffset;
+    u32 endOffset = next.data ? next.data - r->sourceBaseAddress : r->tokens.sourceSize;
 
     pushCommentsInRange(r, startOffset, endOffset);
 }

@@ -395,6 +395,7 @@ UTEST_F(SolFmtFixture, pragmaDirective) { utest_fixture->path = "tests/foundry/p
 UTEST_F(SolFmtFixture, returnStatement) { utest_fixture->path = "tests/foundry/returnStatement.sol"; }
 UTEST_F(SolFmtFixture, revertNamedArgsStatement) { utest_fixture->path = "tests/foundry/revertNamedArgsStatement.sol"; }
 UTEST_F(SolFmtFixture, revertStatement) { utest_fixture->path = "tests/foundry/revertStatement.sol"; }
+UTEST_F(SolFmtFixture, simpleComments) { utest_fixture->path = "tests/foundry/simpleComments.sol"; }
 UTEST_F(SolFmtFixture, statementBlock) { utest_fixture->path = "tests/foundry/statementBlock.sol"; }
 UTEST_F(SolFmtFixture, structDefinition) { utest_fixture->path = "tests/foundry/structDefinition.sol"; }
 UTEST_F(SolFmtFixture, thisExpression) { utest_fixture->path = "tests/foundry/thisExpression.sol"; }
@@ -407,5 +408,6 @@ UTEST_F(SolFmtFixture, variableDefinition) { utest_fixture->path = "tests/foundr
 UTEST_F(SolFmtFixture, whileStatement) { utest_fixture->path = "tests/foundry/whileStatement.sol"; }
 UTEST_F(SolFmtFixture, yul) { utest_fixture->path = "tests/foundry/yul.sol"; }
 UTEST_F(SolFmtFixture, yulStrings) { utest_fixture->path = "tests/foundry/yulStrings.sol"; }
+
 
 UTEST_MAIN();

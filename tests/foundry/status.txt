@@ -38,7 +38,7 @@
 | returnStatement                       |     YES |                                                                    |
 | revertNamedArgsStatement              |     YES |                                          Some things don't compile |
 | revertStatement                       |     YES | Comments are weird, space before revert should be removed if tuple |
-| simpleComments                        |         |                                                                    |
+| simpleComments                        |     YES |                                                                    |
 | sortedImports                         |         |                                                                    |
 | statementBlock                        |     YES |                                                                    |
 | structDefinition                      |     YES |                                                                    |
