@@ -1396,11 +1396,11 @@ pushStatementDocument(Render *r, ASTNode *node) {
             popGroup(r);
 
             pushGroup(r);
-            pushNest(r);
-            pushWord(r, wordLine());
+            pushWord(r, expressionLinkWord(statement->initialValue));
+            addNest(r, expressionNest(statement->initialValue));
             pushExpressionDocument(r, statement->initialValue);
             pushTokenWord(r, node->endToken);
-            popNest(r);
+            addNest(r, -expressionNest(statement->initialValue));
             popGroup(r);
         } break;
         case ASTNodeType_DoWhileStatement: {

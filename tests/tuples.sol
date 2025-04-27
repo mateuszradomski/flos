@@ -48,8 +48,9 @@ contract Tupples {
         (, yo) = demo(_yo).hello();
         (yo,, yo) = demo(_yo).hello3();
         (yo, yo) = demo(_yo).hello();
-        (bool success, bytes memory encodedDecimals) =
-            address(asset_).staticcall(abi.encodeCall(IERC20Metadata.decimals, ()));
+        (bool success, bytes memory encodedDecimals) = address(asset_).staticcall(
+            abi.encodeCall(IERC20Metadata.decimals, ())
+        );
         (
             string memory holderId,
             string memory containerId,
