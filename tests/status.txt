@@ -35,7 +35,7 @@
 | Issues/Issue289.sol                                     |   YES |     YES |                             |
 | Issues/Issue355.sol                                     |   YES |     YES |                             |
 | Issues/Issue385.sol                                     |    NO |      NO |                             |
-| Issues/Issue564.sol                                     |    NO |      NO |                             |
+| Issues/Issue564.sol                                     |   YES |     YES |                             |
 | Issues/Issue799.sol                                     |   YES |     YES |                             |
 | Issues/Issue843.sol                                     |   YES |     YES |                             |
 | Libraries/Libraries.sol                                 |   YES |     YES |                             |
