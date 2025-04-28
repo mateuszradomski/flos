@@ -1018,11 +1018,17 @@ pushExpressionDocument(Render *r, ASTNode *node) {
             assert(stringMatch(LIT_TO_STR("]"), r->tokens.tokenStrings[node->endToken]));
 
             pushExpressionDocument(r, array->expression);
+            pushGroup(r);
+            pushNest(r);
             pushTokenWord(r, array->expression->endToken + 1);
+            pushWord(r, wordSoftline());
             if(array->indexExpression != 0x0) {
                 pushExpressionDocument(r, array->indexExpression);
             }
+            popNest(r);
+            pushWord(r, wordSoftline());
             pushTokenWord(r, node->endToken);
+            popGroup(r);
         } break;
         case ASTNodeType_ArraySliceExpression: {
             ASTNodeArraySliceExpression *array = &node->arraySliceExpressionNode;

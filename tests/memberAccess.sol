@@ -127,29 +127,35 @@ contract MemberAccess {
                 minDestination,
                 path,
                 address(this, aoeu, aoeueu, aoeu)
-            )[IUniswapV2Router(routerAddress).swapExactTokensForTokens(
-                sourceAmount,
-                minDestination,
-                path,
-                address(this, aoeu, aoeueu, aoeu)
-            )];
+            )[
+                IUniswapV2Router(routerAddress).swapExactTokensForTokens(
+                    sourceAmount,
+                    minDestination,
+                    path,
+                    address(this, aoeu, aoeueu, aoeu)
+                )
+            ];
         uint256[] memory amounts =
             IUniswapV2Router(routerAddress).swapExactTokensForTokens(
                 sourceAmount,
                 minDestination,
                 path,
                 address(this, aoeu, aoeueu, aoeu)
-            )[IUniswapV2Router(routerAddress).swapExactTokensForTokens(
-                sourceAmount,
-                minDestination,
-                path,
-                address(this, aoeu, aoeueu, aoeu)
-            )][IUniswapV2Router(routerAddress).swapExactTokensForTokens(
-                sourceAmount,
-                minDestination,
-                path,
-                address(this, aoeu, aoeueu, aoeu)
-            )];
+            )[
+                IUniswapV2Router(routerAddress).swapExactTokensForTokens(
+                    sourceAmount,
+                    minDestination,
+                    path,
+                    address(this, aoeu, aoeueu, aoeu)
+                )
+            ][
+                IUniswapV2Router(routerAddress).swapExactTokensForTokens(
+                    sourceAmount,
+                    minDestination,
+                    path,
+                    address(this, aoeu, aoeueu, aoeu)
+                )
+            ];
         uint256[] memory amounts = IUniswapV2Router(routerAddress).swapExactTokensForTokens(
             sourceAmount,
             minDestination,

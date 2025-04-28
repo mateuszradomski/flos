@@ -32,7 +32,7 @@
 | IndexRangeAccess/IndexRangeAccess.sol                   |   YES |     YES |                             |
 | InheritanceSpecifier/InheritanceSpecifier.sol           |   YES |     YES |                             |
 | Issues/Issue205.sol                                     |   YES |     YES |                             |
-| Issues/Issue289.sol                                     |    NO |      NO |                             |
+| Issues/Issue289.sol                                     |   YES |     YES |                             |
 | Issues/Issue355.sol                                     |   YES |     YES |                             |
 | Issues/Issue385.sol                                     |    NO |      NO |                             |
 | Issues/Issue564.sol                                     |    NO |      NO |                             |
