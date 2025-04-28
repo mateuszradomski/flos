@@ -356,6 +356,7 @@ UTEST_F(SolFmtFixture, mulNoParentheses) { utest_fixture->path = "tests/mulNoPar
 UTEST_F(SolFmtFixture, shiftLNoParentheses) { utest_fixture->path = "tests/shiftLNoParentheses.sol"; }
 UTEST_F(SolFmtFixture, shiftRNoParentheses) { utest_fixture->path = "tests/shiftRNoParentheses.sol"; }
 UTEST_F(SolFmtFixture, subNoParentheses) { utest_fixture->path = "tests/subNoParentheses.sol"; }
+UTEST_F(SolFmtFixture, issue205) { utest_fixture->path = "tests/issue205.sol"; }
 UTEST_F(SolFmtFixture, issue355) { utest_fixture->path = "tests/issue355.sol"; }
 UTEST_F(SolFmtFixture, issue799) { utest_fixture->path = "tests/issue799.sol"; }
 UTEST_F(SolFmtFixture, issue843) { utest_fixture->path = "tests/issue843.sol"; }

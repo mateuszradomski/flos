@@ -31,7 +31,7 @@
 | IndexOf/IndexOf.sol                                     |   YES |     YES |                             |
 | IndexRangeAccess/IndexRangeAccess.sol                   |   YES |     YES |                             |
 | InheritanceSpecifier/InheritanceSpecifier.sol           |   YES |     YES |                             |
-| Issues/Issue205.sol                                     |    NO |      NO |                             |
+| Issues/Issue205.sol                                     |   YES |     YES |                             |
 | Issues/Issue289.sol                                     |    NO |      NO |                             |
 | Issues/Issue355.sol                                     |   YES |     YES |                             |
 | Issues/Issue385.sol                                     |    NO |      NO |                             |

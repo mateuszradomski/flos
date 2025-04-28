@@ -1003,8 +1003,14 @@ pushExpressionDocument(Render *r, ASTNode *node) {
         case ASTNodeType_MemberAccessExpression: {
             ASTNodeMemberAccessExpression *member = &node->memberAccessExpressionNode;
             pushExpressionDocument(r, member->expression);
+            flushTrailing(r); // TODO(radomski): This shouldn't be here?
+            pushGroup(r);
+            pushNest(r);
+            pushWord(r, wordSoftline());
             pushTokenWord(r, member->memberName - 1);
             pushTokenWord(r, member->memberName);
+            popNest(r);
+            popGroup(r);
         } break;
         case ASTNodeType_ArrayAccessExpression: {
             ASTNodeArrayAccessExpression *array = &node->arrayAccessExpressionNode;
