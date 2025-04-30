@@ -17,6 +17,7 @@ contract Constructors is Ownable, Changeable {
 }
 // Above input, below output
 // SPDX-License-Identifier: MIT
+
 pragma solidity ^0.5.2;
 
 // comment block starts here

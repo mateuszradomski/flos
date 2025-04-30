@@ -13,6 +13,7 @@ contract Achievements is IAchievements, SoulBound1155, Ownable {
 }
 // Above input, below output
 // SPDX-License-Identifier: MIT
+
 pragma solidity ^0.5.2;
 
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";

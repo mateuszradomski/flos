@@ -361,15 +361,21 @@ wordEagerBreak(void) {
 
 static void
 preserveHardBreaksIntoDocument(Render *r, ASTNode *node) {
+    flushTrailing(r);
+
     u32 tokenIndex = node->startToken;
 
-    u32 previousTokenIndex = tokenIndex == 0 ? 0 : tokenIndex - 1;
-    String previousToken = r->tokens.tokenStrings[previousTokenIndex];
-    String token = r->tokens.tokenStrings[tokenIndex];
-
     String inBetween = { 0 };
-    inBetween.data = previousToken.data + previousToken.size;
-    inBetween.size = token.data >= inBetween.data ? token.data - inBetween.data : 0;
+    if(tokenIndex == 0) {
+        inBetween.data = r->sourceBaseAddress;
+        inBetween.size = r->tokens.tokenStrings[tokenIndex].data - r->sourceBaseAddress;
+    } else {
+        String token = r->tokens.tokenStrings[tokenIndex];
+        String previousToken = r->tokens.tokenStrings[tokenIndex - 1];
+
+        inBetween.data = previousToken.data + previousToken.size;
+        inBetween.size = token.data >= inBetween.data ? token.data - inBetween.data : 0;
+    }
 
     // TODO(radomski): This shouln't be here
     for(u32 i = 0; inBetween.size > 0 && i < inBetween.size - 1; i++) {
