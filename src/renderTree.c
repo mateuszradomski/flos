@@ -1259,6 +1259,22 @@ pushYulExpressionDocument(Render *r, ASTNode *node) {
     }
 }
 
+static bool
+isYulStatement(ASTNode *node) {
+    return
+        node->type == ASTNodeType_YulBlockStatement ||
+        node->type == ASTNodeType_YulVariableDeclaration ||
+        node->type == ASTNodeType_YulVariableAssignment ||
+        node->type == ASTNodeType_YulIfStatement ||
+        node->type == ASTNodeType_YulForStatement ||
+        node->type == ASTNodeType_YulLeaveStatement ||
+        node->type == ASTNodeType_YulBreakStatement ||
+        node->type == ASTNodeType_YulContinueStatement ||
+        node->type == ASTNodeType_YulFunctionDefinition ||
+        node->type == ASTNodeType_YulSwitchStatement ||
+        node->type == ASTNodeType_YulCaseStatement;
+}
+
 static void
 pushStatementDocument(Render *r, ASTNode *node) {
     switch(node->type) {
@@ -1683,7 +1699,7 @@ pushStatementDocument(Render *r, ASTNode *node) {
                 if(i != 0) { preserveHardBreaksIntoDocument(r, &statement->node); }
 
                 pushStatementDocument(r, &statement->node);
-                pushWord(r, wordHardBreak());
+                pushWord(r, i == 0 && isYulStatement(&statement->node) ? wordLine() : wordHardBreak());
             }
 
             popNest(r);

@@ -786,9 +786,7 @@ library strings {
      */
     function toSlice(string memory self) internal pure returns (slice memory) {
         uint ptr;
-        assembly {
-            ptr := add(self, 0x20)
-        }
+        assembly { ptr := add(self, 0x20) }
         return slice(bytes(self).length, ptr);
     }
 
@@ -857,9 +855,7 @@ library strings {
     function toString(slice memory self) internal pure returns (string memory) {
         string memory ret = new string(self._len);
         uint retptr;
-        assembly {
-            retptr := add(ret, 32)
-        }
+        assembly { retptr := add(ret, 32) }
 
         memcpy(retptr, self._ptr, self._len);
         return ret;
@@ -879,9 +875,7 @@ library strings {
         uint end = ptr + self._len;
         for(l = 0; ptr < end; l++) {
             uint8 b;
-            assembly {
-                b := and(mload(ptr), 0xFF)
-            }
+            assembly { b := and(mload(ptr), 0xFF) }
             if(b < 0x80) {
                 ptr += 1;
             } else if(b < 0xE0) {
@@ -972,9 +966,7 @@ library strings {
         uint l;
         uint b;
         // Load the first byte of the rune into the LSBs of b
-        assembly {
-            b := and(mload(sub(mload(add(self, 32)), 31)), 0xFF)
-        }
+        assembly { b := and(mload(sub(mload(add(self, 32)), 31)), 0xFF) }
         if(b < 0x80) {
             l = 1;
         } else if(b < 0xE0) {
@@ -1024,9 +1016,7 @@ library strings {
         uint divisor = 2 ** 248;
 
         // Load the rune into the MSBs of b
-        assembly {
-            word := mload(mload(add(self, 32)))
-        }
+        assembly { word := mload(mload(add(self, 32))) }
         uint b = word / divisor;
         if(b < 0x80) {
             ret = b;
@@ -1066,9 +1056,7 @@ library strings {
      * @return The hash of the slice.
      */
     function keccak(slice memory self) internal pure returns (bytes32 ret) {
-        assembly {
-            ret := keccak256(mload(add(self, 32)), mload(self))
-        }
+        assembly { ret := keccak256(mload(add(self, 32)), mload(self)) }
     }
 
     /*
@@ -1193,36 +1181,26 @@ library strings {
                 bytes32 mask = bytes32(~(2 ** (8 * (32 - needlelen)) - 1));
 
                 bytes32 needledata;
-                assembly {
-                    needledata := and(mload(needleptr), mask)
-                }
+                assembly { needledata := and(mload(needleptr), mask) }
 
                 uint end = selfptr + selflen - needlelen;
                 bytes32 ptrdata;
-                assembly {
-                    ptrdata := and(mload(ptr), mask)
-                }
+                assembly { ptrdata := and(mload(ptr), mask) }
 
                 while(ptrdata != needledata) {
                     if(ptr >= end) return selfptr + selflen;
                     ptr++;
-                    assembly {
-                        ptrdata := and(mload(ptr), mask)
-                    }
+                    assembly { ptrdata := and(mload(ptr), mask) }
                 }
                 return ptr;
             } else {
                 // For long needles, use hashing
                 bytes32 hash;
-                assembly {
-                    hash := keccak256(needleptr, needlelen)
-                }
+                assembly { hash := keccak256(needleptr, needlelen) }
 
                 for(idx = 0; idx <= selflen - needlelen; idx++) {
                     bytes32 testHash;
-                    assembly {
-                        testHash := keccak256(ptr, needlelen)
-                    }
+                    assembly { testHash := keccak256(ptr, needlelen) }
                     if(hash == testHash) return ptr;
                     ptr += 1;
                 }
@@ -1241,36 +1219,26 @@ library strings {
                 bytes32 mask = bytes32(~(2 ** (8 * (32 - needlelen)) - 1));
 
                 bytes32 needledata;
-                assembly {
-                    needledata := and(mload(needleptr), mask)
-                }
+                assembly { needledata := and(mload(needleptr), mask) }
 
                 ptr = selfptr + selflen - needlelen;
                 bytes32 ptrdata;
-                assembly {
-                    ptrdata := and(mload(ptr), mask)
-                }
+                assembly { ptrdata := and(mload(ptr), mask) }
 
                 while(ptrdata != needledata) {
                     if(ptr <= selfptr) return selfptr;
                     ptr--;
-                    assembly {
-                        ptrdata := and(mload(ptr), mask)
-                    }
+                    assembly { ptrdata := and(mload(ptr), mask) }
                 }
                 return ptr + needlelen;
             } else {
                 // For long needles, use hashing
                 bytes32 hash;
-                assembly {
-                    hash := keccak256(needleptr, needlelen)
-                }
+                assembly { hash := keccak256(needleptr, needlelen) }
                 ptr = selfptr + (selflen - needlelen);
                 while(ptr >= selfptr) {
                     bytes32 testHash;
-                    assembly {
-                        testHash := keccak256(ptr, needlelen)
-                    }
+                    assembly { testHash := keccak256(ptr, needlelen) }
                     if(hash == testHash) return ptr + needlelen;
                     ptr -= 1;
                 }
@@ -1415,9 +1383,7 @@ library strings {
     function concat(slice memory self, slice memory other) internal pure returns (string memory) {
         string memory ret = new string(self._len + other._len);
         uint retptr;
-        assembly {
-            retptr := add(ret, 32)
-        }
+        assembly { retptr := add(ret, 32) }
         memcpy(retptr, self._ptr, self._len);
         memcpy(retptr + self._len, other._ptr, other._len);
         return ret;
@@ -1441,9 +1407,7 @@ library strings {
 
         string memory ret = new string(length);
         uint retptr;
-        assembly {
-            retptr := add(ret, 32)
-        }
+        assembly { retptr := add(ret, 32) }
 
         for(i = 0; i < parts.length; i++) {
             memcpy(retptr, parts[i]._ptr, parts[i]._len);

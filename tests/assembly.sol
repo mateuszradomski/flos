@@ -181,11 +181,7 @@ contract BooleanLiteralsInAssembly {
 // Above input, below output
 contract Assembly {
     function ifAssembly() {
-        assembly {
-            if returndatasize {
-                success := 0
-            }
-        }
+        assembly { if returndatasize { success := 0 } }
     }
 
     function caseAssembly() {
@@ -201,15 +197,7 @@ contract Assembly {
     }
 
     function forAssembly() {
-        assembly {
-            for {
-                let i := 0
-            } lt(i, x) {
-                i := add(i, 1)
-            } {
-                y := mul(2, y)
-            }
-        }
+        assembly { for { let i := 0 } lt(i, x) { i := add(i, 1) } { y := mul(2, y) } }
     }
 
     function callWithComments() {
@@ -223,27 +211,15 @@ contract Assembly {
     }
 
     function assemblyFunctionNoParameters() {
-        assembly {
-            function getAnswer() -> answer {
-                answer := 42
-            }
-        }
+        assembly { function getAnswer() -> answer { answer := 42 } }
     }
 
     function assemblyFunctionOneParameter() {
-        assembly {
-            function inc(x) -> result {
-                result := add(x, 1)
-            }
-        }
+        assembly { function inc(x) -> result { result := add(x, 1) } }
     }
 
     function assemblyFunctionThreeParameters() {
-        assembly {
-            function sum(a, b, c) -> result {
-                result := add(a, add(b, c))
-            }
-        }
+        assembly { function sum(a, b, c) -> result { result := add(a, add(b, c)) } }
     }
 
     function assemblyFunctionLongParameters() {
@@ -254,9 +230,7 @@ contract Assembly {
                 veryLongParameterNames,
                 andItAlsoHasALotOfParameters,
                 soItShouldBeSplitInMultipleLines
-            ) -> result {
-                result := 0
-            }
+            ) -> result { result := 0 }
         }
     }
 
@@ -303,15 +277,11 @@ contract Assembly {
     }
 
     function assemblyFunctionNoReturn() {
-        assembly {
-            function $somefn(somearg) { }
-        }
+        assembly { function $somefn(somearg) { } }
     }
 
     function letWithoutValue() {
-        assembly {
-            let result
-        }
+        assembly { let result }
     }
 
     function memberAccess() {
@@ -330,11 +300,7 @@ contract Assembly {
     }
 
     function withBreak() {
-        assembly {
-            for { } 1 { } {
-                break
-            }
-        }
+        assembly { for { } 1 { } { break } }
     }
 
     function memorySafe() {
@@ -344,18 +310,12 @@ contract Assembly {
 
     function continueAndBreak(uint256 x) public pure returns (uint a, uint b) {
         assembly {
-            for {
-                let i := 0
-            } lt(i, x) {
-                i := add(i, 1)
-            } {
+            for { let i := 0 } lt(i, x) { i := add(i, 1) } {
                 if lt(i, 10) {
                     a := add(a, i)
                     continue
                 }
-                if eq(i, 15) {
-                    break
-                }
+                if eq(i, 15) { break }
 
                 b := i
             }

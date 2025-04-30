@@ -136,7 +136,7 @@ contract Yul {
             val1, val2, val3, val4, val5, val6, val7 := functionThatReturnsSevenValuesAndCanBeUsedInAssignment()
         }
 
-        assembly { a := 1 /* some really really really long comment that should not fit in one line */  }
+        assembly { a := 1 /* some really really really really really really  long comment that should not fit in one line */  }
     }
 }
 // Above input, below output
@@ -284,11 +284,7 @@ contract Yul {
         assembly "evmasm" ("memory-safe") { }
 
         assembly {
-            for {
-                let i := 0
-            } lt(i, 10) {
-                i := add(i, 1)
-            } {
+            for { let i := 0 } lt(i, 10) { i := add(i, 1) } {
                 mstore(i, 7)
             }
 
@@ -315,7 +311,7 @@ contract Yul {
         }
 
         assembly {
-            a := 1 /* some really really really long comment that should not fit in one line */
+            a := 1 /* some really really really really really really  long comment that should not fit in one line */
         }
     }
 }
