@@ -12,6 +12,7 @@ typedef enum WordType {
     WordType_None,
     WordType_Text,
     WordType_Line,
+    WordType_InvertedLine,
     WordType_Space,
     WordType_Softline,
     WordType_Hardline,
@@ -134,7 +135,7 @@ fits(Render *r, Word *words, s32 count, u32 group, u32 remainingWidth) {
             for (s32 j = i; j < count && words[j].group > group; ++j) {
                 if (words[j].type == WordType_Text) {
                     nested_min_width += words[j].text.size;
-                } else if (words[j].type == WordType_Space || words[j].type == WordType_Line) {
+                } else if (words[j].type == WordType_Space || words[j].type == WordType_Line || words[j].type == WordType_InvertedLine) {
                     nested_min_width += 1;
                 }
                 nested_group_words++;
@@ -234,6 +235,14 @@ renderDocumentWord(Render *r, Word *word, u32 nest, WordRenderLineType lineType)
                 case WordRenderLineType_Newline: { finishLine(w); } break;
             }
         } break;
+        case WordType_InvertedLine: {
+            switch (lineType) {
+                case WordRenderLineType_Space: { finishLine(w); } break;
+                case WordRenderLineType_Newline: {
+                    writeString(r->writer, LIT_TO_STR(" "));
+                } break;
+            }
+        } break;
         case WordType_Hardline: { finishLine(w); } break;
         case WordType_GroupPush: { } break;
         case WordType_GroupPop: { } break;
@@ -300,6 +309,7 @@ isWordWhitespace(Word w) {
     return (
         w.type == WordType_Space ||
         w.type == WordType_Line ||
+        w.type == WordType_InvertedLine ||
         w.type == WordType_Softline ||
         w.type == WordType_Hardline
     );
@@ -342,6 +352,11 @@ wordSpace(void) {
 static Word
 wordLine(void) {
     return (Word) { .type = WordType_Line };
+}
+
+static Word
+wordInvertedLine(void) {
+    return (Word) { .type = WordType_InvertedLine };
 }
 
 static void
@@ -1013,6 +1028,8 @@ pushExpressionDocument(Render *r, ASTNode *node) {
             popGroup(r);
         } break;
         case ASTNodeType_ArrayAccessExpression: {
+            // NOTE(radomski): There should be a way in which you can print things from left to right instead of right to left.
+            // This means that the left most array element will break instead of the right most one.
             ASTNodeArrayAccessExpression *array = &node->arrayAccessExpressionNode;
             assert(stringMatch(LIT_TO_STR("["), r->tokens.tokenStrings[array->expression->endToken + 1]));
             assert(stringMatch(LIT_TO_STR("]"), r->tokens.tokenStrings[node->endToken]));
@@ -1570,11 +1587,15 @@ pushStatementDocument(Render *r, ASTNode *node) {
 
             pushWord(r, wordSpace());
             popGroup(r);
+
+            pushGroup(r);
             pushStatementDocument(r, statement->body);
 
             ASTNodeLink *catchLink = statement->catches.head;
             for(u32 i = 0; i < statement->catches.count; i++, catchLink = catchLink->next) {
-                pushWord(r, wordSpace());
+                pushWord(r, wordInvertedLine());
+                popGroup(r);
+
                 ASTNodeCatchStatement *catch = &catchLink->node.catchStatementNode;
                 assert(stringMatch(LIT_TO_STR("catch"), r->tokens.tokenStrings[catchLink->node.startToken]));
 
@@ -1596,6 +1617,10 @@ pushStatementDocument(Render *r, ASTNode *node) {
                 }
 
                 pushWord(r, wordSpace());
+
+                if(i != statement->catches.count - 1) {
+                    pushGroup(r);
+                }
                 pushStatementDocument(r, catch->body);
             }
 

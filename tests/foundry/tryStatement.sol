@@ -80,13 +80,18 @@ contract TryStatement {
     Unknown unknown;
 
     function test() external {
-        try unknown.empty() { } catch { }
+        try unknown.empty() { }
+        catch { }
 
-        try unknown.lookup() returns (uint256) { } catch Error(string memory) { }
+        try unknown.lookup() returns (uint256) { }
+        catch Error(string memory) { }
 
-        try unknown.lookup() returns (uint256) { } catch Error(string memory) { } catch(bytes memory) { }
+        try unknown.lookup() returns (uint256) { }
+        catch Error(string memory) { }
+        catch(bytes memory) { }
 
-        try unknown.lookup() returns (uint256) { } catch(bytes memory) { }
+        try unknown.lookup() returns (uint256) { }
+        catch(bytes memory) { }
 
         try unknown.empty() {
             unknown.doSomething();
@@ -96,11 +101,15 @@ contract TryStatement {
 
         try unknown.empty() {
             unknown.doSomething();
-        } catch Error(string memory) { } catch Panic(uint) { } catch {
+        } catch Error(string memory) { }
+        catch Panic(uint) { }
+        catch {
             unknown.handleError();
         }
 
-        try unknown.lookupMultipleValues() returns (uint256, uint256, uint256, uint256, uint256) { } catch Error(string memory) { } catch { }
+        try unknown.lookupMultipleValues() returns (uint256, uint256, uint256, uint256, uint256) { }
+        catch Error(string memory) { }
+        catch { }
 
         try unknown.lookupMultipleValues() returns (uint256, uint256, uint256, uint256, uint256) {
             unknown.doSomething();
