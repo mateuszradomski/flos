@@ -187,12 +187,8 @@ contract Assembly {
     function caseAssembly() {
         assembly {
             switch value
-            case 0 {
-                mstore(0, 0x0000000000000000000000000000000000000000000000000000000000000000)
-            }
-            case 1 {
-                mstore(0, 0x1111111111111111111111111111111111111111111111111111111111111111)
-            }
+            case 0 { mstore(0, 0x0000000000000000000000000000000000000000000000000000000000000000) }
+            case 1 { mstore(0, 0x1111111111111111111111111111111111111111111111111111111111111111) }
         }
     }
 
@@ -271,9 +267,7 @@ contract Assembly {
     }
 
     function assemblyNoParameterCalls() {
-        assembly {
-            call(gas(), to, value, inputData, inputDataSize, 0, 0)
-        }
+        assembly { call(gas(), to, value, inputData, inputDataSize, 0, 0) }
     }
 
     function assemblyFunctionNoReturn() {

@@ -1259,22 +1259,6 @@ pushYulExpressionDocument(Render *r, ASTNode *node) {
     }
 }
 
-static bool
-isYulStatement(ASTNode *node) {
-    return
-        node->type == ASTNodeType_YulBlockStatement ||
-        node->type == ASTNodeType_YulVariableDeclaration ||
-        node->type == ASTNodeType_YulVariableAssignment ||
-        node->type == ASTNodeType_YulIfStatement ||
-        node->type == ASTNodeType_YulForStatement ||
-        node->type == ASTNodeType_YulLeaveStatement ||
-        node->type == ASTNodeType_YulBreakStatement ||
-        node->type == ASTNodeType_YulContinueStatement ||
-        node->type == ASTNodeType_YulFunctionDefinition ||
-        node->type == ASTNodeType_YulSwitchStatement ||
-        node->type == ASTNodeType_YulCaseStatement;
-}
-
 static void
 pushStatementDocument(Render *r, ASTNode *node) {
     switch(node->type) {
@@ -1699,7 +1683,7 @@ pushStatementDocument(Render *r, ASTNode *node) {
                 if(i != 0) { preserveHardBreaksIntoDocument(r, &statement->node); }
 
                 pushStatementDocument(r, &statement->node);
-                pushWord(r, i == 0 && isYulStatement(&statement->node) ? wordLine() : wordHardBreak());
+                pushWord(r, i == 0 ? wordLine() : wordHardBreak());
             }
 
             popNest(r);
@@ -1871,18 +1855,25 @@ pushStatementDocument(Render *r, ASTNode *node) {
             pushWord(r, wordSpace());
             pushYulExpressionDocument(r, statement->expression);
 
+            Word lineConnecting = wordHardBreak();
             ASTNodeLink *it = statement->cases.head;
             for(u32 i = 0; i < statement->cases.count; i++, it = it->next) {
-                pushWord(r, wordLine());
+                pushWord(r, lineConnecting);
+                if(i > 0) { popGroup(r); }
+                lineConnecting = wordEagerBreak();
+
                 pushTokenWord(r, it->node.yulCaseNode.literal->startToken - 1); // case
                 pushWord(r, wordSpace());
                 pushYulExpressionDocument(r, it->node.yulCaseNode.literal);
                 pushWord(r, wordSpace());
+
+                if(i != statement->cases.count - 1 || statement->defaultBlock != 0x0) { pushGroup(r); }
                 pushStatementDocument(r, it->node.yulCaseNode.block);
             }
 
             if(statement->defaultBlock != 0x0) {
-                pushWord(r, wordLine());
+                pushWord(r, lineConnecting);
+                popGroup(r);
                 pushTokenWord(r, statement->defaultBlock->yulCaseNode.block->startToken - 1); // default
                 pushWord(r, wordSpace());
                 pushStatementDocument(r, statement->defaultBlock->yulCaseNode.block);
