@@ -32,7 +32,7 @@
 | modifierDefinition                    |     YES |                                                                    |
 | namedFunctionCallExpression           |     YES |                                       One expression is not broken |
 | numberLiteralUnderscore               |     YES |                                                                    |
-| operatorExpressions                   |     YES |                                       Nesting of binary expression |
+| operatorExpressions                   |     YES |                                                                    |
 | pragmaDirective                       |     YES |                                                                    |
 | repros                                |     YES |                  Things related to disabling comments are left out |
 | returnStatement                       |     YES |                                                                    |
@@ -50,6 +50,6 @@
 | usingDirective                        |     YES |                                                                    |
 | variableAssignment                    |     YES |                                                                    |
 | variableDefinition                    |     YES |                                                                    |
-| whileStatement                        |     YES |   While and For statements that are inlined (not block statements) |
+| whileStatement                        |     YES |                                                                    |
 | yul                                   |     YES |                                                                    |
 | yulStrings                            |     YES |                            Weird syntax not defined in the grammar |
