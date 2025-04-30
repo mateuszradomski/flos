@@ -396,6 +396,7 @@ UTEST_F(FLOSFixture, namedFunctionCallExpression) { utest_fixture->path = "tests
 UTEST_F(FLOSFixture, numberLiteralUnderscore) { utest_fixture->path = "tests/foundry/numberLiteralUnderscore.sol"; }
 UTEST_F(FLOSFixture, operatorExpressions) { utest_fixture->path = "tests/foundry/operatorExpressions.sol"; }
 UTEST_F(FLOSFixture, pragmaDirective) { utest_fixture->path = "tests/foundry/pragmaDirective.sol"; }
+UTEST_F(FLOSFixture, repros) { utest_fixture->path = "tests/foundry/repros.sol"; }
 UTEST_F(FLOSFixture, returnStatement) { utest_fixture->path = "tests/foundry/returnStatement.sol"; }
 UTEST_F(FLOSFixture, revertNamedArgsStatement) { utest_fixture->path = "tests/foundry/revertNamedArgsStatement.sol"; }
 UTEST_F(FLOSFixture, revertStatement) { utest_fixture->path = "tests/foundry/revertStatement.sol"; }

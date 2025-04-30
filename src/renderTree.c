@@ -1320,8 +1320,12 @@ pushStatementDocument(Render *r, ASTNode *node) {
             pushGroup(r);
             pushNest(r);
             pushTokenWord(r, node->startToken + 1);
+            pushWord(r, wordSoftline());
+            pushGroup(r);
             pushExpressionDocument(r, node->ifStatementNode.conditionExpression);
+            popGroup(r);
             popNest(r);
+            pushWord(r, wordSoftline());
             pushTokenWord(r, node->ifStatementNode.conditionExpression->endToken + 1);
             popGroup(r);
 

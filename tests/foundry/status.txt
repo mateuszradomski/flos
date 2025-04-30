@@ -34,7 +34,7 @@
 | numberLiteralUnderscore               |     YES |                                                                    |
 | operatorExpressions                   |     YES |                                       Nesting of binary expression |
 | pragmaDirective                       |     YES |                                                                    |
-| repros                                |         |                                                                    |
+| repros                                |     YES |                  Things related to disabling comments are left out |
 | returnStatement                       |     YES |                                                                    |
 | revertNamedArgsStatement              |     YES |                                          Some things don't compile |
 | revertStatement                       |     YES | Comments are weird, space before revert should be removed if tuple |

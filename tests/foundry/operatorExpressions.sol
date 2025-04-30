@@ -63,7 +63,8 @@ function test() {
             actionsSold[ActionType.ACCELERATE] + i,
             ACCELERATE_SELL_PER_TICK
         );
-    if(op == 0x54 // SLOAD
+    if(
+        op == 0x54 // SLOAD
         ||
         op == 0x55 // SSTORE
         ||
