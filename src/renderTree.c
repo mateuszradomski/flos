@@ -12,10 +12,10 @@ typedef enum WordType {
     WordType_None,
     WordType_Text,
     WordType_Line,
-    WordType_InvertedLine,
     WordType_Space,
     WordType_Softline,
-    WordType_Hardline,
+    WordType_HardBreak,
+    WordType_EagerBreak,
     WordType_GroupPush,
     WordType_GroupPop,
     WordType_NestPush,
@@ -135,7 +135,7 @@ fits(Render *r, Word *words, s32 count, u32 group, u32 remainingWidth) {
             for (s32 j = i; j < count && words[j].group > group; ++j) {
                 if (words[j].type == WordType_Text) {
                     nested_min_width += words[j].text.size;
-                } else if (words[j].type == WordType_Space || words[j].type == WordType_Line || words[j].type == WordType_InvertedLine) {
+                } else if (words[j].type == WordType_Space || words[j].type == WordType_Line || words[j].type == WordType_EagerBreak) {
                     nested_min_width += 1;
                 }
                 nested_group_words++;
@@ -157,7 +157,7 @@ fits(Render *r, Word *words, s32 count, u32 group, u32 remainingWidth) {
             {
                 width += 1;
             } break;
-            case WordType_Hardline: {
+            case WordType_HardBreak: {
                 return false;
             }
             default: break;
@@ -235,7 +235,7 @@ renderDocumentWord(Render *r, Word *word, u32 nest, WordRenderLineType lineType)
                 case WordRenderLineType_Newline: { finishLine(w); } break;
             }
         } break;
-        case WordType_InvertedLine: {
+        case WordType_EagerBreak: {
             switch (lineType) {
                 case WordRenderLineType_Space: { finishLine(w); } break;
                 case WordRenderLineType_Newline: {
@@ -243,7 +243,7 @@ renderDocumentWord(Render *r, Word *word, u32 nest, WordRenderLineType lineType)
                 } break;
             }
         } break;
-        case WordType_Hardline: { finishLine(w); } break;
+        case WordType_HardBreak: { finishLine(w); } break;
         case WordType_GroupPush: { } break;
         case WordType_GroupPop: { } break;
         case WordType_NestPush: { nest += nestActive; } break;
@@ -309,9 +309,9 @@ isWordWhitespace(Word w) {
     return (
         w.type == WordType_Space ||
         w.type == WordType_Line ||
-        w.type == WordType_InvertedLine ||
+        w.type == WordType_EagerBreak ||
         w.type == WordType_Softline ||
-        w.type == WordType_Hardline
+        w.type == WordType_HardBreak
     );
 }
 
@@ -319,7 +319,7 @@ static void
 pushWord(Render *r, Word w) {
     bool skipPassedWord =
         r->trailingCount > 0 &&
-        r->trailing[r->trailingCount - 1].type == WordType_Hardline &&
+        r->trailing[r->trailingCount - 1].type == WordType_HardBreak &&
         isWordWhitespace(w);
 
     flushTrailing(r);
@@ -335,8 +335,8 @@ wordText(String text) {
 }
 
 static Word
-wordHardline(void) {
-    return (Word) { .type = WordType_Hardline };
+wordHardBreak(void) {
+    return (Word) { .type = WordType_HardBreak };
 }
 
 static Word
@@ -355,12 +355,12 @@ wordLine(void) {
 }
 
 static Word
-wordInvertedLine(void) {
-    return (Word) { .type = WordType_InvertedLine };
+wordEagerBreak(void) {
+    return (Word) { .type = WordType_EagerBreak };
 }
 
 static void
-preserveHardlinesIntoDocument(Render *r, ASTNode *node) {
+preserveHardBreaksIntoDocument(Render *r, ASTNode *node) {
     u32 tokenIndex = node->startToken;
 
     u32 previousTokenIndex = tokenIndex == 0 ? 0 : tokenIndex - 1;
@@ -382,7 +382,7 @@ preserveHardlinesIntoDocument(Render *r, ASTNode *node) {
     for(s32 i = inBetween.size - 1; i >= 0 && isWhitespace(inBetween.data[i]); i--) {
         newlines += inBetween.data[i] == '\n';
         if(newlines == 2) {
-            pushWord(r, wordHardline());
+            pushWord(r, wordHardBreak());
             return;
         }
     }
@@ -453,10 +453,10 @@ pushCommentsInRange(Render *r, u32 startOffset, u32 endOffset) {
                     for(u32 j = cursor; j < commentStart; j++) { preceedingNewlines += input.data[j] == '\n'; }
 
                     if(cursor == 0 && preceedingNewlines >= 2) {
-                        pushTrailing(r, wordHardline());
-                        pushTrailing(r, wordHardline());
+                        pushTrailing(r, wordHardBreak());
+                        pushTrailing(r, wordHardBreak());
                     } else if(preceedingNewlines > 0) {
-                        pushTrailing(r, wordHardline());
+                        pushTrailing(r, wordHardBreak());
                     } else if(cursor == 0) {
                         pushTrailing(r, wordSpace());
                     } else if(commentType != CommentType_SingleLine && previousCommentType != CommentType_SingleLine) {
@@ -470,7 +470,7 @@ pushCommentsInRange(Render *r, u32 startOffset, u32 endOffset) {
                     if(commentType == CommentType_SingleLine) {
                         previousCommentType = commentType;
                         pushTrailing(r, wordText(stringTrim(comment)));
-                        pushTrailing(r, wordHardline());
+                        pushTrailing(r, wordHardBreak());
                     } else if(commentType == CommentType_StarAligned) {
                         previousCommentType = commentType;
                         String line = { .data = comment.data, .size = 0 };
@@ -480,7 +480,7 @@ pushCommentsInRange(Render *r, u32 startOffset, u32 endOffset) {
                                 lineCount += 1;
                                 if(lineCount > 1) { pushTrailing(r, wordSpace()); }
                                 pushTrailing(r, wordText(stringTrim(line)));
-                                pushTrailing(r, wordHardline());
+                                pushTrailing(r, wordHardBreak());
                                 line = (String){ .data = line.data + line.size + 1, .size = 0 };
                             } else {
                                 line.size += 1;
@@ -495,7 +495,7 @@ pushCommentsInRange(Render *r, u32 startOffset, u32 endOffset) {
                         u8 *head = comment.data + comment.size;
                         while(isWhitespace(*head)) {
                             if(*head == '\n') {
-                                pushTrailing(r, wordHardline());
+                                pushTrailing(r, wordHardBreak());
                                 break;
                             }
                             head++;
@@ -507,7 +507,7 @@ pushCommentsInRange(Render *r, u32 startOffset, u32 endOffset) {
                         u8 *head = comment.data + comment.size;
                         while(isWhitespace(*head)) {
                             if(*head == '\n') {
-                                pushTrailing(r, wordHardline());
+                                pushTrailing(r, wordHardBreak());
                                 break;
                             }
                             head++;
@@ -529,7 +529,7 @@ pushCommentsInRange(Render *r, u32 startOffset, u32 endOffset) {
         }
 
         if(cursor != 0 && preceedingNewlines >= 2) {
-            pushTrailing(r, wordHardline());
+            pushTrailing(r, wordHardBreak());
         }
     }
 }
@@ -930,7 +930,7 @@ pushExpressionDocument(Render *r, ASTNode *node) {
 
             for(u32 i = 0; i < expression->values.count; i++) {
                 if(i > 0) {
-                    pushWord(r, wordHardline());
+                    pushWord(r, wordHardBreak());
                 }
 
                 pushWord(r, w);
@@ -1273,10 +1273,10 @@ pushStatementDocument(Render *r, ASTNode *node) {
 
             ASTNodeLink *statement = block->statements.head;
             for(u32 i = 0; i < block->statements.count; i++, statement = statement->next) {
-                if(i != 0) { preserveHardlinesIntoDocument(r, &statement->node); }
+                if(i != 0) { preserveHardBreaksIntoDocument(r, &statement->node); }
 
                 pushStatementDocument(r, &statement->node);
-                pushWord(r, wordHardline());
+                pushWord(r, wordHardBreak());
             }
 
             popNest(r);
@@ -1333,7 +1333,7 @@ pushStatementDocument(Render *r, ASTNode *node) {
             if(!trueStatementIsBlock) { popNest(r); popGroup(r); }
 
             if(node->ifStatementNode.falseStatement) {
-                pushWord(r, trueStatementIsBlock ? wordSpace() : wordHardline());
+                pushWord(r, trueStatementIsBlock ? wordSpace() : wordHardBreak());
 
                 pushTokenWord(r, node->ifStatementNode.falseStatement->startToken - 1);
 
@@ -1593,7 +1593,7 @@ pushStatementDocument(Render *r, ASTNode *node) {
 
             ASTNodeLink *catchLink = statement->catches.head;
             for(u32 i = 0; i < statement->catches.count; i++, catchLink = catchLink->next) {
-                pushWord(r, wordInvertedLine());
+                pushWord(r, wordEagerBreak());
                 popGroup(r);
 
                 ASTNodeCatchStatement *catch = &catchLink->node.catchStatementNode;
@@ -1676,10 +1676,10 @@ pushStatementDocument(Render *r, ASTNode *node) {
 
             ASTNodeLink *statement = block->statements.head;
             for(u32 i = 0; i < block->statements.count; i++, statement = statement->next) {
-                if(i != 0) { preserveHardlinesIntoDocument(r, &statement->node); }
+                if(i != 0) { preserveHardBreaksIntoDocument(r, &statement->node); }
 
                 pushStatementDocument(r, &statement->node);
-                pushWord(r, wordHardline());
+                pushWord(r, wordHardBreak());
             }
 
             popNest(r);
@@ -2042,7 +2042,7 @@ pushMemberDocument(Render *r, ASTNode *member) {
             pushTokenWord(r, member->endToken);
             popGroup(r);
 
-            pushWord(r, wordHardline());
+            pushWord(r, wordHardBreak());
         } break;
         case ASTNodeType_Import: {
             assert(stringMatch(LIT_TO_STR("import"), r->tokens.tokenStrings[member->startToken]));
@@ -2101,7 +2101,7 @@ pushMemberDocument(Render *r, ASTNode *member) {
             pushTokenWord(r, member->endToken);
             popGroup(r);
 
-            pushWord(r, wordHardline());
+            pushWord(r, wordHardBreak());
         } break;
         case ASTNodeType_Using: {
             assert(stringMatch(LIT_TO_STR("using"), r->tokens.tokenStrings[member->startToken]));
@@ -2162,7 +2162,7 @@ pushMemberDocument(Render *r, ASTNode *member) {
             pushTokenWord(r, member->endToken);
             popGroup(r);
 
-            pushWord(r, wordHardline());
+            pushWord(r, wordHardBreak());
         } break;
         case ASTNodeType_EnumDefinition: {
             pushGroup(r);
@@ -2181,14 +2181,14 @@ pushMemberDocument(Render *r, ASTNode *member) {
                     pushTokenWord(r, value + 1);
                 }
 
-                pushWord(r, wordHardline());
+                pushWord(r, wordHardBreak());
             }
             popNest(r);
 
             pushTokenWord(r, member->endToken);
             popGroup(r);
 
-            pushWord(r, wordHardline());
+            pushWord(r, wordHardBreak());
         } break;
         case ASTNodeType_Struct: {
             assert(stringMatch(LIT_TO_STR("{"), r->tokens.tokenStrings[member->startToken + 2]));
@@ -2208,7 +2208,7 @@ pushMemberDocument(Render *r, ASTNode *member) {
             ASTNodeLink *it = list->head;
             for(u32 i = 0; i < list->count; i++, it = it->next) {
                 ASTNodeVariableDeclaration *decl = &it->node.variableDeclarationNode;
-                preserveHardlinesIntoDocument(r, &it->node);
+                preserveHardBreaksIntoDocument(r, &it->node);
 
                 pushGroup(r);
                 pushTypeDocument(r, decl->type);
@@ -2216,7 +2216,7 @@ pushMemberDocument(Render *r, ASTNode *member) {
                 pushWord(r, wordSpace());
                 pushTokenWord(r, decl->name);
                 pushTokenWord(r, decl->name + 1);
-                pushWord(r, wordHardline());
+                pushWord(r, wordHardBreak());
             }
 
             popNest(r);
@@ -2224,7 +2224,7 @@ pushMemberDocument(Render *r, ASTNode *member) {
             pushTokenWord(r, member->endToken);
             popGroup(r);
 
-            pushWord(r, wordHardline());
+            pushWord(r, wordHardBreak());
         } break;
         case ASTNodeType_Error: {
             assert(stringMatch(LIT_TO_STR("error"), r->tokens.tokenStrings[member->startToken]));
@@ -2270,7 +2270,7 @@ pushMemberDocument(Render *r, ASTNode *member) {
             pushTokenWord(r, member->endToken);
             popGroup(r);
 
-            pushWord(r, wordHardline());
+            pushWord(r, wordHardBreak());
         } break;
         case ASTNodeType_Event: {
             assert(stringMatch(LIT_TO_STR("event"), r->tokens.tokenStrings[member->startToken]));
@@ -2323,7 +2323,7 @@ pushMemberDocument(Render *r, ASTNode *member) {
             pushTokenWord(r, member->endToken);
             popGroup(r);
 
-            pushWord(r, wordHardline());
+            pushWord(r, wordHardBreak());
         } break;
         case ASTNodeType_Typedef: {
             ASTNodeTypedef *typedefNode = &member->typedefNode;
@@ -2340,7 +2340,7 @@ pushMemberDocument(Render *r, ASTNode *member) {
             pushTokenWord(r, member->endToken);
             popGroup(r);
 
-            pushWord(r, wordHardline());
+            pushWord(r, wordHardBreak());
         } break;
         case ASTNodeType_ConstVariable: {
             ASTNodeConstVariable *constNode = &member->constVariableNode;
@@ -2367,7 +2367,7 @@ pushMemberDocument(Render *r, ASTNode *member) {
             pushTokenWord(r, member->endToken);
             popGroup(r);
 
-            pushWord(r, wordHardline());
+            pushWord(r, wordHardBreak());
         } break;
         case ASTNodeType_StateVariableDeclaration: {
             ASTNodeConstVariable *decl = &member->constVariableNode;
@@ -2411,7 +2411,7 @@ pushMemberDocument(Render *r, ASTNode *member) {
             pushTokenWord(r, member->endToken);
             popGroup(r);
 
-            pushWord(r, wordHardline());
+            pushWord(r, wordHardBreak());
         } break;
         case ASTNodeType_FallbackFunction:
         case ASTNodeType_ReceiveFunction:
@@ -2509,7 +2509,7 @@ pushMemberDocument(Render *r, ASTNode *member) {
                 popGroup(r);
             }
 
-            pushWord(r, wordHardline());
+            pushWord(r, wordHardBreak());
         } break;
         case ASTNodeType_ConstructorDefinition: {
             ASTNodeConstructorDefinition *constructor = &member->constructorDefinitionNode;
@@ -2555,12 +2555,12 @@ pushMemberDocument(Render *r, ASTNode *member) {
                 popGroup(r);
 
                 pushStatementDocument(r, constructor->body);
-                pushWord(r, wordHardline());
+                pushWord(r, wordHardBreak());
             } else {
                 pushTokenWord(r, member->endToken);
                 popGroup(r);
 
-                pushWord(r, wordHardline());
+                pushWord(r, wordHardBreak());
             }
         } break;
         case ASTNodeType_ModifierDefinition: {
@@ -2601,7 +2601,7 @@ pushMemberDocument(Render *r, ASTNode *member) {
                 pushTokenWord(r, member->endToken);
             }
 
-            pushWord(r, wordHardline());
+            pushWord(r, wordHardBreak());
         } break;
         case ASTNodeType_LibraryDefinition:
         case ASTNodeType_ContractDefinition:
@@ -2668,7 +2668,7 @@ pushMemberDocument(Render *r, ASTNode *member) {
             ASTNodeLink *element = contract->elements.head;
             for(u32 i = 0; i < contract->elements.count; i++, element = element->next) {
                 if(i > 0) {
-                    preserveHardlinesIntoDocument(r, &element->node);
+                    preserveHardBreaksIntoDocument(r, &element->node);
                 }
                 pushMemberDocument(r, &element->node);
             }
@@ -2678,7 +2678,7 @@ pushMemberDocument(Render *r, ASTNode *member) {
             pushTokenWord(r, member->endToken);
             popGroup(r);
             popGroup(r);
-            pushWord(r, wordHardline());
+            pushWord(r, wordHardBreak());
         } break;
         default: {
             assert(0);
@@ -2690,7 +2690,7 @@ static void
 renderSourceUnit(Render *r, ASTNode *tree) {
     ASTNodeLink *child = tree->children.head;
     for(u32 i = 0; i < tree->children.count; i++, child = child->next) {
-        preserveHardlinesIntoDocument(r, &child->node);
+        preserveHardBreaksIntoDocument(r, &child->node);
         pushMemberDocument(r, &child->node);
     }
     renderDocument(r);
