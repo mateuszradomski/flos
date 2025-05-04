@@ -1,55 +1,55 @@
-|                             Test name | Passing |                                                              NOTES |
-|:--------------------------------------|---------|--------------------------------------------------------------------|
-| annotation                            |         |                                                                    |
-| arrayExpressions                      |     YES |                                              Lines longer than 120 |
-| blockComments                         |     YES |                                                                    |
-| blockCommentsFunction                 |     YES |                                                                    |
-| conditionalOperatorExpression         |     YES |         Comment causes additional line breaking which is incorrect |
-| constructorDefinition                 |     YES |                                                                    |
-| constructorModifierStyle              |     YES |                                                                    |
-| contractDefinition                    |     YES |                                                           Comments |
-| doWhileStatement                      |     YES |                                                                    |
-| docComments                           |     YES |                                                                    |
-| emitStatement                         |     YES |                                                                    |
-| enumDefinition                        |     YES |                                                                    |
-| enumVariants                          |     YES |                                                                    |
-| errorDefinition                       |     YES |                                                                    |
-| eventDefinition                       |     YES |                                                                    |
-| forStatement                          |     YES |                                                                    |
-| functionCall                          |     YES |                One line with comment should be broken but it's not |
-| functionCallArgsStatement             |     YES |                                                                    |
-| functionDefinition                    |     YES |                                                                    |
-| functionDefinitionWithFunctionReturns |     YES |                                                                    |
-| functionType                          |     YES |                                                                    |
-| hexUnderscore                         |     YES |                                                                    |
-| ifStatement                           |     YES |                                                                    |
-| ifStatement2                          |     YES |                                                                    |
-| importDirective                       |     YES |                                                                    |
-| inlineDisable                         |         |                                                                    |
-| intTypes                              |     YES |                                                                    |
-| literalExpression                     |     YES |                                                                    |
-| mappingType                           |     YES |                                                                    |
-| modifierDefinition                    |     YES |                                                                    |
-| namedFunctionCallExpression           |     YES |                     One expression is not broken (longer than 120) |
-| numberLiteralUnderscore               |     YES |                                                                    |
-| operatorExpressions                   |     YES |                                                                    |
-| pragmaDirective                       |     YES |                                                                    |
-| repros                                |     YES |                  Things related to disabling comments are left out |
-| returnStatement                       |     YES |                                                                    |
-| revertNamedArgsStatement              |     YES |                                          Some things don't compile |
-| revertStatement                       |     YES | Comments are weird, space before revert should be removed if tuple |
-| simpleComments                        |     YES |                                                                    |
-| sortedImports                         |         |                                                                    |
-| statementBlock                        |     YES |                                                                    |
-| structDefinition                      |     YES |                                                                    |
-| thisExpression                        |     YES |                                                                    |
-| trailingComma                         |         |                                                                    |
-| tryStatement                          |     YES |                                                           Comments |
-| typeDefinition                        |     YES |                                                                    |
-| unitExpression                        |     YES |                                                           Comments |
-| usingDirective                        |     YES |                                                                    |
-| variableAssignment                    |     YES |                                                                    |
-| variableDefinition                    |     YES |                                              Lines longer than 120 |
-| whileStatement                        |     YES |                                                                    |
-| yul                                   |     YES |                                                                    |
-| yulStrings                            |     YES |                            Weird syntax not defined in the grammar |
+|                             Test name | Passing |                                               NOTES |
+|:--------------------------------------|---------|-----------------------------------------------------|
+| annotation                            |         |                                                     |
+| arrayExpressions                      |     YES |                               Lines longer than 120 |
+| blockComments                         |     YES |                                                     |
+| blockCommentsFunction                 |     YES |                                                     |
+| conditionalOperatorExpression         |     YES |                                                     |
+| constructorDefinition                 |     YES |                                                     |
+| constructorModifierStyle              |     YES |                                                     |
+| contractDefinition                    |     YES |                                            Comments |
+| doWhileStatement                      |     YES |                                                     |
+| docComments                           |     YES |                                                     |
+| emitStatement                         |     YES |                                                     |
+| enumDefinition                        |     YES |                                                     |
+| enumVariants                          |     YES |                                                     |
+| errorDefinition                       |     YES |                                                     |
+| eventDefinition                       |     YES |                                                     |
+| forStatement                          |     YES |                                                     |
+| functionCall                          |     YES | One line with comment should be broken but it's not |
+| functionCallArgsStatement             |     YES |                                                     |
+| functionDefinition                    |     YES |                                                     |
+| functionDefinitionWithFunctionReturns |     YES |                                                     |
+| functionType                          |     YES |                                                     |
+| hexUnderscore                         |     YES |                                                     |
+| ifStatement                           |     YES |                                                     |
+| ifStatement2                          |     YES |                                                     |
+| importDirective                       |     YES |                                                     |
+| inlineDisable                         |         |                                                     |
+| intTypes                              |     YES |                                                     |
+| literalExpression                     |     YES |                                                     |
+| mappingType                           |     YES |                                                     |
+| modifierDefinition                    |     YES |                                                     |
+| namedFunctionCallExpression           |     YES |      One expression is not broken (longer than 120) |
+| numberLiteralUnderscore               |     YES |                                                     |
+| operatorExpressions                   |     YES |                                                     |
+| pragmaDirective                       |     YES |                                                     |
+| repros                                |     YES |   Things related to disabling comments are left out |
+| returnStatement                       |     YES |                                                     |
+| revertNamedArgsStatement              |     YES |                           Some things don't compile |
+| revertStatement                       |     YES |                                                     |
+| simpleComments                        |     YES |                                                     |
+| sortedImports                         |         |                                                     |
+| statementBlock                        |     YES |                                                     |
+| structDefinition                      |     YES |                                                     |
+| thisExpression                        |     YES |                                                     |
+| trailingComma                         |         |                                                     |
+| tryStatement                          |     YES |                                            Comments |
+| typeDefinition                        |     YES |                                                     |
+| unitExpression                        |     YES |                                            Comments |
+| usingDirective                        |     YES |                                                     |
+| variableAssignment                    |     YES |                                                     |
+| variableDefinition                    |     YES |                               Lines longer than 120 |
+| whileStatement                        |     YES |                                                     |
+| yul                                   |     YES |                                                     |
+| yulStrings                            |     YES |             Weird syntax not defined in the grammar |

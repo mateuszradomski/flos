@@ -966,8 +966,8 @@ pushExpressionDocument(Render *r, ASTNode *node) {
 
             pushGroup(r);
             pushTokenWord(r, node->startToken);
-            pushWord(r, wordSoftline());
             pushNest(r);
+            pushWord(r, wordSoftline());
             ASTNodeLink *element = tuple->elements.head;
             pushGroup(r);
             for(u32 i = 0; i < tuple->elements.count; i++, element = element->next) {
@@ -1546,7 +1546,9 @@ pushStatementDocument(Render *r, ASTNode *node) {
 
             pushGroup(r);
             pushTokenWord(r, node->startToken);
-            pushWord(r, wordSpace());
+            if(statement->expression->type != ASTNodeType_TupleExpression) {
+                pushWord(r, wordSpace());
+            }
             pushExpressionDocument(r, statement->expression);
             pushTokenWord(r, node->endToken);
             popGroup(r);

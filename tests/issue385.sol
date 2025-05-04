@@ -18,7 +18,7 @@ contract Issue385 {
         catch Error(string memory error) {
             error.revertWithInfo("BService.delegatecall.assign:");
         } catch {
-            revert ("BService.delegatecall.assign:undefined");
+            revert("BService.delegatecall.assign:undefined");
         }
     }
 }
