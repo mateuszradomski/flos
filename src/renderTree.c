@@ -2514,14 +2514,14 @@ pushMemberDocument(Render *r, ASTNode *member) {
                 popGroup(r);
             }
 
-            popNest(r);
-
             if(function->body != 0x0) {
                 pushWord(r, wordLine());
+                popNest(r);
                 popGroup(r);
                 popGroup(r);
                 pushStatementDocument(r, function->body);
             } else {
+                popNest(r);
                 pushTokenWord(r, member->endToken);
                 popGroup(r);
                 popGroup(r);

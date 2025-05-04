@@ -7,7 +7,7 @@
 | conditionalOperatorExpression         |     YES |                                                     |
 | constructorDefinition                 |     YES |                                                     |
 | constructorModifierStyle              |     YES |                                                     |
-| contractDefinition                    |     YES |                                            Comments |
+| contractDefinition                    |     YES |                                                     |
 | doWhileStatement                      |     YES |                                                     |
 | docComments                           |     YES |                                                     |
 | emitStatement                         |     YES |                                                     |
