@@ -39,19 +39,7 @@ int main(int argCount, char **args) {
         filepath = args[1];
     }
 
-    FILE *fd = fopen(filepath, "rb");
-    fseek(fd, 0L, SEEK_END);
-    u32 contentLength = ftell(fd);
-
-    fseek(fd, 0L, SEEK_SET);
-    u8 *content = arrayPush(&arena, u8, contentLength + 1);
-
-    for(u32 i = 0; i < contentLength; i++) {
-        content[i] = 0xaa;
-    }
-    int readBytes = fread(content, contentLength, 1, fd);
-    fclose(fd);
-    content[contentLength] = 0;
+    char *content = readFile(&arena, filepath);
 
     size_t memoryUsed = arenaFreeBytes(&arena);
     String contentString = (String) { .data = content, .size = contentLength };

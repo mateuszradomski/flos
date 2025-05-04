@@ -186,21 +186,21 @@ static MemoryCursorNode *
 arenaNewNode(Arena *arena, size_t size) {
     MemoryCursorNode *result = 0x0;
     size = MAX(arena->chunkSize, size);
-    
+
 #ifdef WASM
     void *memory = (u8 *)malloc(size + sizeof(MemoryCursorNode));
 #else
     void *memory = (u8 *)calloc(1, size + sizeof(MemoryCursorNode));
 #endif
     assert(memory);
-    
+
     result = (MemoryCursorNode *)memory;
-    
+
     result->cursor.basePointer = (u8 *)memory + sizeof(MemoryCursorNode);
     result->cursor.cursorPointer = result->cursor.basePointer;
     result->cursor.size = size;
     SLL_STACK_PUSH(arena->cursorNode, result);
-    
+
     return result;
 }
 
@@ -266,14 +266,14 @@ arenaDestroy(Arena *arena) {
             if(toDestroy) {
                 cursorDestroy(&toDestroy->cursor);
             }
-            
+
             toDestroy = cursorNode;
         }
-        
+
         if(toDestroy) {
             cursorDestroy(&toDestroy->cursor);
         }
-        
+
         arena->cursorNode = 0x0;
     }
 }
@@ -301,40 +301,40 @@ cursorClear(MemoryCursor *cursor, u8 clearTo) {
 static Arena
 arenaCreateZeros(size_t size, size_t chunkSize, size_t alignment) {
     Arena result = {};
-    
+
     result = arenaCreate(size, chunkSize, alignment);
     cursorClear(&result.cursorNode->cursor, 0);
-    
+
     return result;
 }
 
 static void *
 arenaPush(Arena *arena, size_t size) {
     void *result = 0x0;
-    
+
     assert(arena);
-    
+
     if(size) {
         MemoryCursorNode *cursorNode = arena->cursorNode;
         if(!cursorNode) {
             cursorNode = arenaNewNode(arena, size);
         }
-        
+
         MemoryCursor *cursor = &cursorNode->cursor;
         size_t bytesLeft = cursorFreeBytes(cursor);
         // Calculates how many bytes we need to add to be aligned on the 16 bytes.
         size_t paddingNeeded = (0x10 - ((size_t)cursor->cursorPointer & 0xf)) & 0xf;
-        
+
         if(size + paddingNeeded > bytesLeft) {
             cursorNode = arenaNewNode(arena, size + paddingNeeded);
             cursor = &cursorNode->cursor;
         }
-        
+
         cursor->cursorPointer += paddingNeeded;
         result = cursor->cursorPointer;
         cursor->cursorPointer += size;
     }
-    
+
     return result;
 }
 
@@ -485,12 +485,12 @@ stringUnixLines(String a){
 static SplitIterator
 stringSplit(String string, char delim) {
     SplitIterator it = { };
-    
+
     it.string = (char *)string.data;
     it.strLength = string.size;
     it.head = (char *)string.data;
     it.delim = delim;
-    
+
     return it;
 }
 
@@ -550,9 +550,9 @@ stringToInteger(String string) {
 static String
 stringNextInSplit(SplitIterator *it) {
     String result = { };
-    
+
     size_t readLength = (size_t)(it->head - it->string);
-    
+
     if(readLength < it->strLength) {
         char *head = it->head;
         result.data = (u8 *)head;
@@ -561,7 +561,7 @@ stringNextInSplit(SplitIterator *it) {
             head++;
             result.size += 1;
         }
-        
+
         if(head[0] == it->delim) {
             head++;
         }
@@ -569,7 +569,7 @@ stringNextInSplit(SplitIterator *it) {
     } else {
         result.data = 0x0;
     }
-    
+
     return result;
 }
 
@@ -583,7 +583,7 @@ stringConsumeIteratorIntoString(SplitIterator it)
 
     result.data = (u8 *)it.head;
     result.size = toRead;
-    
+
     return result;
 }
 
@@ -947,3 +947,106 @@ listGetU16(U16List *list, u32 index) {
     return bucket->values[index % ARRAY_LENGTH(bucket->values)];
 }
 
+static u8 *
+readFile(Arena *arena, char *path) {
+    FILE *fd = fopen(path, "rb");
+    fseek(fd, 0L, SEEK_END);
+    u32 contentLength = ftell(fd);
+
+    fseek(fd, 0L, SEEK_SET);
+    u8 *content = arrayPush(arena, u8, contentLength + 1);
+
+    for(u32 i = 0; i < contentLength; i++) {
+        content[i] = 0xaa;
+    }
+    int readBytes = fread(content, contentLength, 1, fd);
+    fclose(fd);
+    content[contentLength] = 0;
+
+    return content;
+}
+
+typedef struct Buffer {
+    u8 *data;
+    size_t size;
+    size_t capacity;
+} Buffer;
+
+typedef struct ByteConcatenator {
+    Buffer buffers[32];
+    u32 bufferCount;
+    u32 activeBuffer;
+    u32 capacity;
+    Arena *arena;
+} ByteConcatenator;
+
+static ByteConcatenator
+byteConcatenatorInit(Arena *arena, u32 capacity) {
+    return (ByteConcatenator){
+        .arena = arena,
+        .capacity = capacity,
+        .activeBuffer = ((u32)-1)
+    };
+}
+
+static void
+byteConcatenatorPush(ByteConcatenator *c) {
+    u8 *data = arrayPush(c->arena, u8, c->capacity);
+
+    c->buffers[c->bufferCount++] = (Buffer){ .data = data, .size = 0, .capacity = c->capacity };
+    c->activeBuffer += 1;
+}
+
+static Buffer *
+byteConcatenatorGetCurrentBuffer(ByteConcatenator *c) {
+    if(c->activeBuffer == -1) {
+        return 0x0;
+    }
+
+    return c->buffers + c->activeBuffer;
+}
+
+static void
+byteConcatenatorPushBytes(ByteConcatenator *c, u8 *bytes, u32 count) {
+    assert(count < c->capacity);
+
+    Buffer *buffer = byteConcatenatorGetCurrentBuffer(c);
+    if(buffer == 0x0 || buffer->size + count >= buffer->capacity) {
+        byteConcatenatorPush(c);
+        buffer = byteConcatenatorGetCurrentBuffer(c);
+    }
+
+    u8 *ptr = (buffer->data + buffer->size);
+    memcpy(ptr, bytes, count);
+    buffer->size += count;
+}
+
+static void
+byteConcatenatorPushString(ByteConcatenator *c, String str) {
+    byteConcatenatorPushBytes(c, str.data, str.size);
+}
+
+static Buffer
+byteConcatenatorFinish(ByteConcatenator *c) {
+    if(c->bufferCount == 1) {
+        return byteConcatenatorGetCurrentBuffer(c)[0];
+    }
+
+    u32 totalMemoryUsed = 0;
+    for(u32 i = 0; i < c->bufferCount; i++) {
+        totalMemoryUsed += c->buffers[i].capacity;
+    }
+
+    u8 *data = arrayPush(c->arena, u8, totalMemoryUsed);
+    u8 *head = data;
+    u32 outputSize = 0;
+    for(u32 i = 0; i < c->bufferCount; i++) {
+        u32 count = c->buffers[i].size;
+        outputSize += count;
+
+        memcpy(head, c->buffers[i].data, count);
+        head += count;
+    }
+
+    return (Buffer) { .data = data, .size = outputSize };
+}

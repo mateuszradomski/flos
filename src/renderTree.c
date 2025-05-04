@@ -262,7 +262,6 @@ renderDocument(Render *r) {
     u32 group = 0;
     u32 nest = 0;
     renderGroup(r, r->words, r->wordCount, group, nest);
-    r->wordCount = 0;
 }
 
 static void
@@ -2714,6 +2713,132 @@ renderSourceUnit(Render *r, ASTNode *tree) {
 }
 
 static String
+wordTypeToString(WordType type) {
+    switch(type) {
+        case WordType_None: return LIT_TO_STR("None");
+        case WordType_Text: return LIT_TO_STR("Text");
+        case WordType_Line: return LIT_TO_STR("Line");
+        case WordType_Space: return LIT_TO_STR("Space");
+        case WordType_Softline: return LIT_TO_STR("Softline");
+        case WordType_HardBreak: return LIT_TO_STR("HardBreak");
+        case WordType_EagerBreak: return LIT_TO_STR("EagerBreak");
+        case WordType_GroupPush: return LIT_TO_STR("GroupPush");
+        case WordType_GroupPop: return LIT_TO_STR("GroupPop");
+        case WordType_NestPush: return LIT_TO_STR("NestPush");
+        case WordType_NestPop: return LIT_TO_STR("NestPop");
+        case WordType_Count: return LIT_TO_STR("Count");
+    }
+}
+
+static String
+stringEscape(Arena *arena, String string) {
+    String escaped = stringPush(arena, string.size * 2);
+    u32 newSize = 0;
+    for(u32 i = 0; i < string.size; i++) {
+        char c = string.data[i];
+        if(c == '"' || c == '\\') {
+            escaped.data[newSize] = '\\';
+            newSize += 1;
+        }
+        escaped.data[newSize] = c;
+        newSize += 1;
+    }
+
+    escaped.size = newSize;
+    return escaped;
+}
+
+static void
+openDebugElement(ByteConcatenator *c, String label) {
+    String prefixStart = LIT_TO_STR("{\"text\": \"");
+    String prefixEnd = LIT_TO_STR("\",");
+    byteConcatenatorPushString(c, prefixStart);
+
+    String labelEscaped = stringEscape(c->arena, label);
+    byteConcatenatorPushString(c, labelEscaped);
+
+    byteConcatenatorPushString(c, prefixEnd);
+}
+
+static void
+openDebugElementChildren(ByteConcatenator *c) {
+    String prefix = LIT_TO_STR("\"children\": [");
+    byteConcatenatorPushString(c, prefix);
+}
+
+static void
+closeDebugElementChildren(ByteConcatenator *c) {
+    String suffix = LIT_TO_STR("],");
+    byteConcatenatorPushString(c, suffix);
+}
+
+static void
+closeDebugElement(ByteConcatenator *c) {
+    String suffix = LIT_TO_STR("},");
+    byteConcatenatorPushString(c, suffix);
+}
+
+static u32
+documentGroupIntoDebug(ByteConcatenator *c, Word *words, s32 count, u32 group) {
+    u32 processed = 0;
+    for (u32 i = 0; i < (u32)count && words[i].group >= group;) {
+        Word *word = &words[i];
+
+        if (word->group > group) {
+            openDebugElement(c, LIT_TO_STR("Group"));
+            openDebugElementChildren(c);
+            u32 sub_processed = documentGroupIntoDebug(c, words + i, count - i, group + 1);
+            closeDebugElementChildren(c);
+            closeDebugElement(c);
+
+            i += sub_processed;
+            processed += sub_processed;
+        } else {
+            if(word->type == WordType_GroupPush || word->type == WordType_GroupPop) {
+            } else if(word->type == WordType_Text) {
+                openDebugElement(c, word->text);
+                closeDebugElement(c);
+            } else {
+                openDebugElement(c, wordTypeToString(word->type));
+                closeDebugElement(c);
+            }
+
+            i++;
+            processed++;
+        }
+    }
+    return processed;
+}
+
+static void
+documentIntoDebug(Render *r, ByteConcatenator *c) {
+    byteConcatenatorPushString(c, LIT_TO_STR("["));
+    documentGroupIntoDebug(c, r->words, r->wordCount, 0);
+    byteConcatenatorPushString(c, LIT_TO_STR("]"));
+}
+
+static void
+dumpDocument(Render *r, Arena *arena) {
+    const char *flag = getenv("DDOC");
+    if (!(flag && strcmp(flag, "1") == 0)) return;
+
+    char *prefix = (char *)readFile(arena, "misc/top.html");
+    char *suffix = (char *)readFile(arena, "misc/bottom.html");
+
+    FILE *fd = fopen("output.html", "wb");
+
+    ByteConcatenator c = byteConcatenatorInit(arena, 1 * Megabyte);
+    documentIntoDebug(r, &c);
+    Buffer output = byteConcatenatorFinish(&c);
+
+    fwrite(prefix, 1, strlen(prefix), fd);
+    fwrite(output.data, 1, output.size, fd);
+    fwrite(suffix, 1, strlen(suffix), fd);
+
+    fclose(fd);
+}
+
+static String
 renderTree(Arena *arena, ASTNode tree, String originalSource, TokenizeResult tokens) {
     Writer writer = {
         .data = arrayPush(arena, u8, originalSource.size * 4),
@@ -2721,7 +2846,6 @@ renderTree(Arena *arena, ASTNode tree, String originalSource, TokenizeResult tok
         .capacity = originalSource.size * 4 ,
         .indentSize = 4,
     };
-
 
     u32 scratchBufferCapacity = 8 * Megabyte;
     Render render = {
@@ -2742,5 +2866,8 @@ renderTree(Arena *arena, ASTNode tree, String originalSource, TokenizeResult tok
     u32 startOfTokens = tokens.tokenStrings[tree.startToken].data - originalSource.data;
     pushCommentsInRange(&render, 0, startOfTokens);
     renderSourceUnit(&render, &tree);
+
+    dumpDocument(&render, arena);
+
     return (String){ .data = writer.data, .size = writer.size };
 }

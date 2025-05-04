@@ -1,0 +1,13 @@
+
+                    ,'themes': { 'responsive': true }
+                },
+                'plugins': ['state', 'wholerow']
+            });
+
+            $('#tree-container').on('changed.jstree', function (e, data) {
+                console.log('Selected node: ' + data.instance.get_node(data.selected[0]).text);
+            });
+        });
+    </script>
+</body>
+</html>

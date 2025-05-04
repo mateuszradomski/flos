@@ -1,9 +1,3 @@
-typedef struct Buffer {
-    u8 *data;
-    size_t size;
-    size_t capacity;
-} Buffer;
-
 typedef struct Serializer {
     Arena *arena;
     TokenizeResult tokens;
