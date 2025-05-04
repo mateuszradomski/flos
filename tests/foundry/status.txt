@@ -44,9 +44,9 @@
 | structDefinition                      |     YES |                                                     |
 | thisExpression                        |     YES |                                                     |
 | trailingComma                         |         |                                                     |
-| tryStatement                          |     YES |                                            Comments |
+| tryStatement                          |     YES |                                                     |
 | typeDefinition                        |     YES |                                                     |
-| unitExpression                        |     YES |                                            Comments |
+| unitExpression                        |     YES |                                                     |
 | usingDirective                        |     YES |                                                     |
 | variableAssignment                    |     YES |                                                     |
 | variableDefinition                    |     YES |                               Lines longer than 120 |
