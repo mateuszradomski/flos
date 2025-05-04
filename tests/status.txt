@@ -68,7 +68,7 @@
 | StateVariableDeclarations/StateVariableDeclarations.sol |   YES |     YES |                             |
 | StringLiteral/StringLiteral.sol                         |   YES |     YES |                             |
 | StyleGuide/BlankLines.sol                               |   YES |     YES |                             |
-| StyleGuide/ControlStructures.sol                        |   YES |     YES |   Some commented from start |
+| StyleGuide/ControlStructures.sol                        |   YES |     YES |                             |
 | StyleGuide/FunctionDeclaration.sol                      |   YES |     YES |                             |
 | StyleGuide/Mappings.sol                                 |   YES |     YES |                             |
 | StyleGuide/MaximumLineLength.sol                        |   YES |     YES |                             |
