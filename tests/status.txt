@@ -7,8 +7,8 @@
 | Assembly/Assembly.sol                                   |   YES |     YES |                                 |
 | AssemblyV0.4.26/Assembly.sol                            |    NO |     NO! |          I can't parse this yet |
 | BasicIterator/BasicIterator.sol                         |   YES |     YES |                                 |
-| BinaryOperators/BinaryOperators.sol                     |   YES |     YES |                        Not 100% |
-| BinaryOperators/Parentheses.sol                         |   YES |     YES |     Not 100%, manually modified |
+| BinaryOperators/BinaryOperators.sol                     |   YES |     YES |                                 |
+| BinaryOperators/Parentheses.sol                         |   YES |     YES |                                 |
 | BreakingChangesV0.7.4/BreakingChangesV0.7.4.sol         |   YES |     YES |                                 |
 | BreakingChangesV0.8.0/BreakingChangesV0.8.0.sol         |   YES |     YES |                                 |
 | Comments/Comments.sol                                   |   YES |     YES |                                 |
