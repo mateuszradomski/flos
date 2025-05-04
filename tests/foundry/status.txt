@@ -1,7 +1,7 @@
 |                             Test name | Passing |                                                              NOTES |
 |:--------------------------------------|---------|--------------------------------------------------------------------|
 | annotation                            |         |                                                                    |
-| arrayExpressions                      |     YES |                                                                    |
+| arrayExpressions                      |     YES |                                              Lines longer than 120 |
 | blockComments                         |     YES |                                                                    |
 | blockCommentsFunction                 |     YES |                                                                    |
 | conditionalOperatorExpression         |     YES |         Comment causes additional line breaking which is incorrect |
@@ -30,7 +30,7 @@
 | literalExpression                     |     YES |                                                                    |
 | mappingType                           |     YES |                                                                    |
 | modifierDefinition                    |     YES |                                                                    |
-| namedFunctionCallExpression           |     YES |                                       One expression is not broken |
+| namedFunctionCallExpression           |     YES |                     One expression is not broken (longer than 120) |
 | numberLiteralUnderscore               |     YES |                                                                    |
 | operatorExpressions                   |     YES |                                                                    |
 | pragmaDirective                       |     YES |                                                                    |
@@ -49,7 +49,7 @@
 | unitExpression                        |     YES |                                                           Comments |
 | usingDirective                        |     YES |                                                                    |
 | variableAssignment                    |     YES |                                                                    |
-| variableDefinition                    |     YES |                                                                    |
+| variableDefinition                    |     YES |                                              Lines longer than 120 |
 | whileStatement                        |     YES |                                                                    |
 | yul                                   |     YES |                                                                    |
 | yulStrings                            |     YES |                            Weird syntax not defined in the grammar |
