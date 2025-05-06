@@ -1,8 +1,9 @@
-#include "utest.h"
+#include "munit.h"
 #include "format.c"
 
 #include <sys/ioctl.h>
 #include <unistd.h>
+#include <glob.h>
 
 #define ANSI_RED   "\x1b[31m"
 #define ANSI_GREEN "\x1b[32m"
@@ -253,166 +254,51 @@ showDifferences(Arena *arena, String result, String expected) {
     }
 }
 
-struct FLOSFixture{
-  char *path;
-};
+static MunitResult
+testFormat(const MunitParameter params[], void* userData) {
+    char *path = params[0].value;
 
-UTEST_F_SETUP(FLOSFixture) { }
-
-UTEST_F_TEARDOWN(FLOSFixture) {
     Arena arena = arenaCreate(1024*1024, 4096, 32);
-    TestData data = readTestInput(&arena, utest_fixture->path);
+    TestData data = readTestInput(&arena, path);
 
     String result = stringTrim(format(&arena, data.input));
 
     showDifferences(&arena, result, data.output);
-    ASSERT_TRUE(stringMatch(result, data.output));
+    munit_assert_true(stringMatch(result, data.output));
 
     String result2 = stringTrim(format(&arena, result));
-    ASSERT_TRUE_MSG(stringMatch(result2, result), "Formatting is not stable");
+    munit_assert_true(stringMatch(result2, result));
     arenaDestroy(&arena);
+
+    return MUNIT_OK;
 }
 
-UTEST_F(FLOSFixture, structs) { utest_fixture->path = "tests/prettier/structs.sol"; }
-UTEST_F(FLOSFixture, enums) { utest_fixture->path = "tests/prettier/enums.sol"; }
-UTEST_F(FLOSFixture, addressPayable) { utest_fixture->path = "tests/prettier/addressPayable.sol"; }
-UTEST_F(FLOSFixture, basicIterator) { utest_fixture->path = "tests/prettier/basicIterator.sol"; }
-UTEST_F(FLOSFixture, breakingChangesV0_8_0) { utest_fixture->path = "tests/prettier/breakingChangesV0.8.0.sol"; }
-UTEST_F(FLOSFixture, customErrors) { utest_fixture->path = "tests/prettier/customErrors.sol"; }
-UTEST_F(FLOSFixture, enumsBigger) { utest_fixture->path = "tests/prettier/enumsBigger.sol"; }
-UTEST_F(FLOSFixture, hashLiteral) { utest_fixture->path = "tests/prettier/hashLiteral.sol"; }
-UTEST_F(FLOSFixture, immutable) { utest_fixture->path = "tests/prettier/immutable.sol"; }
-UTEST_F(FLOSFixture, indexRangeAccess) { utest_fixture->path = "tests/prettier/indexRangeAccess.sol"; }
-UTEST_F(FLOSFixture, modifierDefinitions) { utest_fixture->path = "tests/prettier/modifierDefinitions.sol"; }
-UTEST_F(FLOSFixture, modifierInvocations) { utest_fixture->path = "tests/prettier/modifierInvocations.sol"; }
-UTEST_F(FLOSFixture, numberLiteral) { utest_fixture->path = "tests/prettier/numberLiteral.sol"; }
-UTEST_F(FLOSFixture, pragma) { utest_fixture->path = "tests/prettier/pragma.sol"; }
-UTEST_F(FLOSFixture, simpleAuction) { utest_fixture->path = "tests/prettier/simpleAuction.sol"; }
-UTEST_F(FLOSFixture, simpleStorage) { utest_fixture->path = "tests/prettier/simpleStorage.sol"; }
-UTEST_F(FLOSFixture, blanklines) { utest_fixture->path = "tests/prettier/blanklines.sol"; }
-UTEST_F(FLOSFixture, typeDefinitions) { utest_fixture->path = "tests/prettier/typeDefinitions.sol"; }
-UTEST_F(FLOSFixture, operators) { utest_fixture->path = "tests/prettier/operators.sol"; }
-UTEST_F(FLOSFixture, comments) { utest_fixture->path = "tests/prettier/comments.sol"; }
-UTEST_F(FLOSFixture, imports) { utest_fixture->path = "tests/prettier/imports.sol"; }
-UTEST_F(FLOSFixture, blockComments) { utest_fixture->path = "tests/prettier/blockComments.sol"; }
-UTEST_F(FLOSFixture, constructorModifier) { utest_fixture->path = "tests/prettier/constructorModifier.sol"; }
-UTEST_F(FLOSFixture, using) { utest_fixture->path = "tests/prettier/using.sol"; }
-UTEST_F(FLOSFixture, typedefs) { utest_fixture->path = "tests/prettier/typedef.sol"; }
-UTEST_F(FLOSFixture, constVar) { utest_fixture->path = "tests/prettier/constVar.sol"; }
-UTEST_F(FLOSFixture, constVarBreaking) { utest_fixture->path = "tests/prettier/constVarBreaking.sol"; }
-UTEST_F(FLOSFixture, arrays) { utest_fixture->path = "tests/prettier/arrays.sol"; }
-UTEST_F(FLOSFixture, inbox) { utest_fixture->path = "tests/prettier/inbox.sol"; }
-UTEST_F(FLOSFixture, libraries) { utest_fixture->path = "tests/prettier/libraries.sol"; }
-UTEST_F(FLOSFixture, ownable) { utest_fixture->path = "tests/prettier/ownable.sol"; }
-UTEST_F(FLOSFixture, styleGuideMappings) { utest_fixture->path = "tests/prettier/styleGuideMappings.sol"; }
-UTEST_F(FLOSFixture, binaryOperators) { utest_fixture->path = "tests/prettier/binaryOperators.sol"; }
-UTEST_F(FLOSFixture, conditional) { utest_fixture->path = "tests/prettier/conditional.sol"; }
-UTEST_F(FLOSFixture, constructors) { utest_fixture->path = "tests/prettier/constructors.sol"; }
-UTEST_F(FLOSFixture, contractDefinition) { utest_fixture->path = "tests/prettier/contractDefinition.sol"; }
-UTEST_F(FLOSFixture, etc) { utest_fixture->path = "tests/prettier/etc.sol"; }
-UTEST_F(FLOSFixture, forStatement) { utest_fixture->path = "tests/prettier/forStatement.sol"; }
-UTEST_F(FLOSFixture, functionDefinitions) { utest_fixture->path = "tests/prettier/functionDefinitions.sol"; }
-UTEST_F(FLOSFixture, functionDefinitions_v0_5_0) { utest_fixture->path = "tests/prettier/functionDefinitions_v0_5_0.sol"; }
-UTEST_F(FLOSFixture, indexOf) { utest_fixture->path = "tests/prettier/indexOf.sol"; }
-UTEST_F(FLOSFixture, inheritanceSpecifier) { utest_fixture->path = "tests/prettier/inheritanceSpecifier.sol"; }
-UTEST_F(FLOSFixture, memberAccess) { utest_fixture->path = "tests/prettier/memberAccess.sol"; }
-UTEST_F(FLOSFixture, nameValueExpression) { utest_fixture->path = "tests/prettier/nameValueExpression.sol"; }
-UTEST_F(FLOSFixture, sampleCrowdSale) { utest_fixture->path = "tests/prettier/sampleCrowdSale.sol"; }
-UTEST_F(FLOSFixture, splittableCommodity) { utest_fixture->path = "tests/prettier/splittableCommodity.sol"; }
-UTEST_F(FLOSFixture, stateVariableDeclarations) { utest_fixture->path = "tests/prettier/stateVariableDeclarations.sol"; }
-UTEST_F(FLOSFixture, tuples) { utest_fixture->path = "tests/prettier/tuples.sol"; }
-UTEST_F(FLOSFixture, whileStatements) { utest_fixture->path = "tests/prettier/whileStatements.sol"; }
-UTEST_F(FLOSFixture, tryCatch) { utest_fixture->path = "tests/prettier/tryCatch.sol"; }
-UTEST_F(FLOSFixture, binaryOperationGroup) { utest_fixture->path = "tests/prettier/binaryOperationGroup.sol"; }
-UTEST_F(FLOSFixture, binaryOperationIndent) { utest_fixture->path = "tests/prettier/binaryOperationIndent.sol"; }
-UTEST_F(FLOSFixture, experimentalTerneries) { utest_fixture->path = "tests/prettier/experimentalTerneries.sol"; }
-UTEST_F(FLOSFixture, functionCalls) { utest_fixture->path = "tests/prettier/functionCalls.sol"; }
-UTEST_F(FLOSFixture, ifStatements) { utest_fixture->path = "tests/prettier/ifStatements.sol"; }
-UTEST_F(FLOSFixture, assembly) { utest_fixture->path = "tests/prettier/assembly.sol"; }
-UTEST_F(FLOSFixture, allFeatures) { utest_fixture->path = "tests/prettier/allFeatures.sol"; }
-UTEST_F(FLOSFixture, proxy) { utest_fixture->path = "tests/prettier/proxy.sol"; }
-UTEST_F(FLOSFixture, controlStructures) { utest_fixture->path = "tests/prettier/controlStructures.sol"; }
-UTEST_F(FLOSFixture, whitespaceInExpression) { utest_fixture->path = "tests/prettier/whitespaceInExpression.sol"; }
-UTEST_F(FLOSFixture, stringLiteral) { utest_fixture->path = "tests/prettier/stringLiteral.sol"; }
-UTEST_F(FLOSFixture, multipartStrings) { utest_fixture->path = "tests/prettier/multipartStrings.sol"; }
-UTEST_F(FLOSFixture, hexLiteral) { utest_fixture->path = "tests/prettier/hexLiteral.sol"; }
-UTEST_F(FLOSFixture, quotes) { utest_fixture->path = "tests/prettier/quotes.sol"; }
-UTEST_F(FLOSFixture, strings) { utest_fixture->path = "tests/prettier/strings.sol"; }
-UTEST_F(FLOSFixture, allFeaturesV0_4_26) { utest_fixture->path = "tests/prettier/allFeaturesV0_4_26.sol"; }
-UTEST_F(FLOSFixture, breakingChangesV0_7_4) { utest_fixture->path = "tests/prettier/breakingChangesV0.7.4.sol"; }
-UTEST_F(FLOSFixture, wrongCompiler) { utest_fixture->path = "tests/prettier/wrongCompiler.sol"; }
-UTEST_F(FLOSFixture, otherRecommendations) { utest_fixture->path = "tests/prettier/otherRecommendations.sol"; }
-UTEST_F(FLOSFixture, maximumLineLength) { utest_fixture->path = "tests/prettier/maximumLineLength.sol"; }
-UTEST_F(FLOSFixture, functionDeclaration) { utest_fixture->path = "tests/prettier/functionDeclaration.sol"; }
-UTEST_F(FLOSFixture, addNoParentheses) { utest_fixture->path = "tests/prettier/addNoParentheses.sol"; }
-UTEST_F(FLOSFixture, bitAndNoParentheses) { utest_fixture->path = "tests/prettier/bitAndNoParentheses.sol"; }
-UTEST_F(FLOSFixture, bitOrNoParentheses) { utest_fixture->path = "tests/prettier/bitOrNoParentheses.sol"; }
-UTEST_F(FLOSFixture, bitXorNoParentheses) { utest_fixture->path = "tests/prettier/bitXorNoParentheses.sol"; }
-UTEST_F(FLOSFixture, divNoParentheses) { utest_fixture->path = "tests/prettier/divNoParentheses.sol"; }
-UTEST_F(FLOSFixture, expNoParentheses) { utest_fixture->path = "tests/prettier/expNoParentheses.sol"; }
-UTEST_F(FLOSFixture, logicNoParentheses) { utest_fixture->path = "tests/prettier/logicNoParentheses.sol"; }
-UTEST_F(FLOSFixture, modNoParentheses) { utest_fixture->path = "tests/prettier/modNoParentheses.sol"; }
-UTEST_F(FLOSFixture, mulNoParentheses) { utest_fixture->path = "tests/prettier/mulNoParentheses.sol"; }
-UTEST_F(FLOSFixture, shiftLNoParentheses) { utest_fixture->path = "tests/prettier/shiftLNoParentheses.sol"; }
-UTEST_F(FLOSFixture, shiftRNoParentheses) { utest_fixture->path = "tests/prettier/shiftRNoParentheses.sol"; }
-UTEST_F(FLOSFixture, subNoParentheses) { utest_fixture->path = "tests/prettier/subNoParentheses.sol"; }
-UTEST_F(FLOSFixture, issue205) { utest_fixture->path = "tests/prettier/issue205.sol"; }
-UTEST_F(FLOSFixture, issue289) { utest_fixture->path = "tests/prettier/issue289.sol"; }
-UTEST_F(FLOSFixture, issue355) { utest_fixture->path = "tests/prettier/issue355.sol"; }
-UTEST_F(FLOSFixture, issue385) { utest_fixture->path = "tests/prettier/issue385.sol"; }
-UTEST_F(FLOSFixture, issue564) { utest_fixture->path = "tests/prettier/issue564.sol"; }
-UTEST_F(FLOSFixture, issue799) { utest_fixture->path = "tests/prettier/issue799.sol"; }
-UTEST_F(FLOSFixture, issue843) { utest_fixture->path = "tests/prettier/issue843.sol"; }
+int main (int argc, const char* argv[]) {
+    glob_t prettierFiles = { 0 };
+    glob_t foundryFiles = { 0 };
+    assert(glob("./tests/prettier/*.sol", 0, 0x0, &prettierFiles) == 0);
+    assert(glob("./tests/foundry/*.sol", 0, 0x0, &foundryFiles) == 0);
 
-UTEST_F(FLOSFixture, arrayExpressions) { utest_fixture->path = "tests/foundry/arrayExpressions.sol"; }
-UTEST_F(FLOSFixture, blockCommentsFoundry) { utest_fixture->path = "tests/foundry/blockComments.sol"; }
-UTEST_F(FLOSFixture, blockCommentsFunctionFoundry) { utest_fixture->path = "tests/foundry/blockCommentsFunction.sol"; }
-UTEST_F(FLOSFixture, conditionalOperatorExpression) { utest_fixture->path = "tests/foundry/conditionalOperatorExpression.sol"; }
-UTEST_F(FLOSFixture, constructorDefinition) { utest_fixture->path = "tests/foundry/constructorDefinition.sol"; }
-UTEST_F(FLOSFixture, constructorModifierStyle) { utest_fixture->path = "tests/foundry/constructorModifierStyle.sol"; }
-UTEST_F(FLOSFixture, contractDefinitionFoundry) { utest_fixture->path = "tests/foundry/contractDefinition.sol"; }
-UTEST_F(FLOSFixture, doWhileStatement) { utest_fixture->path = "tests/foundry/doWhileStatement.sol"; }
-UTEST_F(FLOSFixture, docComments) { utest_fixture->path = "tests/foundry/docComments.sol"; }
-UTEST_F(FLOSFixture, emitStatement) { utest_fixture->path = "tests/foundry/emitStatement.sol"; }
-UTEST_F(FLOSFixture, enumDefinition) { utest_fixture->path = "tests/foundry/enumDefinition.sol"; }
-UTEST_F(FLOSFixture, enumVariants) { utest_fixture->path = "tests/foundry/enumVariants.sol"; }
-UTEST_F(FLOSFixture, errorDefinition) { utest_fixture->path = "tests/foundry/errorDefinition.sol"; }
-UTEST_F(FLOSFixture, eventDefinition) { utest_fixture->path = "tests/foundry/eventDefinition.sol"; }
-UTEST_F(FLOSFixture, forStatementFoundry) { utest_fixture->path = "tests/foundry/forStatement.sol"; }
-UTEST_F(FLOSFixture, functionCallFoundry) { utest_fixture->path = "tests/foundry/functionCall.sol"; }
-UTEST_F(FLOSFixture, functionCallArgsStatement) { utest_fixture->path = "tests/foundry/functionCallArgsStatement.sol"; }
-UTEST_F(FLOSFixture, functionDefinitionFoundry) { utest_fixture->path = "tests/foundry/functionDefinition.sol"; }
-UTEST_F(FLOSFixture, functionDefinitionWithFunctionReturns) { utest_fixture->path = "tests/foundry/functionDefinitionWithFunctionReturns.sol"; }
-UTEST_F(FLOSFixture, functionType) { utest_fixture->path = "tests/foundry/functionType.sol"; }
-UTEST_F(FLOSFixture, hexUnderscore) { utest_fixture->path = "tests/foundry/hexUnderscore.sol"; }
-UTEST_F(FLOSFixture, ifStatement) { utest_fixture->path = "tests/foundry/ifStatement.sol"; }
-UTEST_F(FLOSFixture, ifStatement2) { utest_fixture->path = "tests/foundry/ifStatement2.sol"; }
-UTEST_F(FLOSFixture, importDirective) { utest_fixture->path = "tests/foundry/importDirective.sol"; }
-UTEST_F(FLOSFixture, intTypes) { utest_fixture->path = "tests/foundry/intTypes.sol"; }
-UTEST_F(FLOSFixture, literalExpression) { utest_fixture->path = "tests/foundry/literalExpression.sol"; }
-UTEST_F(FLOSFixture, mappingType) { utest_fixture->path = "tests/foundry/mappingType.sol"; }
-UTEST_F(FLOSFixture, modifierDefinitionFoundry) { utest_fixture->path = "tests/foundry/modifierDefinition.sol"; }
-UTEST_F(FLOSFixture, namedFunctionCallExpression) { utest_fixture->path = "tests/foundry/namedFunctionCallExpression.sol"; }
-UTEST_F(FLOSFixture, numberLiteralUnderscore) { utest_fixture->path = "tests/foundry/numberLiteralUnderscore.sol"; }
-UTEST_F(FLOSFixture, operatorExpressions) { utest_fixture->path = "tests/foundry/operatorExpressions.sol"; }
-UTEST_F(FLOSFixture, pragmaDirective) { utest_fixture->path = "tests/foundry/pragmaDirective.sol"; }
-UTEST_F(FLOSFixture, repros) { utest_fixture->path = "tests/foundry/repros.sol"; }
-UTEST_F(FLOSFixture, returnStatement) { utest_fixture->path = "tests/foundry/returnStatement.sol"; }
-UTEST_F(FLOSFixture, revertNamedArgsStatement) { utest_fixture->path = "tests/foundry/revertNamedArgsStatement.sol"; }
-UTEST_F(FLOSFixture, revertStatement) { utest_fixture->path = "tests/foundry/revertStatement.sol"; }
-UTEST_F(FLOSFixture, simpleComments) { utest_fixture->path = "tests/foundry/simpleComments.sol"; }
-UTEST_F(FLOSFixture, statementBlock) { utest_fixture->path = "tests/foundry/statementBlock.sol"; }
-UTEST_F(FLOSFixture, structDefinition) { utest_fixture->path = "tests/foundry/structDefinition.sol"; }
-UTEST_F(FLOSFixture, thisExpression) { utest_fixture->path = "tests/foundry/thisExpression.sol"; }
-UTEST_F(FLOSFixture, tryStatement) { utest_fixture->path = "tests/foundry/tryStatement.sol"; }
-UTEST_F(FLOSFixture, typeDefinition) { utest_fixture->path = "tests/foundry/typeDefinition.sol"; }
-UTEST_F(FLOSFixture, unitExpression) { utest_fixture->path = "tests/foundry/unitExpression.sol"; }
-UTEST_F(FLOSFixture, usingDirective) { utest_fixture->path = "tests/foundry/usingDirective.sol"; }
-UTEST_F(FLOSFixture, variableAssignment) { utest_fixture->path = "tests/foundry/variableAssignment.sol"; }
-UTEST_F(FLOSFixture, variableDefinition) { utest_fixture->path = "tests/foundry/variableDefinition.sol"; }
-UTEST_F(FLOSFixture, whileStatement) { utest_fixture->path = "tests/foundry/whileStatement.sol"; }
-UTEST_F(FLOSFixture, yul) { utest_fixture->path = "tests/foundry/yul.sol"; }
-UTEST_F(FLOSFixture, yulStrings) { utest_fixture->path = "tests/foundry/yulStrings.sol"; }
+    char **paths = calloc(sizeof(char *), prettierFiles.gl_pathc + foundryFiles.gl_pathc + 1);
+    for(int i = 0; i < prettierFiles.gl_pathc; i++) {
+        paths[i] = prettierFiles.gl_pathv[i];
+    }
+    for(int i = 0; i < foundryFiles.gl_pathc; i++) {
+        paths[i + prettierFiles.gl_pathc] = foundryFiles.gl_pathv[i];
+    }
+    paths[prettierFiles.gl_pathc + foundryFiles.gl_pathc] = 0;
 
+    MunitParameterEnum test_params[] = {
+        { "path", paths },
+        { NULL, NULL },
+    };
 
-UTEST_MAIN();
+    MunitTest tests[] = {
+        { (char*) "/format", testFormat, NULL, NULL, MUNIT_TEST_OPTION_NONE, test_params },
+        { NULL, NULL, NULL, NULL, MUNIT_TEST_OPTION_NONE, NULL }
+    };
+
+    MunitSuite suite = { "/flos", tests, NULL, 1, MUNIT_SUITE_OPTION_NONE };
+
+  return munit_suite_main(&suite, NULL, argc, (char **)argv);
+}
