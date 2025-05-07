@@ -276,17 +276,22 @@ testFormat(const MunitParameter params[], void* userData) {
 int main (int argc, const char* argv[]) {
     glob_t prettierFiles = { 0 };
     glob_t foundryFiles = { 0 };
+    glob_t flosFiles = { 0 };
     assert(glob("./tests/prettier/*.sol", 0, 0x0, &prettierFiles) == 0);
     assert(glob("./tests/foundry/*.sol", 0, 0x0, &foundryFiles) == 0);
+    assert(glob("./tests/flos/*.sol", 0, 0x0, &flosFiles) == 0);
 
-    char **paths = calloc(sizeof(char *), prettierFiles.gl_pathc + foundryFiles.gl_pathc + 1);
+    char **paths = calloc(sizeof(char *), prettierFiles.gl_pathc + foundryFiles.gl_pathc + flosFiles.gl_pathc + 1);
     for(int i = 0; i < prettierFiles.gl_pathc; i++) {
         paths[i] = prettierFiles.gl_pathv[i];
     }
     for(int i = 0; i < foundryFiles.gl_pathc; i++) {
         paths[i + prettierFiles.gl_pathc] = foundryFiles.gl_pathv[i];
     }
-    paths[prettierFiles.gl_pathc + foundryFiles.gl_pathc] = 0;
+    for(int i = 0; i < flosFiles.gl_pathc; i++) {
+        paths[i + prettierFiles.gl_pathc + foundryFiles.gl_pathc] = flosFiles.gl_pathv[i];
+    }
+    paths[prettierFiles.gl_pathc + foundryFiles.gl_pathc + flosFiles.gl_pathc] = 0;
 
     MunitParameterEnum test_params[] = {
         { "path", paths },
