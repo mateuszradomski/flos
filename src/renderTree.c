@@ -747,6 +747,7 @@ pushTypeDocument(Render *r, ASTNode *node) {
             pushTokenWord(r, node->startToken);
 
             pushGroup(r);
+            pushGroup(r);
             pushTokenWord(r, node->startToken + 1);
             pushWord(r, wordSoftline());
             pushNest(r);
@@ -763,30 +764,31 @@ pushTypeDocument(Render *r, ASTNode *node) {
             popGroup(r);
 
             if(node->functionTypeNode.visibility != INVALID_TOKEN_ID) {
-                pushWord(r, wordSpace());
+                pushWord(r, wordLine());
                 pushTokenWord(r, node->functionTypeNode.visibility);
             }
             if(node->functionTypeNode.stateMutability != INVALID_TOKEN_ID) {
-                pushWord(r, wordSpace());
+                pushWord(r, wordLine());
                 pushTokenWord(r, node->functionTypeNode.stateMutability);
             }
 
             if(node->functionTypeNode.returnParameters.count > 0) {
                 pushWord(r, wordLine());
-                assert(stringMatch(LIT_TO_STR("returns"), r->tokens.tokenStrings[node->functionTypeNode.returnParameters.head->node.endToken - 2]));
-                assert(stringMatch(LIT_TO_STR("("), r->tokens.tokenStrings[node->functionTypeNode.returnParameters.head->node.endToken - 1]));
+                assert(stringMatch(LIT_TO_STR("returns"), r->tokens.tokenStrings[node->functionTypeNode.returnParameters.head->node.startToken - 2]));
+                assert(stringMatch(LIT_TO_STR("("), r->tokens.tokenStrings[node->functionTypeNode.returnParameters.head->node.startToken - 1]));
                 assert(stringMatch(LIT_TO_STR(")"), r->tokens.tokenStrings[node->functionTypeNode.returnParameters.last->node.endToken + 1]));
 
                 pushGroup(r);
-                pushTokenWord(r, node->functionTypeNode.returnParameters.head->node.endToken - 2);
+                pushTokenWord(r, node->functionTypeNode.returnParameters.head->node.startToken - 2);
                 pushWord(r, wordSpace());
-                pushTokenWord(r, node->functionTypeNode.returnParameters.head->node.endToken - 1);
+                pushTokenWord(r, node->functionTypeNode.returnParameters.head->node.startToken - 1);
                 pushNest(r);
                 pushParametersDocument(r, &node->functionTypeNode.returnParameters);
                 popNest(r);
                 pushTokenWord(r, node->functionTypeNode.returnParameters.last->node.endToken + 1);
                 popGroup(r);
             }
+            popGroup(r);
 
             // assert(false);
         } break;
