@@ -1082,19 +1082,21 @@ pushExpressionDocument(Render *r, ASTNode *node) {
             pushWord(r, wordSoftline());
             pushNest(r);
 
+            pushGroup(r);
             ASTNodeLink *expression = array->expressions.head;
             for(u32 i = 0; i < array->expressions.count; i++, expression = expression->next) {
                 pushExpressionDocument(r, &expression->node);
                 if(i < array->expressions.count - 1) {
                     assert(stringMatch(LIT_TO_STR(","), r->tokens.tokenStrings[expression->node.endToken + 1]));
                     pushTokenWord(r, expression->node.endToken + 1);
-                }
 
-                Word whitespace = i < array->expressions.count - 1 ? wordLine() : wordSoftline();
-                pushWord(r, whitespace);
+                    pushWord(r, wordLine());
+                }
             }
+            popGroup(r);
 
             popNest(r);
+            pushWord(r, wordSoftline());
             pushTokenWord(r, node->endToken);
             popGroup(r);
         } break;

@@ -22,7 +22,7 @@ contract ArrayExpressions {
             : /* comment2 */ msg.data.length // comment3
             ];
         msg.data[
-        // comment4 
+        // comment4
         4 // comment5
         :msg.data.length /* comment6 */];
 
@@ -38,11 +38,11 @@ contract ArrayExpressions {
         uint256 someVeryVeryLongVariableName = 0;
         [someVeryVeryLongVariableName, someVeryVeryLongVariableName, someVeryVeryLongVariableName];
         uint256[3] memory literal = [someVeryVeryLongVariableName,someVeryVeryLongVariableName,someVeryVeryLongVariableName];
-        
-        uint8[3] memory literal2 = /* comment7 */ [ // comment8 
+
+        uint8[3] memory literal2 = /* comment7 */ [ // comment8
         1, 2, /* comment9 */ 3 // comment10
         ];
-        uint256[1] memory literal3 = [ /* comment11 */ someVeryVeryLongVariableName /* comment13 */]; 
+        uint256[1] memory literal3 = [ /* comment11 */ someVeryVeryLongVariableName /* comment13 */];
     }
 }
 // Above input, below output
@@ -84,15 +84,11 @@ contract ArrayExpressions {
         uint256 someVeryVeryLongVariableName = 0;
         [someVeryVeryLongVariableName, someVeryVeryLongVariableName, someVeryVeryLongVariableName];
         uint256[3] memory literal = [
-            someVeryVeryLongVariableName,
-            someVeryVeryLongVariableName,
-            someVeryVeryLongVariableName
+            someVeryVeryLongVariableName, someVeryVeryLongVariableName, someVeryVeryLongVariableName
         ];
 
         uint8[3] memory literal2 = /* comment7 */ [ // comment8
-            1,
-            2, /* comment9 */
-            3 // comment10
+            1, 2, /* comment9 */ 3 // comment10
         ];
         uint256[1] memory literal3 = [ /* comment11 */someVeryVeryLongVariableName /* comment13 */];
     }
