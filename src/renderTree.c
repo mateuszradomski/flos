@@ -1014,8 +1014,8 @@ pushExpressionDocument(Render *r, ASTNode *node) {
         case ASTNodeType_FunctionCallExpression: {
             ASTNodeFunctionCallExpression *function = &node->functionCallExpressionNode;
 
-            pushGroup(r);
             pushExpressionDocument(r, function->expression);
+            pushGroup(r);
             pushCallArgumentListDocument(r, function->expression->endToken + 1, &function->argumentsExpression, &function->argumentsName);
             popGroup(r);
         } break;
@@ -1380,10 +1380,10 @@ pushStatementDocument(Render *r, ASTNode *node) {
                 assert(stringMatch(LIT_TO_STR("="), r->tokens.tokenStrings[statement->initialValue->startToken - 1]));
 
                 pushTokenWord(r, statement->initialValue->startToken - 1);
-                pushWord(r, expressionLinkWord(statement->initialValue));
 
-                addNest(r, expressionNest(statement->initialValue));
                 pushGroup(r);
+                addNest(r, expressionNest(statement->initialValue));
+                pushWord(r, expressionLinkWord(statement->initialValue));
                 pushExpressionDocument(r, statement->initialValue);
                 popGroup(r);
                 addNest(r, -expressionNest(statement->initialValue));
@@ -1438,8 +1438,8 @@ pushStatementDocument(Render *r, ASTNode *node) {
             popGroup(r);
 
             pushGroup(r);
-            pushWord(r, expressionLinkWord(statement->initialValue));
             addNest(r, expressionNest(statement->initialValue));
+            pushWord(r, expressionLinkWord(statement->initialValue));
             pushExpressionDocument(r, statement->initialValue);
             pushTokenWord(r, node->endToken);
             addNest(r, -expressionNest(statement->initialValue));
@@ -2378,10 +2378,10 @@ pushMemberDocument(Render *r, ASTNode *member) {
             pushTokenWord(r, constNode->identifier);
             pushWord(r, wordSpace());
             pushTokenWord(r, constNode->identifier + 1);
-            pushWord(r, expressionLinkWord(constNode->expression));
 
-            addNest(r, expressionNest(constNode->expression));
             pushGroup(r);
+            addNest(r, expressionNest(constNode->expression));
+            pushWord(r, expressionLinkWord(constNode->expression));
             pushExpressionDocument(r, constNode->expression);
             popGroup(r);
             addNest(r, -expressionNest(constNode->expression));
@@ -2416,14 +2416,14 @@ pushMemberDocument(Render *r, ASTNode *member) {
             popGroup(r);
 
             if(decl->expression) {
-                addNest(r, expressionNest(decl->expression));
 
                 assert(stringMatch(LIT_TO_STR("="), r->tokens.tokenStrings[decl->identifier + 1]));
                 pushWord(r, wordSpace());
                 pushTokenWord(r, decl->identifier + 1);
-                pushWord(r, expressionLinkWord(decl->expression));
 
                 pushGroup(r);
+                addNest(r, expressionNest(decl->expression));
+                pushWord(r, expressionLinkWord(decl->expression));
                 pushExpressionDocument(r, decl->expression);
                 popGroup(r);
 
