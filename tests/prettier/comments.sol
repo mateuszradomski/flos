@@ -256,18 +256,18 @@ contract Comments13 {
         // comment 1
         modifier1 // comment 2
         (
-        // comment 3
+            // comment 3
         ) // comment 4
         // comment 5
         modifier2 // comment 6
         (
-        /* comment 7 */
+            /* comment 7 */
         ) // comment 8
         modifier3 // comment 9
         (
-        // comment 10
-        param1 // comment 11
-        // comment 12
+            // comment 10
+            param1 // comment 11
+            // comment 12
         ) // comment 13
     { }
 }

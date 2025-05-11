@@ -7,7 +7,20 @@ contract ConstructorBreaking {
         uint256 _minOwners,
         uint256 _thresholdPercentage,
         address _fallbackOwner
-    ) {
+    )
+        FaultDisputeGame(
+            _gameType,
+            _absolutePrestate,
+            _maxGameDepth,
+            _splitDepth,
+            _clockExtension,
+            _maxClockDuration,
+            _vm,
+            _weth,
+            _anchorStateRegistry,
+            _l2ChainId
+        )
+    {
         SAFE = _safe;
         LIVENESS_GUARD = _livenessGuard;
         LIVENESS_INTERVAL = _livenessInterval;
@@ -30,7 +43,20 @@ contract ConstructorBreaking {
         uint256 _minOwners,
         uint256 _thresholdPercentage,
         address _fallbackOwner
-    ) {
+    )
+        FaultDisputeGame(
+            _gameType,
+            _absolutePrestate,
+            _maxGameDepth,
+            _splitDepth,
+            _clockExtension,
+            _maxClockDuration,
+            _vm,
+            _weth,
+            _anchorStateRegistry,
+            _l2ChainId
+        )
+    {
         SAFE = _safe;
         LIVENESS_GUARD = _livenessGuard;
         LIVENESS_INTERVAL = _livenessInterval;

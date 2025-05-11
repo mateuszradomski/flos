@@ -622,8 +622,14 @@ pushCallArgumentListDocument(Render *r, TokenId startingToken, ASTNodeListRanged
     }
     pushNest(r);
 
+    Word whitespace = names->count == 0 ? wordSoftline() : wordLine();
     if(names->count == 0) {
-        pushWord(r, wordSoftline());
+        if(expressions->count == 0) {
+            whitespace = (Word){ .type = WordType_None };
+        }
+
+        pushWord(r, whitespace);
+
         ASTNodeLink *argument = expressions->head;
         for(u32 i = 0; i < expressions->count; i++, argument = argument->next) {
             pushExpressionDocument(r, &argument->node);
@@ -634,7 +640,7 @@ pushCallArgumentListDocument(Render *r, TokenId startingToken, ASTNodeListRanged
             }
         }
     } else {
-        pushWord(r, wordLine());
+        pushWord(r, whitespace);
         ASTNodeLink *argument = expressions->head;
         assert(names->count == expressions->count);
         for(u32 i = 0; i < expressions->count; i++, argument = argument->next) {
@@ -662,12 +668,11 @@ pushCallArgumentListDocument(Render *r, TokenId startingToken, ASTNodeListRanged
         endToken = startingToken + 1;
     }
 
+    pushWord(r, whitespace);
     if(names->count > 0) {
-        pushWord(r, wordLine());
         popNest(r);
         pushTokenWord(r, expressions->last->node.endToken + 1);
     } else {
-        pushWord(r, wordSoftline());
         popNest(r);
     }
 
@@ -1982,54 +1987,7 @@ pushModifierInvocations(Render *r, ASTNodeList *modifiers) {
 
             assert(expressions->count != -1);
             TokenId startingToken = invocation->identifier->endToken + 1;
-
-            assert(stringMatch(LIT_TO_STR("("), r->tokens.tokenStrings[startingToken]));
-            pushTokenWord(r, startingToken);
-
-            if(names->count == 0) {
-                ASTNodeLink *argument = expressions->head;
-                for(u32 k = 0; k < expressions->count; k++, argument = argument->next) {
-                    pushExpressionDocument(r, &argument->node);
-                    if(k != expressions->count - 1) {
-                        assert(stringMatch(LIT_TO_STR(","), r->tokens.tokenStrings[argument->node.endToken + 1]));
-                        pushTokenWord(r, argument->node.endToken + 1);
-                        pushWord(r, wordLine());
-                    }
-                }
-            } else {
-                ASTNodeLink *argument = expressions->head;
-                assert(names->count == expressions->count);
-                assert(stringMatch(LIT_TO_STR("{"), r->tokens.tokenStrings[listGetTokenId(names, 0) - 1]));
-                assert(stringMatch(LIT_TO_STR("}"), r->tokens.tokenStrings[expressions->last->node.endToken + 1]));
-
-                pushTokenWord(r, listGetTokenId(names, 0) - 1);
-                pushWord(r, wordSpace());
-                for(u32 k = 0; k < expressions->count; k++, argument = argument->next) {
-                    TokenId literal = listGetTokenId(names, k);
-                    assert(stringMatch(LIT_TO_STR(":"), r->tokens.tokenStrings[literal - 1]));
-
-                    pushTokenWord(r, literal);
-                    pushTokenWord(r, literal + 1);
-                    pushWord(r, wordSpace());
-                    pushExpressionDocument(r, &argument->node);
-                    if(k != expressions->count - 1) {
-                        assert(stringMatch(LIT_TO_STR(","), r->tokens.tokenStrings[argument->node.endToken + 1]));
-                        pushTokenWord(r, argument->node.endToken + 1);
-                        pushWord(r, wordLine());
-                    }
-                }
-                pushTokenWord(r, expressions->last->node.endToken + 1);
-            }
-
-            if(expressions->count > 0) {
-                TokenId token = expressions->last->node.endToken + 1;
-                token += names->count > 0;
-                assert(stringMatch(LIT_TO_STR(")"), r->tokens.tokenStrings[token]));
-                pushTokenWord(r, token);
-            } else {
-                assert(stringMatch(LIT_TO_STR(")"), r->tokens.tokenStrings[startingToken + 1]));
-                pushTokenWord(r, startingToken + 1);
-            }
+            pushCallArgumentListDocument(r, startingToken, expressions, names);
         }
         popGroup(r);
 
