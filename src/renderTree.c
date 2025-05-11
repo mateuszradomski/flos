@@ -2539,19 +2539,24 @@ pushMemberDocument(Render *r, ASTNode *member) {
             pushGroup(r);
 
             pushTokenWord(r, member->startToken);
-            pushNest(r);
 
-            pushGroup(r);
             TokenId openParenToken = member->startToken + 1;
             TokenId closeParenToken = constructor->parameters.count > 0
                 ? constructor->parameters.last->node.endToken + 1
                 : openParenToken + 1;
 
+            pushGroup(r);
             pushTokenWord(r, openParenToken);
+            pushWord(r, wordSoftline());
+            pushNest(r);
             pushParametersDocument(r, &constructor->parameters);
+            popNest(r);
+            pushWord(r, wordSoftline());
             pushTokenWord(r, closeParenToken);
             popGroup(r);
 
+            pushGroup(r);
+            pushNest(r);
             assert(stringMatch(LIT_TO_STR("("), r->tokens.tokenStrings[openParenToken]));
             assert(stringMatch(LIT_TO_STR(")"), r->tokens.tokenStrings[closeParenToken]));
 
@@ -2574,11 +2579,13 @@ pushMemberDocument(Render *r, ASTNode *member) {
             if(constructor->body != 0x0) {
                 pushWord(r, wordLine());
                 popGroup(r);
+                popGroup(r);
 
                 pushStatementDocument(r, constructor->body);
                 pushWord(r, wordHardBreak());
             } else {
                 pushTokenWord(r, member->endToken);
+                popGroup(r);
                 popGroup(r);
 
                 pushWord(r, wordHardBreak());
