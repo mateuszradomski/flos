@@ -1161,8 +1161,8 @@ pushExpressionDocument(Render *r, ASTNode *node) {
                 }
             }
             popNest(r);
-            popGroup(r);
             pushWord(r, wordLine());
+            popGroup(r);
             pushTokenWord(r, node->endToken);
         } break;
         default: {
