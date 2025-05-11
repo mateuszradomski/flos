@@ -6,6 +6,11 @@
 #include <stdio.h>
 #include <math.h>
 
+#define ANSI_RED   "\x1b[31m"
+#define ANSI_GREEN "\x1b[32m"
+#define ANSI_RESET "\x1b[0m"
+#define ANSI_GREY  "\x1b[90m"
+
 typedef unsigned long long u64;
 
 static u64
@@ -51,5 +56,11 @@ int main(int argCount, char **args) {
 
     double cpuFreq = readCPUFrequency();
     elapsed += readCPUTimer();
+    if(stringMatch(stringTrim(result), stringTrim(content))) {
+        printf(ANSI_GREEN "The formatted output is the same as input!\n" ANSI_RESET);
+    } else {
+        printf(ANSI_RED "The formatted output is different from input!\n" ANSI_RESET);
+    }
+
     printf("Done in [%llu cycles][%f ms][%f MB/s]\n", elapsed, (double)elapsed / cpuFreq * 1e3, ((content.size / ((double)elapsed / cpuFreq)) / 1e6));
 }
