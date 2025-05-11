@@ -1,14 +1,10 @@
-solfmt.exe
-solfmt.ilk
-solfmt.pdb
 test.exe
 test.ilk
 test.pdb
 test.dSYM/Contents
-solfmt
 test
-solfmt.dSYM/Contents
 tags
 expected.sol
 result.sol
 output.html
+flos

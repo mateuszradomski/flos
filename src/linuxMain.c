@@ -39,11 +39,10 @@ int main(int argCount, char **args) {
         filepath = args[1];
     }
 
-    char *content = readFile(&arena, filepath);
+    String content = readFile(&arena, filepath);
 
     size_t memoryUsed = arenaFreeBytes(&arena);
-    String contentString = (String) { .data = content, .size = contentLength };
-    String result = format(&arena, contentString);
+    String result = format(&arena, content);
     memoryUsed -= arenaFreeBytes(&arena);
 
     FILE *output = fopen("output.sol", "w");
@@ -52,5 +51,5 @@ int main(int argCount, char **args) {
 
     double cpuFreq = readCPUFrequency();
     elapsed += readCPUTimer();
-    printf("Done in [%llu cycles][%f ms][%f MB/s]\n", elapsed, (double)elapsed / cpuFreq * 1e3, ((contentLength / ((double)elapsed / cpuFreq)) / 1e6));
+    printf("Done in [%llu cycles][%f ms][%f MB/s]\n", elapsed, (double)elapsed / cpuFreq * 1e3, ((content.size / ((double)elapsed / cpuFreq)) / 1e6));
 }

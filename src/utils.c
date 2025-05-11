@@ -943,7 +943,7 @@ listGetU16(U16List *list, u32 index) {
     return bucket->values[index % ARRAY_LENGTH(bucket->values)];
 }
 
-static u8 *
+static String
 readFile(Arena *arena, char *path) {
     FILE *fd = fopen(path, "rb");
     fseek(fd, 0L, SEEK_END);
@@ -959,7 +959,7 @@ readFile(Arena *arena, char *path) {
     fclose(fd);
     content[contentLength] = 0;
 
-    return content;
+    return (String) { .data = content, .size = contentLength };
 }
 
 typedef struct Buffer {

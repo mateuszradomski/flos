@@ -2827,8 +2827,8 @@ dumpDocument(Render *r, Arena *arena) {
     const char *flag = getenv("DDOC");
     if (!(flag && strcmp(flag, "1") == 0)) return;
 
-    char *prefix = (char *)readFile(arena, "misc/top.html");
-    char *suffix = (char *)readFile(arena, "misc/bottom.html");
+    String prefix = readFile(arena, "misc/top.html");
+    String suffix = readFile(arena, "misc/bottom.html");
 
     FILE *fd = fopen("output.html", "wb");
 
@@ -2836,9 +2836,9 @@ dumpDocument(Render *r, Arena *arena) {
     documentIntoDebug(r, &c);
     Buffer output = byteConcatenatorFinish(&c);
 
-    fwrite(prefix, 1, strlen(prefix), fd);
+    fwrite(prefix.data, 1, prefix.size, fd);
     fwrite(output.data, 1, output.size, fd);
-    fwrite(suffix, 1, strlen(suffix), fd);
+    fwrite(suffix.data, 1, suffix.size, fd);
 
     fclose(fd);
 }
