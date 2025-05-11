@@ -1166,7 +1166,6 @@ pushExpressionDocument(Render *r, ASTNode *node) {
     }
 }
 
-// TODO(radomski): Array access?
 static Word
 expressionLinkWord(ASTNode *node) {
     switch(node->type){
