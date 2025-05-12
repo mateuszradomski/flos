@@ -52,7 +52,7 @@ contract ReturnStatement {
                 987654321, 1234567890,/* return mul 5 */ false); }
 
         if (val == 2) {
-            return /* return mul 6 */ ( 1234567890 + 987654321  + 87654123536, 987654321 + 1234567890  + 124245235235, true);  
+            return /* return mul 6 */ ( 1234567890 + 987654321  + 87654123536, 987654321 + 1234567890  + 124245235235, true);
         }
 
         return someFunction().getValue().modifyValue().negate().scaleBySomeFactor(1000).transformToTuple();
@@ -82,7 +82,7 @@ contract ReturnStatement {
     function returnSingleValue(uint256 val) external returns (uint256) {
         if(val == 0) {
             return // return single 1
-            0x00;
+                0x00;
         }
 
         if(val == 1) {
@@ -95,8 +95,9 @@ contract ReturnStatement {
 
         if(val == 4) {
             /* return single 2 */
-            return 2 ** // return single 3
-            3 // return single 4
+            return
+                2 ** // return single 3
+                3 // return single 4
             ;
         }
 

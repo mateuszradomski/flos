@@ -1180,6 +1180,7 @@ expressionLinkWord(ASTNode *node) {
             return complexCondition ? wordLine() : wordSpace();
         }
         case ASTNodeType_FunctionCallExpression: return wordSpace();
+        case ASTNodeType_TupleExpression: return wordSpace();
         default: return wordLine();
     }
 }
@@ -1193,6 +1194,7 @@ expressionNest(ASTNode *node) {
             return complexCondition ? 1 : 0;
         }
         case ASTNodeType_FunctionCallExpression: return 0;
+        case ASTNodeType_TupleExpression: return 0;
         default: return 1;
     }
 }
@@ -1309,8 +1311,10 @@ pushStatementDocument(Render *r, ASTNode *node) {
             pushGroup(r);
             pushTokenWord(r, node->startToken);
             if(node->returnStatementNode.expression != 0x0) {
-                pushWord(r, wordSpace());
+                addNest(r, expressionNest(node->returnStatementNode.expression));
+                pushWord(r, expressionLinkWord(node->returnStatementNode.expression));
                 pushExpressionDocument(r, node->returnStatementNode.expression);
+                addNest(r, -expressionNest(node->returnStatementNode.expression));
             }
             pushTokenWord(r, node->endToken);
             popGroup(r);
