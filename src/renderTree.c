@@ -856,6 +856,11 @@ static void
 pushBinaryExpressionDocument(Render *r, ASTNode *node, TokenId outerOperator) {
     ASTNodeBinaryExpression *binary = &node->binaryExpressionNode;
 
+    bool onlyTwoElementBinaryExpression =
+        outerOperator == TokenType_None &&
+        binary->left->type != ASTNodeType_BinaryExpression &&
+        binary->right->type != ASTNodeType_BinaryExpression;
+
     u32 outerPrecedence = getOperatorPrecedence2(outerOperator);
     u32 innerPrec = getOperatorPrecedence2(binary->operator);
     bool startingPrecedence = outerPrecedence == 0;
@@ -896,6 +901,9 @@ pushBinaryExpressionDocument(Render *r, ASTNode *node, TokenId outerOperator) {
 
     pushWord(r, wordSpace());
     pushTokenWord(r, binary->right->startToken - 1);
+
+    if(onlyTwoElementBinaryExpression) { pushGroup(r); }
+
     if(binary->operator >= TokenType_Equal && binary->operator <= TokenType_PercentEqual) {
         pushWord(r, expressionLinkWord(binary->right));
     } else {
@@ -916,6 +924,9 @@ pushBinaryExpressionDocument(Render *r, ASTNode *node, TokenId outerOperator) {
     if(outerOperator == TokenType_None && binary->operator >= TokenType_Equal && binary->operator <= TokenType_PercentEqual) {
         addNest(r, -expressionNest(binary->right));
     }
+
+    if(onlyTwoElementBinaryExpression) { popGroup(r); }
+
     if(addParens) { pushWord(r, wordText(LIT_TO_STR(")"))); }
     if(openGroup || addParens) { popGroup(r); }
 }
