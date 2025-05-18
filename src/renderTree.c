@@ -152,20 +152,20 @@ static u32 renderDocumentWord(Render *r, Word *word, u32 nest, WordRenderLineTyp
 static u32 renderGroup(Render *r, Word *words, s32 count, u32 group, u32 nest);
 
 static u32 processGroupWords(Render *r, Word *words, s32 count, u32 group, u32 nest, WordRenderLineType lineType) {
-    u32 processed = 0;
-    for (u32 i = 0; i < (u32)count && words[i].group >= group;) {
+    u32 i = 0;
+
+    for (; i < (u32)count && words[i].group >= group;) {
         Word *word = &words[i];
+
         if (word->group > group) {
-            u32 sub_processed = renderGroup(r, words + i, count - i, group + 1, nest);
-            i += sub_processed;
-            processed += sub_processed;
+            i += renderGroup(r, words + i, count - i, group + 1, nest);
         } else {
             nest = renderDocumentWord(r, word, nest, lineType);
             i++;
-            processed++;
         }
     }
-    return processed;
+
+    return i;
 }
 
 static u32
