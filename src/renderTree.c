@@ -123,39 +123,18 @@ fits(Render *r, Word *words, s32 count, u32 group, u32 remainingWidth) {
         }
 
         Word *word = &words[i];
-        if (word->group < group) {
-            break;
-        }
 
-        if (word->group > group) {
-            u32 nested_min_width = 0;
-            u32 nested_group_words = 0;
-            for (s32 j = i; j < count && words[j].group > group; ++j) {
-                WordType type = words[j].type;
-                if (type == WordType_Text) {
-                    nested_min_width += words[j].text.size;
-                } else if (type == WordType_Space || type == WordType_CommentStartSpace || type == WordType_Line) {
-                    nested_min_width += 1;
-                } else if (type == WordType_HardBreak) {
-                    return false;
-                }
-                nested_group_words++;
-            }
-            width += nested_min_width;
-            i += nested_group_words - 1;
-        } else {
-            switch (word->type) {
-                case WordType_Text: {
-                    width += word->text.size;
-                } break;
-                case WordType_Space:
-                case WordType_CommentStartSpace:
-                case WordType_Line: {
-                    width += 1;
-                } break;
-                case WordType_HardBreak: return false;
-                default: break;
-            }
+        switch (word->type) {
+            case WordType_Text: {
+                width += word->text.size;
+            } break;
+            case WordType_Space:
+            case WordType_CommentStartSpace:
+            case WordType_Line: {
+                width += 1;
+            } break;
+            case WordType_HardBreak: return false;
+            default: break;
         }
     }
 
