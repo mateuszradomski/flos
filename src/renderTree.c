@@ -148,40 +148,6 @@ fits(Render *r, Word *words, s32 count, u32 group, u32 remainingWidth) {
     return width <= remainingWidth;
 }
 
-static u32 renderDocumentWord(Render *r, Word *word, u32 nest, WordRenderLineType lineType);
-static u32 renderGroup(Render *r, Word *words, s32 count, u32 group, u32 nest);
-
-static u32 processGroupWords(Render *r, Word *words, s32 count, u32 group, u32 nest, WordRenderLineType lineType) {
-    u32 i = 0;
-
-    for (; i < (u32)count && words[i].group >= group;) {
-        Word *word = &words[i];
-
-        if (word->group > group) {
-            i += renderGroup(r, words + i, count - i, group + 1, nest);
-        } else {
-            nest = renderDocumentWord(r, word, nest, lineType);
-            i++;
-        }
-    }
-
-    return i;
-}
-
-static u32
-renderGroup(Render *r, Word *words, s32 count, u32 group, u32 nest) {
-    if (count <= 0) return 0;
-
-    Writer *w = r->writer;
-
-    s32 remainingWidth = MAX(0, 120 - (s32)(w->lineSize == 0 ? w->indentSize * nest : w->lineSize));
-    if (fits(r, words, count, group, remainingWidth)) {
-        return processGroupWords(r, words, count, group, nest, WordRenderLineType_Space);
-    }
-
-    return processGroupWords(r, words, count, group, nest, WordRenderLineType_Newline);
-}
-
 static u32
 renderDocumentWord(Render *r, Word *word, u32 nest, WordRenderLineType lineType) {
     Writer *w = r->writer;
@@ -220,6 +186,39 @@ renderDocumentWord(Render *r, Word *word, u32 nest, WordRenderLineType lineType)
     }
 
     return nest;
+}
+
+static u32 renderGroup(Render *r, Word *words, s32 count, u32 group, u32 nest);
+
+static u32 processGroupWords(Render *r, Word *words, s32 count, u32 group, u32 nest, WordRenderLineType lineType) {
+    u32 i = 0;
+
+    for (; i < (u32)count && words[i].group >= group;) {
+        Word *word = &words[i];
+
+        if (word->group > group) {
+            i += renderGroup(r, words + i, count - i, group + 1, nest);
+        } else {
+            nest = renderDocumentWord(r, word, nest, lineType);
+            i++;
+        }
+    }
+
+    return i;
+}
+
+static u32
+renderGroup(Render *r, Word *words, s32 count, u32 group, u32 nest) {
+    if (count <= 0) return 0;
+
+    Writer *w = r->writer;
+
+    s32 remainingWidth = MAX(0, 120 - (s32)(w->lineSize == 0 ? w->indentSize * nest : w->lineSize));
+    if (fits(r, words, count, group, remainingWidth)) {
+        return processGroupWords(r, words, count, group, nest, WordRenderLineType_Space);
+    }
+
+    return processGroupWords(r, words, count, group, nest, WordRenderLineType_Newline);
 }
 
 static void
