@@ -1291,15 +1291,17 @@ pushStatementDocument(Render *r, ASTNode *node) {
         case ASTNodeType_BlockStatement: {
             ASTNodeBlockStatement *block = &node->blockStatementNode;
 
-            pushGroup(r);
             pushTokenWord(r, node->startToken);
             pushNest(r);
 
-            pushWord(r, wordLine());
+            if(block->statements.count == 0) {
+                pushWord(r, wordSpace());
+            }
 
             ASTNodeLink *statement = block->statements.head;
             for(u32 i = 0; i < block->statements.count; i++, statement = statement->next) {
                 if(i != 0) { preserveHardBreaksIntoDocument(r, &statement->node); }
+                else { pushWord(r, wordLine()); }
 
                 pushStatementDocument(r, &statement->node);
                 pushWord(r, wordHardBreak());
@@ -1307,7 +1309,6 @@ pushStatementDocument(Render *r, ASTNode *node) {
 
             popNest(r);
             pushTokenWord(r, node->endToken);
-            popGroup(r);
         } break;
         case ASTNodeType_UncheckedBlockStatement: {
             ASTNodeUncheckedBlockStatement *unchecked = &node->uncheckedBlockStatementNode;
@@ -2494,8 +2495,8 @@ pushMemberDocument(Render *r, ASTNode *member) {
                 pushWord(r, wordLine());
                 popNest(r);
                 popGroup(r);
-                popGroup(r);
                 pushStatementDocument(r, function->body);
+                popGroup(r);
             } else {
                 popNest(r);
                 pushTokenWord(r, member->endToken);
