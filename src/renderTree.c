@@ -25,14 +25,8 @@ typedef enum WordType {
 
 typedef struct Word {
     WordType type;
-    u8 group;
     String text;
 } Word;
-
-typedef enum WordRenderLineType {
-    WordRenderLineType_Space,
-    WordRenderLineType_Newline,
-} WordRenderLineType;
 
 typedef struct Render {
     Writer *writer;
@@ -46,7 +40,6 @@ typedef struct Render {
     Word *words;
     s32 wordCount;
     u32 wordCapacity;
-    u8 group;
 
     u32 trailingCount;
     Word trailing[8192];
@@ -98,28 +91,28 @@ flushTrailing(Render *r) {
     for(u32 i = 0; i < r->trailingCount; i++) {
         Word *out = r->words + r->wordCount++;
         *out = r->trailing[i];
-        out->group = r->group;
     }
 
     r->trailingCount = 0;
 }
 
 static bool
-fits(Render *r, Word *words, s32 count, u32 group, u32 remainingWidth) {
+fits(Render *r, Word *words, s32 count, u32 remainingWidth) {
     u32 width = 0;
     s32 i = 0;
-    for (; i < count && words[i].group >= group && width <= remainingWidth; i++) {
+
+    s32 groupStack = 0;
+
+    for (; i < count && groupStack >= 0 && width <= remainingWidth; i++) {
         Word *word = &words[i];
 
         switch (word->type) {
-            case WordType_Text: {
-                width += word->text.size;
-            } break;
+            case WordType_Text:      { width += word->text.size; } break;
             case WordType_Space:
             case WordType_CommentStartSpace:
-            case WordType_Line: {
-                width += 1;
-            } break;
+            case WordType_Line:      { width += 1; } break;
+            case WordType_GroupPush: { groupStack += 1; } break;
+            case WordType_GroupPop:  { groupStack -= 1; } break;
             case WordType_HardBreak: return false;
             default: break;
         }
@@ -129,18 +122,12 @@ fits(Render *r, Word *words, s32 count, u32 group, u32 remainingWidth) {
         Word *word = &words[i];
 
         switch (word->type) {
-            case WordType_Text: {
-                width += word->text.size;
-            } break;
-            case WordType_Space: {
-                width += 1;
-            } break;
+            case WordType_Text:  { width += word->text.size; } break;
+            case WordType_Space: { width += 1; } break;
             case WordType_Softline:
             case WordType_HardBreak:
             case WordType_CommentStartSpace:
-            case WordType_Line: {
-                return width <= remainingWidth;
-            } break;
+            case WordType_Line:  { return width <= remainingWidth; } break;
             default: break;
         }
     }
@@ -149,58 +136,48 @@ fits(Render *r, Word *words, s32 count, u32 group, u32 remainingWidth) {
 }
 
 static u32
-renderDocumentWord(Render *r, Word *word, u32 nest, WordRenderLineType lineType) {
+renderDocumentWord(Render *r, Word *word, u32 nest, bool flatMode) {
     Writer *w = r->writer;
     setIndent(w, nest);
 
-    u32 nestActive = (lineType == WordRenderLineType_Newline) ? 1 : 0;
+    u32 nestActive = flatMode ? 0 : 1;
     switch(word->type) {
-        case WordType_Text: {
-            writeString(r->writer, word->text);
-        } break;
+        case WordType_Text:  { writeString(r->writer, word->text); } break;
         case WordType_CommentStartSpace:
-        case WordType_Space: {
-            writeString(r->writer, LIT_TO_STR(" "));
-        } break;
+        case WordType_Space: { writeString(r->writer, LIT_TO_STR(" ")); } break;
         case WordType_Line: {
-            switch (lineType) {
-                case WordRenderLineType_Space: {
-                    writeString(r->writer, LIT_TO_STR(" "));
-                } break;
-                case WordRenderLineType_Newline: { finishLine(w); } break;
-            }
+            if(flatMode) { writeString(r->writer, LIT_TO_STR(" ")); }
+            else         { finishLine(w); }
         } break;
         case WordType_Softline: {
-            switch (lineType) {
-                case WordRenderLineType_Space: { } break;
-                case WordRenderLineType_Newline: { finishLine(w); } break;
-            }
+            if(flatMode) { }
+            else         { finishLine(w); }
         } break;
         case WordType_HardBreak: { finishLine(w); } break;
-        case WordType_GroupPush: { } break;
-        case WordType_GroupPop: { } break;
-        case WordType_NestPush: { nest += nestActive; } break;
-        case WordType_NestPop: { nest -= nestActive; } break;
-        case WordType_None: {} break;
-        default: { assert(false); }
+        case WordType_NestPush:  { nest += nestActive; } break;
+        case WordType_NestPop:   { nest -= nestActive; } break;
+        case WordType_None:      { } break;
+        default:                 { assert(false); }
     }
 
     return nest;
 }
 
-static u32 renderGroup(Render *r, Word *words, s32 count, u32 group, u32 nest);
+static u32 renderGroup(Render *r, Word *words, s32 count, u32 nest);
 
-static u32 processGroupWords(Render *r, Word *words, s32 count, u32 group, u32 nest, WordRenderLineType lineType) {
+static u32
+processGroupWords(Render *r, Word *words, s32 count, u32 nest, bool flatMode) {
     u32 i = 0;
 
-    for (; i < (u32)count && words[i].group >= group;) {
-        Word *word = &words[i];
+    while (i < count) {
+        Word *word = &words[i++];
 
-        if (word->group > group) {
-            i += renderGroup(r, words + i, count - i, group + 1, nest);
+        if (word->type == WordType_GroupPush) {
+            i += renderGroup(r, words + i, count - i, nest);
+        } else if (word->type == WordType_GroupPop) {
+            break;
         } else {
-            nest = renderDocumentWord(r, word, nest, lineType);
-            i++;
+            nest = renderDocumentWord(r, word, nest, flatMode);
         }
     }
 
@@ -208,57 +185,50 @@ static u32 processGroupWords(Render *r, Word *words, s32 count, u32 group, u32 n
 }
 
 static u32
-renderGroup(Render *r, Word *words, s32 count, u32 group, u32 nest) {
+renderGroup(Render *r, Word *words, s32 count, u32 nest) {
     if (count <= 0) return 0;
 
     Writer *w = r->writer;
 
+    bool flatMode = false;
     s32 remainingWidth = MAX(0, 120 - (s32)(w->lineSize == 0 ? w->indentSize * nest : w->lineSize));
-    if (fits(r, words, count, group, remainingWidth)) {
-        return processGroupWords(r, words, count, group, nest, WordRenderLineType_Space);
+    if (fits(r, words, count, remainingWidth)) {
+        flatMode = true;
+        return processGroupWords(r, words, count, nest, flatMode);
     }
 
-    return processGroupWords(r, words, count, group, nest, WordRenderLineType_Newline);
+    return processGroupWords(r, words, count, nest, flatMode);
 }
 
 static void
 renderDocument(Render *r) {
     flushTrailing(r);
 
-    u32 group = 0;
     u32 nest = 0;
-    renderGroup(r, r->words, r->wordCount, group, nest);
+    renderGroup(r, r->words, r->wordCount, nest);
 }
 
 static void
 pushGroup(Render *r) {
     Word w = { .type = WordType_GroupPush };
-    w.group = r->group;
     r->words[r->wordCount++] = w;
-
-    r->group += 1;
 }
 
 static void
 popGroup(Render *r) {
-    r->group -= 1;
-
     Word w = { .type = WordType_GroupPop };
-    w.group = r->group;
     r->words[r->wordCount++] = w;
 }
 
 static void
 pushNest(Render *r) {
     Word w = { .type = WordType_NestPush };
-    w.group = r->group;
     r->words[r->wordCount++] = w;
 }
 
 static void
 popNest(Render *r) {
     Word w = { .type = WordType_NestPop };
-    w.group = r->group;
     r->words[r->wordCount++] = w;
 }
 
@@ -289,7 +259,6 @@ pushWord(Render *r, Word w) {
 
     flushTrailing(r);
     if(!skipPassedWord) {
-        w.group = r->group;
         r->words[r->wordCount++] = w;
     }
 }
@@ -530,7 +499,6 @@ pushTokenWord(Render *r, TokenId token) {
     Word w = {
         .type = WordType_Text,
         .text = getTokenString(r->tokens, token),
-        .group = r->group,
     };
 
     pushWord(r, w);
@@ -575,7 +543,6 @@ pushTokenAsStringWord(Render *r, TokenId token) {
     Word w = {
         .type = WordType_Text,
         .text = text,
-        .group = r->group,
     };
     pushWord(r, w);
 
@@ -2707,11 +2674,13 @@ pushMemberDocument(Render *r, ASTNode *member) {
 
 static void
 renderSourceUnit(Render *r, ASTNode *tree) {
+    pushGroup(r);
     ASTNodeLink *child = tree->children.head;
     for(u32 i = 0; i < tree->children.count; i++, child = child->next) {
         preserveHardBreaksIntoDocument(r, &child->node);
         pushMemberDocument(r, &child->node);
     }
+    popGroup(r);
     renderDocument(r);
 }
 
@@ -2781,64 +2750,9 @@ closeDebugElement(ByteConcatenator *c) {
     byteConcatenatorPushString(c, suffix);
 }
 
-static u32
-documentGroupIntoDebug(ByteConcatenator *c, Word *words, s32 count, u32 group) {
-    u32 processed = 0;
-    for (u32 i = 0; i < (u32)count && words[i].group >= group;) {
-        Word *word = &words[i];
-
-        if (word->group > group) {
-            openDebugElement(c, LIT_TO_STR("Group"));
-            openDebugElementChildren(c);
-            u32 sub_processed = documentGroupIntoDebug(c, words + i, count - i, group + 1);
-            closeDebugElementChildren(c);
-            closeDebugElement(c);
-
-            i += sub_processed;
-            processed += sub_processed;
-        } else {
-            if(word->type == WordType_GroupPush || word->type == WordType_GroupPop) {
-            } else if(word->type == WordType_Text) {
-                openDebugElement(c, word->text);
-                closeDebugElement(c);
-            } else {
-                openDebugElement(c, wordTypeToString(word->type));
-                closeDebugElement(c);
-            }
-
-            i++;
-            processed++;
-        }
-    }
-    return processed;
-}
-
-static void
-documentIntoDebug(Render *r, ByteConcatenator *c) {
-    byteConcatenatorPushString(c, LIT_TO_STR("["));
-    documentGroupIntoDebug(c, r->words, r->wordCount, 0);
-    byteConcatenatorPushString(c, LIT_TO_STR("]"));
-}
-
 static void
 dumpDocument(Render *r, Arena *arena) {
     const char *flag = getenv("DDOC");
-    if (!(flag && strcmp(flag, "1") == 0)) return;
-
-    String prefix = readFile(arena, "misc/top.html");
-    String suffix = readFile(arena, "misc/bottom.html");
-
-    FILE *fd = fopen("output.html", "wb");
-
-    ByteConcatenator c = byteConcatenatorInit(arena, 1 * Megabyte);
-    documentIntoDebug(r, &c);
-    Buffer output = byteConcatenatorFinish(&c);
-
-    fwrite(prefix.data, 1, prefix.size, fd);
-    fwrite(output.data, 1, output.size, fd);
-    fwrite(suffix.data, 1, suffix.size, fd);
-
-    fclose(fd);
 }
 
 static String
