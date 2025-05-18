@@ -117,11 +117,7 @@ static bool
 fits(Render *r, Word *words, s32 count, u32 group, u32 remainingWidth) {
     u32 width = 0;
     s32 i = 0;
-    for (; i < count && words[i].group >= group; i++) {
-        if (width > remainingWidth) {
-            return false;
-        }
-
+    for (; i < count && words[i].group >= group && width <= remainingWidth; i++) {
         Word *word = &words[i];
 
         switch (word->type) {
@@ -138,11 +134,7 @@ fits(Render *r, Word *words, s32 count, u32 group, u32 remainingWidth) {
         }
     }
 
-    for (; i < count; i++) {
-        if (width > remainingWidth) {
-            return false;
-        }
-
+    for (; i < count && width <= remainingWidth; i++) {
         Word *word = &words[i];
 
         switch (word->type) {
@@ -162,7 +154,7 @@ fits(Render *r, Word *words, s32 count, u32 group, u32 remainingWidth) {
         }
     }
 
-    return true;
+    return width <= remainingWidth;
 }
 
 static u32 renderGroup(Render *r, Word *words, s32 count, u32 group, u32 nest);
