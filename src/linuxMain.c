@@ -54,6 +54,10 @@ int main(int argCount, char **args) {
     fwrite(result.data, result.size, 1, output);
     fclose(output);
 
+    FILE *input = fopen("input.sol", "w");
+    fwrite(content.data, content.size, 1, input);
+    fclose(input);
+
     double cpuFreq = readCPUFrequency();
     elapsed += readCPUTimer();
     if(stringMatch(stringTrim(result), stringTrim(content))) {
