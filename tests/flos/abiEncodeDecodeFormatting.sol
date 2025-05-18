@@ -60,7 +60,6 @@ contract AbiEncodeDecodeFormatting {
         emit Decoded(decodedId, decodedName);
 
         // Decode with complex tuple type forcing breaks
-        // TODO(radomski): This is just wrong, straddling the line limit and not breaking anything at all
         (
             uint256 a,
             MyData memory b,
@@ -152,7 +151,14 @@ contract AbiEncodeDecodeFormatting {
         emit Decoded(decodedId, decodedName);
 
         // Decode with complex tuple type forcing breaks
-        // TODO(radomski): This is just wrong, straddling the line limit and not breaking anything at all
-        (uint256 a, MyData memory b, string memory c, bool d, address[] memory e, uint256[3] memory f, bytes memory g) = abi.decode(encodedData, (uint256, MyData, string, bool, address[], uint256[3], bytes));
+        (
+            uint256 a,
+            MyData memory b,
+            string memory c,
+            bool d,
+            address[] memory e,
+            uint256[3] memory f,
+            bytes memory g
+        ) = abi.decode(encodedData, (uint256, MyData, string, bool, address[], uint256[3], bytes));
     }
 }

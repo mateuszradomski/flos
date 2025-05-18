@@ -406,7 +406,9 @@ contract Conditional {
                     ? row[field]
                     : definition.defaults != "undefined" ? definition.defaults : "null"
             )
-            : row[field] != "undefined" ? row[field] : definition.defaults != "undefined" ? definition.defaults : "null";
+            : row[field] != "undefined"
+                ? row[field]
+                : definition.defaults != "undefined" ? definition.defaults : "null";
 
         // (the following is semantically equivalent to the above, but written in a more-confusing style – it'd be hard to grok no matter the formatting)
         string storage typeofExampleFlipped = definition.encode
@@ -415,6 +417,8 @@ contract Conditional {
                     ? definition.defaults == "undefined" ? "null" : definition.defaults
                     : row[field]
             )
-            : row[field] == "undefined" ? definition.defaults == "undefined" ? "null" : definition.defaults : row[field];
+            : row[field] == "undefined"
+                ? definition.defaults == "undefined" ? "null" : definition.defaults
+                : row[field];
     }
 }

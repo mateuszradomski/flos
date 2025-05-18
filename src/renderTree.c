@@ -119,7 +119,12 @@ static u32 renderDocumentWord(Render *r, Word *word, u32 nest, WordRenderLineTyp
 static bool
 fits(Render *r, Word *words, s32 count, u32 group, u32 remainingWidth) {
     u32 width = 0;
-    for (s32 i = 0; i < count && words[i].group >= group; i++) {
+    s32 i = 0;
+    for (; i < count && words[i].group >= group; i++) {
+        if (width > remainingWidth) {
+            return false;
+        }
+
         Word *word = &words[i];
         if (word->group < group) {
             break;
@@ -141,31 +146,49 @@ fits(Render *r, Word *words, s32 count, u32 group, u32 remainingWidth) {
                 nested_group_words++;
             }
             width += nested_min_width;
-            if (width > remainingWidth) {
-                return false;
-            }
             i += nested_group_words - 1;
-            continue;
+        } else {
+            switch (word->type) {
+                case WordType_Text: {
+                    width += word->text.size;
+                } break;
+                case WordType_Space:
+                case WordType_Line: {
+                    width += 1;
+                } break;
+                case WordType_HardBreak: return false;
+                default: break;
+            }
         }
+    }
+
+    if (width > remainingWidth) {
+        return false;
+    }
+
+    for (; i < count; i++) {
+        if (width > remainingWidth) {
+            return false;
+        }
+
+        Word *word = &words[i];
 
         switch (word->type) {
             case WordType_Text: {
                 width += word->text.size;
             } break;
-            case WordType_Space:
-            case WordType_Line:
-            {
+            case WordType_Space: {
                 width += 1;
-            } break;
-            case WordType_HardBreak: {
-                return false;
             }
+            case WordType_Softline:
+            case WordType_HardBreak:
+            case WordType_Line: {
+                return width <= remainingWidth;
+            } break;
             default: break;
         }
-        if (width > remainingWidth) {
-            return false;
-        }
     }
+
     return true;
 }
 
@@ -1076,7 +1099,10 @@ pushExpressionDocument(Render *r, ASTNode *node) {
             assert(stringMatch(LIT_TO_STR("]"), r->tokens.tokenStrings[node->endToken]));
 
             pushExpressionDocument(r, array->expression);
+            pushGroup(r);
+            pushNest(r);
             pushTokenWord(r, array->expression->endToken + 1);
+            pushWord(r, wordSoftline());
             if(array->leftFenceExpression != 0x0) {
                 pushExpressionDocument(r, array->leftFenceExpression);
                 pushTokenWord(r, array->leftFenceExpression->endToken + 1);
@@ -1086,7 +1112,10 @@ pushExpressionDocument(Render *r, ASTNode *node) {
             if(array->rightFenceExpression != 0x0) {
                 pushExpressionDocument(r, array->rightFenceExpression);
             }
+            pushWord(r, wordSoftline());
+            popNest(r);
             pushTokenWord(r, node->endToken);
+            popGroup(r);
         } break;
         case ASTNodeType_InlineArrayExpression: {
             ASTNodeInlineArrayExpression *array = &node->inlineArrayExpressionNode;
