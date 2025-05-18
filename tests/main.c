@@ -217,6 +217,7 @@ showDifferences(Arena *arena, String result, String expected) {
 
     DiffResult diffResult = { 0 };
     bool leading = false;
+    printf("\n");
     while(validDiff(diffResult = diffNext(&diffIt))) {
         if(!leading) {
             leading = true;
