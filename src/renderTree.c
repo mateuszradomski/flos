@@ -16,7 +16,6 @@ typedef enum WordType {
     WordType_CommentStartSpace,
     WordType_Softline,
     WordType_HardBreak,
-    WordType_EagerBreak,
     WordType_GroupPush,
     WordType_GroupPop,
     WordType_NestPush,
@@ -139,7 +138,7 @@ fits(Render *r, Word *words, s32 count, u32 group, u32 remainingWidth) {
                 WordType type = words[j].type;
                 if (type == WordType_Text) {
                     nested_min_width += words[j].text.size;
-                } else if (type == WordType_Space || type == WordType_CommentStartSpace || type == WordType_Line || type == WordType_EagerBreak) {
+                } else if (type == WordType_Space || type == WordType_CommentStartSpace || type == WordType_Line) {
                     nested_min_width += 1;
                 }
                 nested_group_words++;
@@ -162,10 +161,6 @@ fits(Render *r, Word *words, s32 count, u32 group, u32 remainingWidth) {
         }
     }
 
-    if (width > remainingWidth) {
-        return false;
-    }
-
     for (; i < count; i++) {
         if (width > remainingWidth) {
             return false;
@@ -183,7 +178,6 @@ fits(Render *r, Word *words, s32 count, u32 group, u32 remainingWidth) {
             case WordType_Softline:
             case WordType_HardBreak:
             case WordType_CommentStartSpace:
-            case WordType_EagerBreak:
             case WordType_Line: {
                 return width <= remainingWidth;
             } break;
@@ -218,17 +212,10 @@ renderGroup(Render *r, Word *words, s32 count, u32 group, u32 nest) {
 
     Writer *w = r->writer;
 
-    // Try fitting everything on one line
-    u32 baseLineSize = w->lineSize;
-    u32 baseWritten = w->size;
-
     s32 remainingWidth = MAX(0, 120 - (s32)(w->lineSize == 0 ? w->indentSize * nest : w->lineSize));
     if (fits(r, words, count, group, remainingWidth)) {
         return processGroupWords(r, words, count, group, nest, WordRenderLineType_Space);
     }
-
-    w->size = baseWritten;
-    w->lineSize = baseLineSize;
 
     return processGroupWords(r, words, count, group, nest, WordRenderLineType_Newline);
 }
@@ -259,14 +246,6 @@ renderDocumentWord(Render *r, Word *word, u32 nest, WordRenderLineType lineType)
             switch (lineType) {
                 case WordRenderLineType_Space: { } break;
                 case WordRenderLineType_Newline: { finishLine(w); } break;
-            }
-        } break;
-        case WordType_EagerBreak: {
-            switch (lineType) {
-                case WordRenderLineType_Space: { finishLine(w); } break;
-                case WordRenderLineType_Newline: {
-                    writeString(r->writer, LIT_TO_STR(" "));
-                } break;
             }
         } break;
         case WordType_HardBreak: { finishLine(w); } break;
@@ -335,7 +314,6 @@ isWordWhitespace(Word w) {
         w.type == WordType_Space ||
         w.type == WordType_CommentStartSpace ||
         w.type == WordType_Line ||
-        w.type == WordType_EagerBreak ||
         w.type == WordType_Softline ||
         w.type == WordType_HardBreak
     );
@@ -2795,7 +2773,6 @@ wordTypeToString(WordType type) {
         case WordType_CommentStartSpace: return LIT_TO_STR("CommentStartSpace");
         case WordType_Softline: return LIT_TO_STR("Softline");
         case WordType_HardBreak: return LIT_TO_STR("HardBreak");
-        case WordType_EagerBreak: return LIT_TO_STR("EagerBreak");
         case WordType_GroupPush: return LIT_TO_STR("GroupPush");
         case WordType_GroupPop: return LIT_TO_STR("GroupPop");
         case WordType_NestPush: return LIT_TO_STR("NestPush");
