@@ -104,15 +104,6 @@ flushTrailing(Render *r) {
     r->trailingCount = 0;
 }
 
-enum CommentType {
-    CommentType_None,
-    CommentType_SingleLine,
-    CommentType_MultiLine,
-    CommentType_StarAligned
-};
-
-static u32 renderDocumentWord(Render *r, Word *word, u32 nest, WordRenderLineType lineType);
-
 static bool
 fits(Render *r, Word *words, s32 count, u32 group, u32 remainingWidth) {
     u32 width = 0;
@@ -157,7 +148,9 @@ fits(Render *r, Word *words, s32 count, u32 group, u32 remainingWidth) {
     return width <= remainingWidth;
 }
 
+static u32 renderDocumentWord(Render *r, Word *word, u32 nest, WordRenderLineType lineType);
 static u32 renderGroup(Render *r, Word *words, s32 count, u32 group, u32 nest);
+
 static u32 processGroupWords(Render *r, Word *words, s32 count, u32 group, u32 nest, WordRenderLineType lineType) {
     u32 processed = 0;
     for (u32 i = 0; i < (u32)count && words[i].group >= group;) {
@@ -366,6 +359,13 @@ preserveHardBreaksIntoDocument(Render *r, ASTNode *node) {
         }
     }
 }
+
+enum CommentType {
+    CommentType_None,
+    CommentType_SingleLine,
+    CommentType_MultiLine,
+    CommentType_StarAligned
+};
 
 static void
 pushCommentsInRange(Render *r, u32 startOffset, u32 endOffset) {
