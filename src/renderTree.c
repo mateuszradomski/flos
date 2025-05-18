@@ -49,7 +49,7 @@ typedef struct Render {
     u8 group;
 
     u32 trailingCount;
-    Word trailing[128];
+    Word trailing[8192];
 } Render;
 
 static void
