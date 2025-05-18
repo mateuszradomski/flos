@@ -222,7 +222,7 @@ renderGroup(Render *r, Word *words, s32 count, u32 group, u32 nest) {
     u32 baseLineSize = w->lineSize;
     u32 baseWritten = w->size;
 
-    u32 remainingWidth = 120 - (w->lineSize == 0 ? w->indentSize * nest : w->lineSize);
+    s32 remainingWidth = MAX(0, 120 - (s32)(w->lineSize == 0 ? w->indentSize * nest : w->lineSize));
     if (fits(r, words, count, group, remainingWidth)) {
         return processGroupWords(r, words, count, group, nest, WordRenderLineType_Space);
     }

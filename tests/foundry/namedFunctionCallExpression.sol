@@ -46,7 +46,9 @@ contract NamedFunctionCallExpression {
 
         ComplexStruct memory complex = ComplexStruct({ val: 1, anotherVal: 2, flag: true, timestamp: block.timestamp });
 
-        StructWithAVeryLongNameThatExceedsMaximumLengthThatIsAllowedForFormatting memory long = StructWithAVeryLongNameThatExceedsMaximumLengthThatIsAllowedForFormatting({ whyNameSoLong: "dunno" });
+        StructWithAVeryLongNameThatExceedsMaximumLengthThatIsAllowedForFormatting memory long = StructWithAVeryLongNameThatExceedsMaximumLengthThatIsAllowedForFormatting({
+            whyNameSoLong: "dunno"
+        });
 
         SimpleStruct memory simple2 = SimpleStruct({ // comment1
             /* comment2 */
