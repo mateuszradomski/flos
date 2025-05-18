@@ -13,6 +13,7 @@ typedef enum WordType {
     WordType_Text,
     WordType_Line,
     WordType_Space,
+    WordType_CommentStartSpace,
     WordType_Softline,
     WordType_HardBreak,
     WordType_EagerBreak,
@@ -26,10 +27,7 @@ typedef enum WordType {
 typedef struct Word {
     WordType type;
     u8 group;
-    union {
-        String text;
-        TokenId token;
-    };
+    String text;
 } Word;
 
 typedef enum WordRenderLineType {
@@ -138,9 +136,10 @@ fits(Render *r, Word *words, s32 count, u32 group, u32 remainingWidth) {
             u32 nested_min_width = 0;
             u32 nested_group_words = 0;
             for (s32 j = i; j < count && words[j].group > group; ++j) {
-                if (words[j].type == WordType_Text) {
+                WordType type = words[j].type;
+                if (type == WordType_Text) {
                     nested_min_width += words[j].text.size;
-                } else if (words[j].type == WordType_Space || words[j].type == WordType_Line || words[j].type == WordType_EagerBreak) {
+                } else if (type == WordType_Space || type == WordType_CommentStartSpace || type == WordType_Line || type == WordType_EagerBreak) {
                     nested_min_width += 1;
                 }
                 nested_group_words++;
@@ -153,6 +152,7 @@ fits(Render *r, Word *words, s32 count, u32 group, u32 remainingWidth) {
                     width += word->text.size;
                 } break;
                 case WordType_Space:
+                case WordType_CommentStartSpace:
                 case WordType_Line: {
                     width += 1;
                 } break;
@@ -179,9 +179,11 @@ fits(Render *r, Word *words, s32 count, u32 group, u32 remainingWidth) {
             } break;
             case WordType_Space: {
                 width += 1;
-            }
+            } break;
             case WordType_Softline:
             case WordType_HardBreak:
+            case WordType_CommentStartSpace:
+            case WordType_EagerBreak:
             case WordType_Line: {
                 return width <= remainingWidth;
             } break;
@@ -241,6 +243,7 @@ renderDocumentWord(Render *r, Word *word, u32 nest, WordRenderLineType lineType)
         case WordType_Text: {
             writeString(r->writer, word->text);
         } break;
+        case WordType_CommentStartSpace:
         case WordType_Space: {
             writeString(r->writer, LIT_TO_STR(" "));
         } break;
@@ -330,6 +333,7 @@ static bool
 isWordWhitespace(Word w) {
     return (
         w.type == WordType_Space ||
+        w.type == WordType_CommentStartSpace ||
         w.type == WordType_Line ||
         w.type == WordType_EagerBreak ||
         w.type == WordType_Softline ||
@@ -372,13 +376,13 @@ wordSpace(void) {
 }
 
 static Word
-wordLine(void) {
-    return (Word) { .type = WordType_Line };
+wordCommentStartSpace(void) {
+    return (Word) { .type = WordType_CommentStartSpace };
 }
 
 static Word
-wordEagerBreak(void) {
-    return (Word) { .type = WordType_EagerBreak };
+wordLine(void) {
+    return (Word) { .type = WordType_Line };
 }
 
 static void
@@ -486,7 +490,7 @@ pushCommentsInRange(Render *r, u32 startOffset, u32 endOffset) {
                     } else if(preceedingNewlines > 0) {
                         pushTrailing(r, wordHardBreak());
                     } else if(cursor == 0) {
-                        pushTrailing(r, wordSpace());
+                        pushTrailing(r, wordCommentStartSpace());
                     } else if(commentType != CommentType_SingleLine && previousCommentType != CommentType_SingleLine) {
                         pushTrailing(r, wordSpace());
                     }
@@ -737,6 +741,7 @@ pushTypeDocument(Render *r, ASTNode *node) {
             pushGroup(r);
             pushNest(r);
             pushTokenWord(r, openParen);
+            pushWord(r, wordSoftline());
             pushTypeDocument(r, node->mappingNode.keyType);
             pushWord(r, wordSpace());
             if(node->mappingNode.keyIdentifier != INVALID_TOKEN_ID) {
@@ -754,6 +759,7 @@ pushTypeDocument(Render *r, ASTNode *node) {
                 pushTokenWord(r, node->mappingNode.valueIdentifier);
             }
             popNest(r);
+            pushWord(r, wordSoftline());
             pushTokenWord(r, node->endToken);
             popGroup(r);
         } break;
@@ -1314,6 +1320,8 @@ pushYulExpressionDocument(Render *r, ASTNode *node) {
     }
 }
 
+static void pushStatementDocumentOpenedBlock(Render *r, ASTNode *node);
+
 static void
 pushStatementDocument(Render *r, ASTNode *node) {
     switch(node->type) {
@@ -1652,13 +1660,11 @@ pushStatementDocument(Render *r, ASTNode *node) {
             pushWord(r, wordSpace());
             popGroup(r);
 
-            pushGroup(r);
-            pushStatementDocument(r, statement->body);
+            pushStatementDocumentOpenedBlock(r, statement->body);
 
             ASTNodeLink *catchLink = statement->catches.head;
             for(u32 i = 0; i < statement->catches.count; i++, catchLink = catchLink->next) {
-                pushWord(r, wordEagerBreak());
-                popGroup(r);
+                pushWord(r, wordSpace());
 
                 ASTNodeCatchStatement *catch = &catchLink->node.catchStatementNode;
                 assert(stringMatch(LIT_TO_STR("catch"), r->tokens.tokenStrings[catchLink->node.startToken]));
@@ -1682,10 +1688,7 @@ pushStatementDocument(Render *r, ASTNode *node) {
 
                 pushWord(r, wordSpace());
 
-                if(i != statement->catches.count - 1) {
-                    pushGroup(r);
-                }
-                pushStatementDocument(r, catch->body);
+                pushStatementDocumentOpenedBlock(r, catch->body);
             }
 
             popGroup(r);
@@ -1915,28 +1918,27 @@ pushStatementDocument(Render *r, ASTNode *node) {
             pushWord(r, wordSpace());
             pushYulExpressionDocument(r, statement->expression);
 
-            Word lineConnecting = wordHardBreak();
             ASTNodeLink *it = statement->cases.head;
             for(u32 i = 0; i < statement->cases.count; i++, it = it->next) {
-                pushWord(r, lineConnecting);
-                if(i > 0) { popGroup(r); }
-                lineConnecting = wordEagerBreak();
+                if(i == 0) {
+                    pushWord(r, wordHardBreak());
+                } else {
+                    pushWord(r, wordSpace());
+                }
 
                 pushTokenWord(r, it->node.yulCaseNode.literal->startToken - 1); // case
                 pushWord(r, wordSpace());
                 pushYulExpressionDocument(r, it->node.yulCaseNode.literal);
                 pushWord(r, wordSpace());
 
-                if(i != statement->cases.count - 1 || statement->defaultBlock != 0x0) { pushGroup(r); }
-                pushStatementDocument(r, it->node.yulCaseNode.block);
+                pushStatementDocumentOpenedBlock(r, it->node.yulCaseNode.block);
             }
 
             if(statement->defaultBlock != 0x0) {
-                pushWord(r, lineConnecting);
-                popGroup(r);
+                pushWord(r, wordSpace());
                 pushTokenWord(r, statement->defaultBlock->yulCaseNode.block->startToken - 1); // default
                 pushWord(r, wordSpace());
-                pushStatementDocument(r, statement->defaultBlock->yulCaseNode.block);
+                pushStatementDocumentOpenedBlock(r, statement->defaultBlock->yulCaseNode.block);
             }
             popGroup(r);
         } break;
@@ -1953,6 +1955,56 @@ pushStatementDocument(Render *r, ASTNode *node) {
             javascriptPrintString("Unreachable, unhandled statement type = ");
             javascriptPrintNumber(node->type);
             assert(0);
+        }
+    }
+}
+
+static void
+pushStatementDocumentOpenedBlock(Render *r, ASTNode *node) {
+    switch(node->type) {
+        case ASTNodeType_BlockStatement: {
+            ASTNodeBlockStatement *block = &node->blockStatementNode;
+
+            pushTokenWord(r, node->startToken);
+            pushNest(r);
+
+            if(block->statements.count == 0) {
+                pushWord(r, wordHardBreak());
+            }
+
+            ASTNodeLink *statement = block->statements.head;
+            for(u32 i = 0; i < block->statements.count; i++, statement = statement->next) {
+                if(i != 0) { preserveHardBreaksIntoDocument(r, &statement->node); }
+                else { pushWord(r, wordHardBreak()); }
+
+                pushStatementDocument(r, &statement->node);
+                pushWord(r, wordHardBreak());
+            }
+
+            popNest(r);
+            pushTokenWord(r, node->endToken);
+        } break;
+        case ASTNodeType_YulBlockStatement: {
+            ASTNodeBlockStatement *block = &node->blockStatementNode;
+            pushGroup(r);
+            pushTokenWord(r, node->startToken); // {
+            pushNest(r);
+
+            ASTNodeLink *statement = block->statements.head;
+            for(u32 i = 0; i < block->statements.count; i++, statement = statement->next) {
+                if(i != 0) { preserveHardBreaksIntoDocument(r, &statement->node); }
+                else { pushWord(r, wordHardBreak()); }
+
+                pushStatementDocument(r, &statement->node);
+                pushWord(r, i == 0 ? wordLine() : wordHardBreak());
+            }
+
+            popNest(r);
+            pushTokenWord(r, node->endToken); // }
+            popGroup(r);
+        } break;
+        default: {
+            pushStatementDocument(r, node);
         }
     }
 }
@@ -2734,6 +2786,7 @@ wordTypeToString(WordType type) {
         case WordType_Text: return LIT_TO_STR("Text");
         case WordType_Line: return LIT_TO_STR("Line");
         case WordType_Space: return LIT_TO_STR("Space");
+        case WordType_CommentStartSpace: return LIT_TO_STR("CommentStartSpace");
         case WordType_Softline: return LIT_TO_STR("Softline");
         case WordType_HardBreak: return LIT_TO_STR("HardBreak");
         case WordType_EagerBreak: return LIT_TO_STR("EagerBreak");

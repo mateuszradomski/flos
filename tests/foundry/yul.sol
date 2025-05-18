@@ -164,8 +164,11 @@ contract Yul {
             returndatacopy(0, 0, returndatasize())
 
             switch result
-            case 0 { revert(0, returndatasize()) }
-            default { return(0, returndatasize()) }
+            case 0 {
+                revert(0, returndatasize())
+            } default {
+                return(0, returndatasize())
+            }
         }
 
         // https://github.com/libevm/subway/blob/8ea4e86c65ad76801c72c681138b0a150f7e2dbd/contracts/src/Sandwich.sol#L51
