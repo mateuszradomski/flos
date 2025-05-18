@@ -128,10 +128,6 @@ fits(Render *r, Word *words, s32 count, u32 group, u32 remainingWidth) {
         }
 
         if (word->group > group) {
-            if (!fits(r, words + i, count - i, group + 1, remainingWidth - width)) {
-                return false;
-            }
-            // Calculate minimum width taken by nested group
             u32 nested_min_width = 0;
             u32 nested_group_words = 0;
             for (s32 j = i; j < count && words[j].group > group; ++j) {
@@ -140,6 +136,8 @@ fits(Render *r, Word *words, s32 count, u32 group, u32 remainingWidth) {
                     nested_min_width += words[j].text.size;
                 } else if (type == WordType_Space || type == WordType_CommentStartSpace || type == WordType_Line) {
                     nested_min_width += 1;
+                } else if (type == WordType_HardBreak) {
+                    return false;
                 }
                 nested_group_words++;
             }
