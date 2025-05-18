@@ -1191,6 +1191,16 @@ expressionNest(ASTNode *node) {
     }
 }
 
+static void
+pushExpressionDocumentLinked(Render *r, ASTNode *node) {
+    pushGroup(r);
+    addNest(r, expressionNest(node));
+    pushWord(r, expressionLinkWord(node));
+    pushExpressionDocument(r, node);
+    addNest(r, -expressionNest(node));
+    popGroup(r);
+}
+
 static void pushYulExpressionDocument(Render *r, ASTNode *node);
 
 static void
@@ -1303,16 +1313,11 @@ pushStatementDocument(Render *r, ASTNode *node) {
         case ASTNodeType_ReturnStatement: {
             assert(stringMatch(LIT_TO_STR("return"), r->tokens.tokenStrings[node->startToken]));
 
-            pushGroup(r);
             pushTokenWord(r, node->startToken);
             if(node->returnStatementNode.expression != 0x0) {
-                addNest(r, expressionNest(node->returnStatementNode.expression));
-                pushWord(r, expressionLinkWord(node->returnStatementNode.expression));
-                pushExpressionDocument(r, node->returnStatementNode.expression);
-                addNest(r, -expressionNest(node->returnStatementNode.expression));
+                pushExpressionDocumentLinked(r, node->returnStatementNode.expression);
             }
             pushTokenWord(r, node->endToken);
-            popGroup(r);
         } break;
         case ASTNodeType_ExpressionStatement: {
             if(node->expressionStatementNode.expression != 0x0) {
@@ -1384,12 +1389,7 @@ pushStatementDocument(Render *r, ASTNode *node) {
 
                 pushTokenWord(r, statement->initialValue->startToken - 1);
 
-                pushGroup(r);
-                addNest(r, expressionNest(statement->initialValue));
-                pushWord(r, expressionLinkWord(statement->initialValue));
-                pushExpressionDocument(r, statement->initialValue);
-                popGroup(r);
-                addNest(r, -expressionNest(statement->initialValue));
+                pushExpressionDocumentLinked(r, statement->initialValue);
             }
 
             pushTokenWord(r, node->endToken);
@@ -1440,13 +1440,8 @@ pushStatementDocument(Render *r, ASTNode *node) {
             pushTokenWord(r, statement->initialValue->startToken - 1);
             popGroup(r);
 
-            pushGroup(r);
-            addNest(r, expressionNest(statement->initialValue));
-            pushWord(r, expressionLinkWord(statement->initialValue));
-            pushExpressionDocument(r, statement->initialValue);
+            pushExpressionDocumentLinked(r, statement->initialValue);
             pushTokenWord(r, node->endToken);
-            addNest(r, -expressionNest(statement->initialValue));
-            popGroup(r);
         } break;
         case ASTNodeType_DoWhileStatement: {
             ASTNodeWhileStatement *statement = &node->whileStatementNode;
@@ -2385,12 +2380,7 @@ pushMemberDocument(Render *r, ASTNode *member) {
             pushWord(r, wordSpace());
             pushTokenWord(r, constNode->identifier + 1);
 
-            pushGroup(r);
-            addNest(r, expressionNest(constNode->expression));
-            pushWord(r, expressionLinkWord(constNode->expression));
-            pushExpressionDocument(r, constNode->expression);
-            popGroup(r);
-            addNest(r, -expressionNest(constNode->expression));
+            pushExpressionDocumentLinked(r, constNode->expression);
 
             pushTokenWord(r, member->endToken);
             popGroup(r);
@@ -2427,13 +2417,7 @@ pushMemberDocument(Render *r, ASTNode *member) {
                 pushWord(r, wordSpace());
                 pushTokenWord(r, decl->identifier + 1);
 
-                pushGroup(r);
-                addNest(r, expressionNest(decl->expression));
-                pushWord(r, expressionLinkWord(decl->expression));
-                pushExpressionDocument(r, decl->expression);
-                popGroup(r);
-
-                addNest(r, -expressionNest(decl->expression));
+                pushExpressionDocumentLinked(r, decl->expression);
             }
 
             pushTokenWord(r, member->endToken);
