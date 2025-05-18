@@ -620,7 +620,12 @@ contract FunctionOverrides is FunctionInterfaces, FunctionDefinitions {
     }
 
     function oneParam(uint256 x)
-        override(FunctionInterfaces, FunctionDefinitions, SomeOtherFunctionContract, SomeImport.AndAnotherFunctionContract)
+        override(
+            FunctionInterfaces,
+            FunctionDefinitions,
+            SomeOtherFunctionContract,
+            SomeImport.AndAnotherFunctionContract
+        )
     {
         a = 1;
     }

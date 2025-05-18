@@ -49,7 +49,7 @@
 | unitExpression                        |     YES |                                                   |
 | usingDirective                        |     YES |                                                   |
 | variableAssignment                    |     YES |                                                   |
-| variableDefinition                    |     YES |                             Lines longer than 120 |
+| variableDefinition                    |     YES |                                                   |
 | whileStatement                        |     YES |                                                   |
 | yul                                   |     YES |                                                   |
 | yulStrings                            |     YES |           Weird syntax not defined in the grammar |

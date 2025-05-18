@@ -2029,18 +2029,24 @@ pushOverridesDocument(Render *r, TokenId overrideToken, ASTNodeListRanged *overr
             assert(stringMatch(LIT_TO_STR("("), r->tokens.tokenStrings[overrides->startToken - 1]));
             assert(stringMatch(LIT_TO_STR(")"), r->tokens.tokenStrings[overrides->endToken + 1]));
 
+            pushGroup(r);
+            pushNest(r);
             pushTokenWord(r, overrides->startToken - 1);
+            pushWord(r, wordSoftline());
 
             ASTNodeLink *override = overrides->head;
             for(u32 i = 0; i < overrides->count; i++, override = override->next) {
                 pushTypeDocument(r, &override->node);
                 if(i != overrides->count - 1) {
                     pushTokenWord(r, override->node.endToken + 1);
-                    pushWord(r, wordSpace());
+                    pushWord(r, wordLine());
                 }
             }
 
+            popNest(r);
+            pushWord(r, wordSoftline());
             pushTokenWord(r, overrides->endToken + 1);
+            popGroup(r);
         }
     }
 }
