@@ -145,12 +145,9 @@ renderDocumentWord(Render *r, Word *word, u32 nest, bool flatMode) {
         case WordType_Text:  { writeString(r->writer, word->text); } break;
         case WordType_CommentStartSpace:
         case WordType_Space: { writeString(r->writer, LIT_TO_STR(" ")); } break;
+        case WordType_Softline:
         case WordType_Line: {
-            if(flatMode) { writeString(r->writer, LIT_TO_STR(" ")); }
-            else         { finishLine(w); }
-        } break;
-        case WordType_Softline: {
-            if(flatMode) { }
+            if(flatMode) { writeString(r->writer, word->text); }
             else         { finishLine(w); }
         } break;
         case WordType_HardBreak: { finishLine(w); } break;
@@ -290,7 +287,7 @@ wordCommentStartSpace(void) {
 
 static Word
 wordLine(void) {
-    return (Word) { .type = WordType_Line };
+    return (Word) { .type = WordType_Line, .text = LIT_TO_STR(" ") };
 }
 
 static void
