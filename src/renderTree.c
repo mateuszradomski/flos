@@ -160,10 +160,16 @@ renderDocumentWord(Render *r, Word *word, u32 nest, bool flatMode) {
     return nest;
 }
 
-static u32 renderGroup(Render *r, Word *words, s32 count, u32 nest);
-
 static u32
-processGroupWords(Render *r, Word *words, s32 count, u32 nest, bool flatMode) {
+renderGroup(Render *r, Word *words, s32 count, u32 nest) {
+    if (count <= 0) return 0;
+
+    Writer *w = r->writer;
+
+    s32 remainingWidth = 120 - MIN(120, MAX(w->lineSize, w->indentSize * nest));
+    bool hasFlatMode = false;
+    bool flatMode = false;
+
     u32 i = 0;
 
     while (i < count) {
@@ -174,27 +180,16 @@ processGroupWords(Render *r, Word *words, s32 count, u32 nest, bool flatMode) {
         } else if (word->type == WordType_GroupPop) {
             break;
         } else {
+            if(!hasFlatMode) {
+                flatMode = fits(r, words, count, remainingWidth);
+                hasFlatMode = true;
+            }
+
             nest = renderDocumentWord(r, word, nest, flatMode);
         }
     }
 
     return i;
-}
-
-static u32
-renderGroup(Render *r, Word *words, s32 count, u32 nest) {
-    if (count <= 0) return 0;
-
-    Writer *w = r->writer;
-
-    bool flatMode = false;
-    s32 remainingWidth = MAX(0, 120 - (s32)(w->lineSize == 0 ? w->indentSize * nest : w->lineSize));
-    if (fits(r, words, count, remainingWidth)) {
-        flatMode = true;
-        return processGroupWords(r, words, count, nest, flatMode);
-    }
-
-    return processGroupWords(r, words, count, nest, flatMode);
 }
 
 static void
