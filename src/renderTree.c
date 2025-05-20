@@ -2666,6 +2666,7 @@ pushMemberDocument(Render *r, ASTNode *member) {
 
 static void
 renderSourceUnit(Render *r, ASTNode *tree) {
+    gCyclesTable[Measurement_BuildDoc] = -readCPUTimer();
     pushGroup(r);
     ASTNodeLink *child = tree->children.head;
     for(u32 i = 0; i < tree->children.count; i++, child = child->next) {
@@ -2673,7 +2674,11 @@ renderSourceUnit(Render *r, ASTNode *tree) {
         pushMemberDocument(r, &child->node);
     }
     popGroup(r);
+    gCyclesTable[Measurement_BuildDoc] += readCPUTimer();
+
+    gCyclesTable[Measurement_RenderDoc] = -readCPUTimer();
     renderDocument(r);
+    gCyclesTable[Measurement_RenderDoc] += readCPUTimer();
 }
 
 static String
@@ -2745,6 +2750,20 @@ closeDebugElement(ByteConcatenator *c) {
 static void
 dumpDocument(Render *r, Arena *arena) {
     const char *flag = getenv("DDOC");
+    if(flag == NULL) {
+        return;
+    }
+
+    FILE *output = fopen("document.csv", "wb");
+    fprintf(output, "Type,Text Size,Text\n");
+    for(u32 i = 0; i < r->wordCount; i++) {
+        Word *word = &r->words[i];
+        fprintf(output, "%.*s,%zu,%.*s\n",
+                (int)wordTypeToString(word->type).size, wordTypeToString(word->type).data,
+                word->text.size,
+                (int)word->text.size, word->text.data);
+    }
+    fclose(output);
 }
 
 static String

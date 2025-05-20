@@ -18,10 +18,12 @@ typedef u32 size_t;
 typedef uint8_t u8;
 typedef uint16_t u16;
 typedef uint32_t u32;
+typedef uint64_t u64;
 
 typedef int8_t s8;
 typedef int16_t s16;
 typedef int32_t s32;
+typedef int64_t s64;
 
 typedef u32 bool;
 #endif
@@ -31,6 +33,37 @@ typedef struct String
     u8 *data;
     size_t size;
 } String;
+
+static u64
+readCPUTimer()
+{
+#if defined(__x86_64__) || defined(_M_AMD64)
+    return __rdtsc();
+#else
+    u64 tsc = 0;
+    asm volatile("mrs %0, cntvct_el0" : "=r"(tsc));
+    return tsc;
+#endif
+}
+
+static u64
+readCPUFrequency()
+{
+#if defined(__x86_64__) || defined(_M_AMD64)
+    return 4.2e9;
+#else
+    return 24e6;
+#endif
+}
+
+u64 gCyclesTable[64];
+
+enum MeasurementId {
+    Measurement_Tokenize = 0,
+    Measurement_Parse,
+    Measurement_BuildDoc,
+    Measurement_RenderDoc,
+};
 
 #define LIT_TO_STR(x) ((String){ .data = (u8 *)x, .size = sizeof(x) - 1 })
 

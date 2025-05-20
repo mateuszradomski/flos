@@ -13,30 +13,7 @@
 
 typedef unsigned long long u64;
 
-static u64
-readCPUTimer()
-{
-#if defined(__x86_64__) || defined(_M_AMD64)
-    return __rdtsc();
-#else
-    u64 tsc = 0;
-    asm volatile("mrs %0, cntvct_el0" : "=r"(tsc));
-    return tsc;
-#endif
-}
-
-static u64
-readCPUFrequency()
-{
-#if defined(__x86_64__) || defined(_M_AMD64)
-    return 4.2e9;
-#else
-    return 24e6;
-#endif
-}
-
 int main(int argCount, char **args) {
-    u64 elapsed = -readCPUTimer();
     Arena arena = arenaCreate(128 * Megabyte, 32 * Kilobyte, 64);
 
     char *filepath = "tests/parserbuilding.sol";
@@ -46,6 +23,7 @@ int main(int argCount, char **args) {
 
     String content = readFile(&arena, filepath);
 
+    u64 elapsed = -readCPUTimer();
     size_t memoryUsed = arenaFreeBytes(&arena);
     String result = format(&arena, content);
     memoryUsed -= arenaFreeBytes(&arena);
@@ -66,5 +44,12 @@ int main(int argCount, char **args) {
         printf(ANSI_RED "The formatted output is different from input!\n" ANSI_RESET);
     }
 
-    printf("Done in [%llu cycles][%f ms][%f MB/s]\n", elapsed, (double)elapsed / cpuFreq * 1e3, ((content.size / ((double)elapsed / cpuFreq)) / 1e6));
+    printf("Done with throughput %f MB/s\n", ((content.size / ((double)elapsed / cpuFreq)) / 1e6));
+    printf("Timings:\n");
+    printf("  Tokenize:   %9llu cycles, %f ms\n", gCyclesTable[Measurement_Tokenize], (double)gCyclesTable[Measurement_Tokenize] / cpuFreq * 1e3);
+    printf("  Parse:      %9llu cycles, %f ms\n", gCyclesTable[Measurement_Parse], (double)gCyclesTable[Measurement_Parse] / cpuFreq * 1e3);
+    printf("  BuildDoc:   %9llu cycles, %f ms\n", gCyclesTable[Measurement_BuildDoc], (double)gCyclesTable[Measurement_BuildDoc] / cpuFreq * 1e3);
+    printf("  RenderDoc:  %9llu cycles, %f ms\n", gCyclesTable[Measurement_RenderDoc], (double)gCyclesTable[Measurement_RenderDoc] / cpuFreq * 1e3);
+    printf("  ---------\n");
+    printf("  Sum:        %9llu cycles, %f ms\n", elapsed, (double)elapsed / cpuFreq * 1e3);
 }
