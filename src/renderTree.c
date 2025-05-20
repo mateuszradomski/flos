@@ -905,6 +905,7 @@ pushExpressionDocument(Render *r, ASTNode *node) {
             pushWord(r, wordSoftline());
             ASTNodeLink *element = tuple->elements.head;
             pushGroup(r);
+            TokenId commaToken = node->startToken;
             for(u32 i = 0; i < tuple->elements.count; i++, element = element->next) {
                 bool isNamed = element->node.type != ASTNodeType_None;
                 if(isNamed) {
@@ -913,7 +914,7 @@ pushExpressionDocument(Render *r, ASTNode *node) {
                 }
 
                 if(i < tuple->elements.count - 1) {
-                    TokenId commaToken = isNamed ? element->node.endToken + 1 : element->next->node.startToken - 1;
+                    commaToken = isNamed ? element->node.endToken + 1 : commaToken + 1;
                     assert(stringMatch(LIT_TO_STR(","), r->tokens.tokenStrings[commaToken]));
                     pushTokenWord(r, commaToken);
                 }

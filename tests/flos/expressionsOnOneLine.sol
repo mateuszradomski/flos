@@ -5,9 +5,8 @@ contract ExpressionsOnOneLine {
         uint256 flags = flag1 | flag2 | flag3 | flag4 | flag5 | flag6 | flag7 | flag8 | flag9 | flag10 | flag11 | flag12 | flag13;
         string memory longString = string.concat(str1, str2, str3, str4, str5, str6, str7, str8, str9, str10, str11, str12, str13, str14);
 
-        // TODO(radomski): make this work
-        // (bool success, bytes memory returnData) =
-        //     SAFE.execTransactionFromModuleReturnData(address(SUPERCHAIN_CONFIG), 0, data, Enum.Operation.Call);
+        (bool success, bytes memory returnData) =
+            SAFE.execTransactionFromModuleReturnData(address(SUPERCHAIN_CONFIG), 0, data, Enum.Operation.Call);
     }
 
     // Regression test
@@ -46,9 +45,12 @@ contract ExpressionsOnOneLine {
             str14
         );
 
-        // TODO(radomski): make this work
-        // (bool success, bytes memory returnData) =
-        //     SAFE.execTransactionFromModuleReturnData(address(SUPERCHAIN_CONFIG), 0, data, Enum.Operation.Call);
+        (bool success, bytes memory returnData) = SAFE.execTransactionFromModuleReturnData(
+            address(SUPERCHAIN_CONFIG),
+            0,
+            data,
+            Enum.Operation.Call
+        );
     }
 
     // Regression test
