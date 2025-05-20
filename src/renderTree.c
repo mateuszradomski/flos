@@ -472,13 +472,7 @@ pushCommentsAfterToken(Render *r, TokenId token) {
 
 static void
 pushTokenWord(Render *r, TokenId token) {
-    Word w = {
-        .type = WordType_Text,
-        .text = getTokenString(r->tokens, token),
-    };
-
-    pushWord(r, w);
-
+    pushWord(r, wordText(getTokenString(r->tokens, token)));
     pushCommentsAfterToken(r, token);
 }
 
@@ -516,12 +510,7 @@ pushTokenAsStringWord(Render *r, TokenId token) {
         assert(r->scratchBufferSize <= r->scratchBufferCapacity && "Scratch buffer overflow detected when wrapping string with quotes");
     }
 
-    Word w = {
-        .type = WordType_Text,
-        .text = text,
-    };
-    pushWord(r, w);
-
+    pushWord(r, wordText(text));
     pushCommentsAfterToken(r, token);
 }
 
