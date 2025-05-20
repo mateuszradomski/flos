@@ -13,7 +13,6 @@ typedef enum WordType {
     WordType_Line,
     WordType_Space,
     WordType_CommentStartSpace,
-    WordType_Softline,
     WordType_HardBreak,
     WordType_GroupPush,
     WordType_GroupPop,
@@ -46,10 +45,10 @@ typedef struct Render {
 
 static void
 commitIndent(Writer *w) {
-    for(u32 i = 0; i < w->indentSize * w->indentCount; i++) {
-        w->data[w->size++] = ' ';
-        w->lineSize += 1;
-    }
+    u32 spaceCount = w->indentSize * w->indentCount;
+    memset(w->data + w->size, ' ', spaceCount);
+    w->size += spaceCount;
+    w->lineSize = spaceCount;
 }
 
 static void
@@ -115,7 +114,6 @@ fits(Render *r, Word *words, s32 count, u32 remainingWidth) {
     for (;
          i < count &&
          width <= remainingWidth &&
-         words[i].type != WordType_Softline &&
          words[i].type != WordType_HardBreak &&
          words[i].type != WordType_CommentStartSpace &&
          words[i].type != WordType_Line;
@@ -140,7 +138,6 @@ renderDocumentWord(Render *r, Word *word, u32 nest, bool flatMode) {
         case WordType_CommentStartSpace:
         case WordType_Space:
         case WordType_Text:  { writeString(r->writer, word->text); } break;
-        case WordType_Softline:
         case WordType_Line: {
             if(flatMode) { writeString(r->writer, word->text); }
             else         { finishLine(w); }
@@ -160,21 +157,20 @@ renderGroup(Render *r, Word *words, s32 count, u32 nest) {
 
     Writer *w = r->writer;
 
-    s32 remainingWidth = 120 - MIN(120, MAX(w->lineSize, w->indentSize * nest));
+    u32 startLineSize = w->lineSize;
     bool hasFlatMode = false;
     bool flatMode = false;
 
     u32 i = 0;
 
-    while (i < count) {
-        Word *word = &words[i++];
+    for(;i < count && words[i].type != WordType_GroupPop; i++) {
+        Word *word = &words[i];
 
         if (word->type == WordType_GroupPush) {
-            i += renderGroup(r, words + i, count - i, nest);
-        } else if (word->type == WordType_GroupPop) {
-            break;
+            i += renderGroup(r, words + (i + 1), count - (i + 1), nest);
         } else {
             if(!hasFlatMode) {
+                s32 remainingWidth = 120 - MIN(120, MAX(startLineSize, w->indentSize * nest));
                 flatMode = fits(r, words, count, remainingWidth);
                 hasFlatMode = true;
             }
@@ -183,7 +179,8 @@ renderGroup(Render *r, Word *words, s32 count, u32 nest) {
         }
     }
 
-    return i;
+    // NOTE(radomski): Consume that last GroupPop
+    return i + 1;
 }
 
 static void
@@ -231,7 +228,6 @@ isWordWhitespace(Word w) {
         w.type == WordType_Space ||
         w.type == WordType_CommentStartSpace ||
         w.type == WordType_Line ||
-        w.type == WordType_Softline ||
         w.type == WordType_HardBreak
     );
 }
@@ -260,11 +256,6 @@ wordHardBreak(void) {
 }
 
 static Word
-wordSoftline(void) {
-    return (Word) { .type = WordType_Softline };
-}
-
-static Word
 wordSpace(void) {
     return (Word) { .type = WordType_Space, .text = LIT_TO_STR(" ") };
 }
@@ -272,6 +263,11 @@ wordSpace(void) {
 static Word
 wordCommentStartSpace(void) {
     return (Word) { .type = WordType_CommentStartSpace, .text = LIT_TO_STR(" ") };
+}
+
+static Word
+wordSoftline(void) {
+    return (Word) { .type = WordType_Line, .text = LIT_TO_STR("") };
 }
 
 static Word
@@ -2680,7 +2676,6 @@ wordTypeToString(WordType type) {
         case WordType_Line: return LIT_TO_STR("Line");
         case WordType_Space: return LIT_TO_STR("Space");
         case WordType_CommentStartSpace: return LIT_TO_STR("CommentStartSpace");
-        case WordType_Softline: return LIT_TO_STR("Softline");
         case WordType_HardBreak: return LIT_TO_STR("HardBreak");
         case WordType_GroupPush: return LIT_TO_STR("GroupPush");
         case WordType_GroupPop: return LIT_TO_STR("GroupPop");
