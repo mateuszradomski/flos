@@ -54,8 +54,7 @@ commitIndent(Writer *w) {
 
 static void
 writeString(Writer *w, String str) {
-    String newline = LIT_TO_STR("\n") ;
-    if(w->lineSize == 0 && !stringMatch(newline, str)) {
+    if(w->lineSize == 0) {
         commitIndent(w);
     }
 
@@ -66,12 +65,7 @@ writeString(Writer *w, String str) {
 
 static void
 finishLine(Writer *w) {
-    // TODO(radomski): Is this needed?
-    if(w->size > 0 && w->data[w->size - 1] == ' ') {
-        w->size -= 1;
-    }
-
-    writeString(w, LIT_TO_STR("\n"));
+    w->data[w->size++] = '\n';
     w->lineSize = 0;
 }
 
