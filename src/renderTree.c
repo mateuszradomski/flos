@@ -99,16 +99,13 @@ fits(Render *r, Word *words, s32 count, u32 remainingWidth) {
     for (; i < count && groupStack >= 0 && width <= remainingWidth; i++) {
         Word *word = &words[i];
 
-        switch (word->type) {
-            case WordType_Line:
-            case WordType_Space:
-            case WordType_CommentStartSpace:
-            case WordType_Text: { width += word->text.size; } break;
-            case WordType_GroupPush: { groupStack += 1; } break;
-            case WordType_GroupPop:  { groupStack -= 1; } break;
-            case WordType_HardBreak: { width = 0xffffffff; } break;
-            default: break;
+        if(word->type == WordType_GroupPush) {
+            groupStack += 1;
+        } else if(word->type == WordType_GroupPop) {
+            groupStack -= 1;
         }
+
+        width += word->text.size;
     }
 
     for (;
@@ -119,10 +116,7 @@ fits(Render *r, Word *words, s32 count, u32 remainingWidth) {
          words[i].type != WordType_Line;
          i++) {
         Word *word = &words[i];
-
-        if(word->type == WordType_Space || word->type == WordType_Text) {
-            width += word->text.size;
-        }
+        width += word->text.size;
     }
 
     return width <= remainingWidth;
@@ -137,7 +131,7 @@ renderDocumentWord(Render *r, Word *word, u32 nest, bool flatMode) {
     switch(word->type) {
         case WordType_CommentStartSpace:
         case WordType_Space:
-        case WordType_Text:  { writeString(r->writer, word->text); } break;
+        case WordType_Text: { writeString(r->writer, word->text); } break;
         case WordType_Line: {
             if(flatMode) { writeString(r->writer, word->text); }
             else         { finishLine(w); }
@@ -252,7 +246,7 @@ wordText(String text) {
 
 static Word
 wordHardBreak(void) {
-    return (Word) { .type = WordType_HardBreak };
+    return (Word) { .type = WordType_HardBreak, .text = { .data = 0x0, .size = 0xffff } };
 }
 
 static Word
