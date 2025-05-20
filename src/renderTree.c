@@ -9,7 +9,6 @@ typedef struct Writer {
 } Writer;
 
 typedef enum WordType {
-    WordType_None,
     WordType_Text,
     WordType_Line,
     WordType_Space,
@@ -155,7 +154,6 @@ renderDocumentWord(Render *r, Word *word, u32 nest, bool flatMode) {
         case WordType_HardBreak: { finishLine(w); } break;
         case WordType_NestPush:  { nest += nestActive; } break;
         case WordType_NestPop:   { nest -= nestActive; } break;
-        case WordType_None:      { } break;
         default:                 { assert(false); }
     }
 
@@ -558,11 +556,9 @@ pushCallArgumentListDocument(Render *r, TokenId startingToken, ASTNodeListRanged
 
     Word whitespace = names->count == 0 ? wordSoftline() : wordLine();
     if(names->count == 0) {
-        if(expressions->count == 0) {
-            whitespace = (Word){ .type = WordType_None };
+        if(expressions->count > 0) {
+            pushWord(r, whitespace);
         }
-
-        pushWord(r, whitespace);
 
         ASTNodeLink *argument = expressions->head;
         for(u32 i = 0; i < expressions->count; i++, argument = argument->next) {
@@ -2686,7 +2682,6 @@ renderSourceUnit(Render *r, ASTNode *tree) {
 static String
 wordTypeToString(WordType type) {
     switch(type) {
-        case WordType_None: return LIT_TO_STR("None");
         case WordType_Text: return LIT_TO_STR("Text");
         case WordType_Line: return LIT_TO_STR("Line");
         case WordType_Space: return LIT_TO_STR("Space");
