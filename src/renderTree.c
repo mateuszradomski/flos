@@ -53,11 +53,23 @@ commitIndent(Writer *w) {
 
 static void
 writeString(Writer *w, String str) {
-    if(w->lineSize == 0) {
+    if (str.size == 0) {
+        return;
+    }
+
+    if (w->lineSize == 0) {
         commitIndent(w);
     }
 
-    memcpy(w->data + w->size, str.data, str.size);
+    if (str.size <= 16) {
+        u64 *output = (u64 *)(w->data + w->size);
+        u64 *input = (u64 *)(str.data);
+        output[0] = input[0];
+        output[1] = input[1];
+    } else {
+        memcpy(w->data + w->size, str.data, str.size);
+    }
+
     w->size += str.size;
     w->lineSize += str.size;
 }
