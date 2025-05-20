@@ -67,6 +67,7 @@ writeString(Writer *w, String str) {
 
 static void
 finishLine(Writer *w) {
+    // TODO(radomski): Is this needed?
     if(w->size > 0 && w->data[w->size - 1] == ' ') {
         w->size -= 1;
     }
@@ -107,28 +108,29 @@ fits(Render *r, Word *words, s32 count, u32 remainingWidth) {
         Word *word = &words[i];
 
         switch (word->type) {
-            case WordType_Text:      { width += word->text.size; } break;
+            case WordType_Line:
             case WordType_Space:
             case WordType_CommentStartSpace:
-            case WordType_Line:      { width += 1; } break;
+            case WordType_Text: { width += word->text.size; } break;
             case WordType_GroupPush: { groupStack += 1; } break;
             case WordType_GroupPop:  { groupStack -= 1; } break;
-            case WordType_HardBreak: return false;
+            case WordType_HardBreak: { width = 0xffffffff; } break;
             default: break;
         }
     }
 
-    for (; i < count && width <= remainingWidth; i++) {
+    for (;
+         i < count &&
+         width <= remainingWidth &&
+         words[i].type != WordType_Softline &&
+         words[i].type != WordType_HardBreak &&
+         words[i].type != WordType_CommentStartSpace &&
+         words[i].type != WordType_Line;
+         i++) {
         Word *word = &words[i];
 
-        switch (word->type) {
-            case WordType_Text:  { width += word->text.size; } break;
-            case WordType_Space: { width += 1; } break;
-            case WordType_Softline:
-            case WordType_HardBreak:
-            case WordType_CommentStartSpace:
-            case WordType_Line:  { return width <= remainingWidth; } break;
-            default: break;
+        if(word->type == WordType_Space || word->type == WordType_Text) {
+            width += word->text.size;
         }
     }
 
@@ -142,9 +144,9 @@ renderDocumentWord(Render *r, Word *word, u32 nest, bool flatMode) {
 
     u32 nestActive = flatMode ? 0 : 1;
     switch(word->type) {
-        case WordType_Text:  { writeString(r->writer, word->text); } break;
         case WordType_CommentStartSpace:
-        case WordType_Space: { writeString(r->writer, LIT_TO_STR(" ")); } break;
+        case WordType_Space:
+        case WordType_Text:  { writeString(r->writer, word->text); } break;
         case WordType_Softline:
         case WordType_Line: {
             if(flatMode) { writeString(r->writer, word->text); }
@@ -272,12 +274,12 @@ wordSoftline(void) {
 
 static Word
 wordSpace(void) {
-    return (Word) { .type = WordType_Space };
+    return (Word) { .type = WordType_Space, .text = LIT_TO_STR(" ") };
 }
 
 static Word
 wordCommentStartSpace(void) {
-    return (Word) { .type = WordType_CommentStartSpace };
+    return (Word) { .type = WordType_CommentStartSpace, .text = LIT_TO_STR(" ") };
 }
 
 static Word
