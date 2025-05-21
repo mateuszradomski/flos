@@ -2731,6 +2731,7 @@ dumpDocument(Render *r, Arena *arena) {
 static Render
 createRender(Arena *arena, String originalSource, TokenizeResult tokens) {
     u32 scratchBufferCapacity = 8 * Megabyte;
+    u32 wordCount = MAX(131071, originalSource.size / 2);
     Render render = {
         .writer = {
             .data = arrayPush(arena, u8, originalSource.size * 4),
@@ -2742,9 +2743,9 @@ createRender(Arena *arena, String originalSource, TokenizeResult tokens) {
         .sourceBaseAddress = originalSource.data,
 
         // NOTE(radomski): This makes read and writes to (-1) possible
-        .words = arrayPush(arena, Word, 131072) + 1,
+        .words = arrayPush(arena, Word, wordCount + 1) + 1,
         .wordCount = 0,
-        .wordCapacity = 131071,
+        .wordCapacity = wordCount,
 
         .scratchBufferCapacity = scratchBufferCapacity,
         .scratchBufferSize = 0,
