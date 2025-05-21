@@ -27,7 +27,7 @@ typedef struct Word {
 } Word;
 
 typedef struct Render {
-    Writer *writer;
+    Writer writer;
     TokenizeResult tokens;
     u8 *sourceBaseAddress;
 
@@ -102,7 +102,7 @@ flushTrailing(Render *r) {
 }
 
 static bool
-fits(Render *r, Word *words, s64 count, u64 remainingWidth) {
+fits(Word *words, s64 count, u64 remainingWidth) {
     u64 width = 0;
     u64 i = 0;
 
@@ -135,17 +135,16 @@ fits(Render *r, Word *words, s64 count, u64 remainingWidth) {
 }
 
 static u32
-renderDocumentWord(Render *r, Word *word, u32 nest, bool flatMode) {
-    Writer *w = r->writer;
+renderDocumentWord(Writer *w, Word *word, u32 nest, bool flatMode) {
     setIndent(w, nest);
 
     u32 nestActive = flatMode ? 0 : 1;
     switch(word->type) {
         case WordType_CommentStartSpace:
         case WordType_Space:
-        case WordType_Text: { writeString(r->writer, word->text); } break;
+        case WordType_Text: { writeString(w, word->text); } break;
         case WordType_Line: {
-            if(flatMode) { writeString(r->writer, word->text); }
+            if(flatMode) { writeString(w, word->text); }
             else         { finishLine(w); }
         } break;
         case WordType_HardBreak: { finishLine(w); } break;
@@ -158,10 +157,8 @@ renderDocumentWord(Render *r, Word *word, u32 nest, bool flatMode) {
 }
 
 static u64
-renderGroup(Render *r, Word *words, s64 count, u32 nest) {
+renderGroup(Writer *w, Word *words, s64 count, u32 nest) {
     if (count <= 0) return 0;
-
-    Writer *w = r->writer;
 
     u32 startLineSize = w->lineSize;
     bool hasFlatMode = false;
@@ -173,15 +170,15 @@ renderGroup(Render *r, Word *words, s64 count, u32 nest) {
         Word *word = &words[i];
 
         if (word->type == WordType_GroupPush) {
-            i += renderGroup(r, words + (i + 1), count - (i + 1), nest);
+            i += renderGroup(w, words + (i + 1), count - (i + 1), nest);
         } else {
             if(!hasFlatMode) {
                 s32 remainingWidth = 120 - MIN(120, MAX(startLineSize, w->indentSize * nest));
-                flatMode = fits(r, words, count, remainingWidth);
+                flatMode = fits(words, count, remainingWidth);
                 hasFlatMode = true;
             }
 
-            nest = renderDocumentWord(r, word, nest, flatMode);
+            nest = renderDocumentWord(w, word, nest, flatMode);
         }
     }
 
@@ -194,7 +191,7 @@ renderDocument(Render *r) {
     flushTrailing(r);
 
     u32 nest = 0;
-    renderGroup(r, r->words, r->wordCount, nest);
+    renderGroup(&r->writer, r->words, r->wordCount, nest);
 }
 
 static void
@@ -2750,16 +2747,14 @@ dumpDocument(Render *r, Arena *arena) {
 
 static String
 renderTree(Arena *arena, ASTNode tree, String originalSource, TokenizeResult tokens) {
-    Writer writer = {
-        .data = arrayPush(arena, u8, originalSource.size * 4),
-        .size = 0,
-        .capacity = originalSource.size * 4 ,
-        .indentSize = 4,
-    };
-
     u32 scratchBufferCapacity = 8 * Megabyte;
     Render render = {
-        .writer = &writer,
+        .writer = {
+            .data = arrayPush(arena, u8, originalSource.size * 4),
+            .size = 0,
+            .capacity = originalSource.size * 4 ,
+            .indentSize = 4,
+        },
         .tokens = tokens,
         .sourceBaseAddress = originalSource.data,
 
@@ -2779,5 +2774,5 @@ renderTree(Arena *arena, ASTNode tree, String originalSource, TokenizeResult tok
 
     dumpDocument(&render, arena);
 
-    return (String){ .data = writer.data, .size = writer.size };
+    return (String){ .data = render.writer.data, .size = render.writer.size };
 }
