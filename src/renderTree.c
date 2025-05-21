@@ -102,9 +102,9 @@ flushTrailing(Render *r) {
 }
 
 static bool
-fits(Render *r, Word *words, s32 count, u32 remainingWidth) {
-    u32 width = 0;
-    s32 i = 0;
+fits(Render *r, Word *words, s64 count, u64 remainingWidth) {
+    u64 width = 0;
+    u64 i = 0;
 
     s32 groupStack = 0;
 
@@ -157,8 +157,8 @@ renderDocumentWord(Render *r, Word *word, u32 nest, bool flatMode) {
     return nest;
 }
 
-static u32
-renderGroup(Render *r, Word *words, s32 count, u32 nest) {
+static u64
+renderGroup(Render *r, Word *words, s64 count, u32 nest) {
     if (count <= 0) return 0;
 
     Writer *w = r->writer;
@@ -167,7 +167,7 @@ renderGroup(Render *r, Word *words, s32 count, u32 nest) {
     bool hasFlatMode = false;
     bool flatMode = false;
 
-    u32 i = 0;
+    u64 i = 0;
 
     for(;i < count && words[i].type != WordType_GroupPop; i++) {
         Word *word = &words[i];
@@ -258,7 +258,7 @@ wordText(String text) {
 
 static Word
 wordHardBreak(void) {
-    return (Word) { .type = WordType_HardBreak, .text = { .data = 0x0, .size = 0xffff } };
+    return (Word) { .type = WordType_HardBreak, .text = { .data = 0x0, .size = 0xffffffff } };
 }
 
 static Word
