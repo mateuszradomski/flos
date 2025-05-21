@@ -2645,23 +2645,6 @@ pushMemberDocument(Render *r, ASTNode *member) {
     }
 }
 
-static void
-renderSourceUnit(Render *r, ASTNode *tree) {
-    gCyclesTable[Measurement_BuildDoc] = -readCPUTimer();
-    pushGroup(r);
-    ASTNodeLink *child = tree->children.head;
-    for(u32 i = 0; i < tree->children.count; i++, child = child->next) {
-        preserveHardBreaksIntoDocument(r, &child->node);
-        pushMemberDocument(r, &child->node);
-    }
-    popGroup(r);
-    gCyclesTable[Measurement_BuildDoc] += readCPUTimer();
-
-    gCyclesTable[Measurement_RenderDoc] = -readCPUTimer();
-    renderDocument(r);
-    gCyclesTable[Measurement_RenderDoc] += readCPUTimer();
-}
-
 static String
 wordTypeToString(WordType type) {
     switch(type) {
@@ -2745,8 +2728,8 @@ dumpDocument(Render *r, Arena *arena) {
     fclose(output);
 }
 
-static String
-renderTree(Arena *arena, ASTNode tree, String originalSource, TokenizeResult tokens) {
+static Render
+createRender(Arena *arena, String originalSource, TokenizeResult tokens) {
     u32 scratchBufferCapacity = 8 * Megabyte;
     Render render = {
         .writer = {
@@ -2768,9 +2751,35 @@ renderTree(Arena *arena, ASTNode tree, String originalSource, TokenizeResult tok
         .scratchBuffer = arrayPush(arena, u8, scratchBufferCapacity),
     };
 
-    u32 startOfTokens = tokens.tokenStrings[tree.startToken].data - originalSource.data;
-    pushCommentsInRange(&render, 0, startOfTokens);
-    renderSourceUnit(&render, &tree);
+    return render;
+}
+
+static void
+buildDocument(Render *r, ASTNode *tree, String originalSource, TokenizeResult tokens) {
+    u32 startOfTokens = tokens.tokenStrings[tree->startToken].data - originalSource.data;
+
+    pushGroup(r);
+    pushCommentsInRange(r, 0, startOfTokens);
+
+    ASTNodeLink *child = tree->children.head;
+    for(u32 i = 0; i < tree->children.count; i++, child = child->next) {
+        preserveHardBreaksIntoDocument(r, &child->node);
+        pushMemberDocument(r, &child->node);
+    }
+    popGroup(r);
+}
+
+static String
+renderTree(Arena *arena, ASTNode tree, String originalSource, TokenizeResult tokens) {
+    Render render = createRender(arena, originalSource, tokens);
+
+    gCyclesTable[Measurement_BuildDoc] = -readCPUTimer();
+    buildDocument(&render, &tree, originalSource, tokens);
+    gCyclesTable[Measurement_BuildDoc] += readCPUTimer();
+
+    gCyclesTable[Measurement_RenderDoc] = -readCPUTimer();
+    renderDocument(&render);
+    gCyclesTable[Measurement_RenderDoc] += readCPUTimer();
 
     dumpDocument(&render, arena);
 
