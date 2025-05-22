@@ -23,7 +23,8 @@ typedef enum WordType {
 
 typedef struct Word {
     WordType type;
-    String text;
+    u32 textSize;
+    u8 *text;
 } Word;
 
 typedef struct Render {
@@ -52,8 +53,8 @@ commitIndent(Writer *w) {
 }
 
 static void
-writeString(Writer *w, String str) {
-    if (str.size == 0) {
+writeString(Writer *w, u8 *str, u32 size) {
+    if (size == 0) {
         return;
     }
 
@@ -61,17 +62,17 @@ writeString(Writer *w, String str) {
         commitIndent(w);
     }
 
-    if (str.size <= 16) {
+    if (size <= 16) {
         u64 *output = (u64 *)(w->data + w->size);
-        u64 *input = (u64 *)(str.data);
+        u64 *input = (u64 *)(str);
         output[0] = input[0];
         output[1] = input[1];
     } else {
-        memcpy(w->data + w->size, str.data, str.size);
+        memcpy(w->data + w->size, str, size);
     }
 
-    w->size += str.size;
-    w->lineSize += str.size;
+    w->size += size;
+    w->lineSize += size;
 }
 
 static void
@@ -117,7 +118,7 @@ fits(Word *words, s64 count, u64 remainingWidth) {
             groupStack -= 1;
         }
 
-        width += word->text.size;
+        width += word->textSize;
     }
 
     for (;
@@ -128,7 +129,7 @@ fits(Word *words, s64 count, u64 remainingWidth) {
          words[i].type != WordType_Line;
          i++) {
         Word *word = &words[i];
-        width += word->text.size;
+        width += word->textSize;
     }
 
     return width <= remainingWidth;
@@ -142,9 +143,9 @@ renderDocumentWord(Writer *w, Word *word, u32 nest, bool flatMode) {
     switch(word->type) {
         case WordType_CommentStartSpace:
         case WordType_Space:
-        case WordType_Text: { writeString(w, word->text); } break;
+        case WordType_Text: { writeString(w, word->text, word->textSize); } break;
         case WordType_Line: {
-            if(flatMode) { writeString(w, word->text); }
+            if(flatMode) { writeString(w, word->text, word->textSize); }
             else         { finishLine(w); }
         } break;
         case WordType_HardBreak: { finishLine(w); } break;
@@ -250,32 +251,32 @@ pushWord(Render *r, Word w) {
 
 static Word
 wordText(String text) {
-    return (Word) { .type = WordType_Text, .text = text };
+    return (Word) { .type = WordType_Text, .text = text.data, .textSize = text.size };
 }
 
 static Word
 wordHardBreak(void) {
-    return (Word) { .type = WordType_HardBreak, .text = { .data = 0x0, .size = 0xffffffff } };
+    return (Word) { .type = WordType_HardBreak, .text = 0x0, .textSize = 0xffffffff };
 }
 
 static Word
 wordSpace(void) {
-    return (Word) { .type = WordType_Space, .text = LIT_TO_STR(" ") };
+    return (Word) { .type = WordType_Space, .text = (u8 *)" ",  .textSize = 1 };
 }
 
 static Word
 wordCommentStartSpace(void) {
-    return (Word) { .type = WordType_CommentStartSpace, .text = LIT_TO_STR(" ") };
+    return (Word) { .type = WordType_CommentStartSpace, .text = (u8 *)" ",  .textSize = 1 };
 }
 
 static Word
 wordSoftline(void) {
-    return (Word) { .type = WordType_Line, .text = LIT_TO_STR("") };
+    return (Word) { .type = WordType_Line, .text = (u8 *)"", .textSize = 0 };
 }
 
 static Word
 wordLine(void) {
-    return (Word) { .type = WordType_Line, .text = LIT_TO_STR(" ") };
+    return (Word) { .type = WordType_Line, .text = (u8 *)" ",  .textSize = 1 };
 }
 
 static void
@@ -2720,10 +2721,10 @@ dumpDocument(Render *r, Arena *arena) {
     fprintf(output, "Type,Text Size,Text\n");
     for(u32 i = 0; i < r->wordCount; i++) {
         Word *word = &r->words[i];
-        fprintf(output, "%.*s,%zu,%.*s\n",
+        fprintf(output, "%.*s,%u,%.*s\n",
                 (int)wordTypeToString(word->type).size, wordTypeToString(word->type).data,
-                word->text.size,
-                (int)word->text.size, word->text.data);
+                word->textSize,
+                (int)word->textSize, word->text);
     }
     fclose(output);
 }
