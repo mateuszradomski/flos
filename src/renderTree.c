@@ -109,14 +109,15 @@ fits(Word *words, s64 count, u64 remainingWidth) {
 
     s32 groupStack = 0;
 
+    s8 groupStackLUT[WordType_Count] = {
+        [WordType_GroupPush] = 1,
+        [WordType_GroupPop] = -1,
+    };
+
     for (; i < count && groupStack >= 0 && width <= remainingWidth; i++) {
         Word *word = &words[i];
 
-        if(word->type == WordType_GroupPush) {
-            groupStack += 1;
-        } else if(word->type == WordType_GroupPop) {
-            groupStack -= 1;
-        }
+        groupStack += groupStackLUT[word->type];
 
         width += word->textSize;
     }
