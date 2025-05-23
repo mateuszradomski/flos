@@ -109,7 +109,7 @@ fits(Word *words, s64 count, u64 remainingWidth) {
 
     s32 groupStack = 0;
 
-    s8 groupStackLUT[WordType_Count] = {
+    static s8 groupStackLUT[WordType_Count] = {
         [WordType_GroupPush] = 1,
         [WordType_GroupPop] = -1,
     };
@@ -136,56 +136,43 @@ fits(Word *words, s64 count, u64 remainingWidth) {
     return width <= remainingWidth;
 }
 
-static u32
-renderDocumentWord(Writer *w, Word *word, u32 nest, bool flatMode) {
-    setIndent(w, nest);
+static s8 nestActiveLut[WordType_Count] = {
+    [WordType_NestPush] = 1,
+    [WordType_NestPop] = -1,
+};
 
-    u32 nestActive = flatMode ? 0 : 1;
-    switch(word->type) {
-        case WordType_CommentStartSpace:
-        case WordType_Space:
-        case WordType_Text: { writeString(w, word->text, word->textSize); } break;
-        case WordType_Line: {
-            if(flatMode) { writeString(w, word->text, word->textSize); }
-            else         { finishLine(w); }
-        } break;
-        case WordType_HardBreak: { finishLine(w); } break;
-        case WordType_NestPush:  { nest += nestActive; } break;
-        case WordType_NestPop:   { nest -= nestActive; } break;
-        default:                 { assert(false); }
-    }
+static u32 nestActiveMaskLUT[2] = { 0xffffffff, 0 };
 
-    return nest;
-}
-
-static u64
+static void
 renderGroup(Writer *w, Word *words, s64 count, u32 nest) {
-    if (count <= 0) return 0;
-
-    u32 startLineSize = w->lineSize;
-    bool hasFlatMode = false;
+    u8 flatModeStack[64];
+    u8 flatModeStackIndex = 0;
     bool flatMode = false;
+    u32 nestActiveMask = 0;
 
-    u64 i = 0;
-
-    for(;i < count && words[i].type != WordType_GroupPop; i++) {
+    for(u64 i = 0; i < count; i++) {
         Word *word = &words[i];
 
         if (word->type == WordType_GroupPush) {
-            i += renderGroup(w, words + (i + 1), count - (i + 1), nest);
-        } else {
-            if(!hasFlatMode) {
-                s32 remainingWidth = 120 - MIN(120, MAX(startLineSize, w->indentSize * nest));
-                flatMode = fits(words, count, remainingWidth);
-                hasFlatMode = true;
-            }
-
-            nest = renderDocumentWord(w, word, nest, flatMode);
+            s32 remainingWidth = 120 - MIN(120, MAX(w->lineSize, w->indentSize * nest));
+            flatMode = fits(words + (i + 1), count - (i + 1), remainingWidth);
+            flatModeStack[++flatModeStackIndex] = flatMode;
+            nestActiveMask = nestActiveMaskLUT[flatMode];
+        } else if(word->type == WordType_GroupPop) {
+            flatMode = flatModeStack[--flatModeStackIndex];
+            nestActiveMask = nestActiveMaskLUT[flatMode];
         }
-    }
 
-    // NOTE(radomski): Consume that last GroupPop
-    return i + 1;
+        setIndent(w, nest);
+
+        if(word->type == WordType_HardBreak || (!flatMode && word->type == WordType_Line)) {
+            finishLine(w);
+        } else {
+            writeString(w, word->text, word->textSize);
+        }
+
+        nest += nestActiveLut[word->type] & nestActiveMask;
+    }
 }
 
 static void
