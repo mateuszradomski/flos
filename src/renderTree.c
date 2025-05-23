@@ -47,7 +47,15 @@ typedef struct Render {
 static void
 commitIndent(Writer *w) {
     u32 spaceCount = w->indentSize * w->indentCount;
-    memset(w->data + w->size, ' ', spaceCount);
+
+    if(spaceCount <= 16) {
+        u64 *output = (u64 *)(w->data + w->size);
+        output[0] = 0x2020202020202020;
+        output[1] = 0x2020202020202020;
+    } else {
+        memset(w->data + w->size, ' ', spaceCount);
+    }
+
     w->size += spaceCount;
     w->lineSize = spaceCount;
 }
