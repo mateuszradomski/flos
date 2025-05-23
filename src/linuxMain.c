@@ -10,42 +10,18 @@
 #define ANSI_GREEN "\x1b[32m"
 #define ANSI_RESET "\x1b[0m"
 #define ANSI_GREY  "\x1b[90m"
+#define ANSI_MAGENTA "\x1b[35m"
 
 typedef unsigned long long u64;
 
-static void
+static u64
 formatMain(Arena *arena, String content) {
     u64 elapsed = -readCPUTimer();
     size_t memoryUsed = arenaFreeBytes(arena);
     String result = format(arena, content);
     memoryUsed -= arenaFreeBytes(arena);
-
-    FILE *output = fopen("output.sol", "w");
-    fwrite(result.data, result.size, 1, output);
-    fclose(output);
-
-    FILE *input = fopen("input.sol", "w");
-    fwrite(content.data, content.size, 1, input);
-    fclose(input);
-
-    double cpuFreq = readCPUFrequency();
     elapsed += readCPUTimer();
-    if(stringMatch(stringTrim(result), stringTrim(content))) {
-        printf(ANSI_GREEN "The formatted output is the same as input!\n" ANSI_RESET);
-    } else {
-        printf(ANSI_RED "The formatted output is different from input!\n" ANSI_RESET);
-    }
-
-    printf("Done with throughput %f MB/s\n", ((content.size / ((double)elapsed / cpuFreq)) / 1e6));
-    printf("Memory:\n");
-    printf("  Used:       %9lu MB\n", memoryUsed / Megabyte);
-    printf("Timings:\n");
-    printf("  Tokenize:   %9llu cycles, %f ms\n", gCyclesTable[Measurement_Tokenize], (double)gCyclesTable[Measurement_Tokenize] / cpuFreq * 1e3);
-    printf("  Parse:      %9llu cycles, %f ms\n", gCyclesTable[Measurement_Parse], (double)gCyclesTable[Measurement_Parse] / cpuFreq * 1e3);
-    printf("  BuildDoc:   %9llu cycles, %f ms\n", gCyclesTable[Measurement_BuildDoc], (double)gCyclesTable[Measurement_BuildDoc] / cpuFreq * 1e3);
-    printf("  RenderDoc:  %9llu cycles, %f ms\n", gCyclesTable[Measurement_RenderDoc], (double)gCyclesTable[Measurement_RenderDoc] / cpuFreq * 1e3);
-    printf("  ---------\n");
-    printf("  Sum:        %9llu cycles, %f ms\n", elapsed, (double)elapsed / cpuFreq * 1e3);
+    return elapsed;
 }
 
 typedef struct TestEntry {
@@ -69,7 +45,7 @@ repetitionTesterMain(Arena *arena, String content) {
     u64 minTiming = (u64)(-1);
     u64 timingSum = 0;
     u64 timingCount = 0;
-    u64 testDuration = 2 * readCPUFrequency();
+    u64 testDuration = 10 * readCPUFrequency();
 
     while(startedAt + testDuration > readCPUTimer()) {
         u64 timing = -readCPUTimer();
@@ -145,20 +121,33 @@ int main(int argCount, char **args) {
     char *filepath = "tests/parserbuilding.sol";
     bool repetitionTester = false;
 
-    if(argCount == 2) {
-        filepath = args[1];
-    }
     if(argCount == 3) {
         assert(stringMatch((String){ .data = (u8 *)args[1], .size = strlen(args[1]) }, LIT_TO_STR("rep")));
         filepath = args[2];
         repetitionTester = true;
     }
 
-    String content = readFile(&arena, filepath);
-
     if(repetitionTester) {
+        String content = readFile(&arena, filepath);
         repetitionTesterMain(&arena, content);
     } else {
-        formatMain(&arena, content);
+        u64 inputBytes = 0;
+        u64 elapsed = 0;
+        for(int i = 0; i < argCount - 1; i++) {
+            String content = readFile(&arena, args[i + 1]);
+            inputBytes += content.size;
+            elapsed += formatMain(&arena, content);
+        }
+
+        double cpuFreq = readCPUFrequency();
+        printf(ANSI_MAGENTA "Formatted %d files in %f ms with throughput %f MB/s\n" ANSI_RESET, argCount - 1, (double)elapsed / cpuFreq * 1e3, ((inputBytes / ((double)elapsed / cpuFreq)) / 1e6));
+        printf("Timings:\n");
+        printf("  Tokenize:   %9llu cycles, %f ms\n", gCyclesTable[Measurement_Tokenize], (double)gCyclesTable[Measurement_Tokenize] / cpuFreq * 1e3);
+        printf("  Parse:      %9llu cycles, %f ms\n", gCyclesTable[Measurement_Parse], (double)gCyclesTable[Measurement_Parse] / cpuFreq * 1e3);
+        printf("  BuildDoc:   %9llu cycles, %f ms\n", gCyclesTable[Measurement_BuildDoc], (double)gCyclesTable[Measurement_BuildDoc] / cpuFreq * 1e3);
+        printf("  RenderDoc:  %9llu cycles, %f ms\n", gCyclesTable[Measurement_RenderDoc], (double)gCyclesTable[Measurement_RenderDoc] / cpuFreq * 1e3);
+        printf("  ---------\n");
+        printf("  Sum:        %9llu cycles, %f ms\n", elapsed, (double)elapsed / cpuFreq * 1e3);
     }
+
 }

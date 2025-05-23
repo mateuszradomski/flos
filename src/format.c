@@ -5,11 +5,11 @@
 #include "./src/renderTree.c"
 
 String format(Arena *arena, String input) {
-    gCyclesTable[Measurement_Tokenize] = -readCPUTimer();
+    gCyclesTable[Measurement_Tokenize] -= readCPUTimer();
     TokenizeResult tokens = tokenize(input, arena);
     gCyclesTable[Measurement_Tokenize] += readCPUTimer();
 
-    gCyclesTable[Measurement_Parse] = -readCPUTimer();
+    gCyclesTable[Measurement_Parse] -= readCPUTimer();
     Parser parser = createParser(tokens, arena);
     ASTNode node = parseSourceUnit(&parser);
     gCyclesTable[Measurement_Parse] += readCPUTimer();
