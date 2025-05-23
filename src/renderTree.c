@@ -113,7 +113,7 @@ flushTrailing(Render *r) {
 static bool
 fits(Word *words, s64 count, u64 remainingWidth) {
     u64 width = 0;
-    u64 i = 0;
+    s64 i = 0;
 
     s32 groupStack = 0;
 
@@ -165,7 +165,7 @@ renderDocument(Render *r) {
     bool flatMode = false;
     u32 nestActiveMask = 0;
 
-    for(u64 i = 0; i < count; i++) {
+    for(s64 i = 0; i < count; i++) {
         Word *word = &words[i];
 
         if (word->type == WordType_GroupPush) {
@@ -523,7 +523,7 @@ static void pushExpressionDocument(Render *r, ASTNode *node);
 
 static void
 pushCallArgumentListDocument(Render *r, TokenId startingToken, ASTNodeListRanged *expressions, TokenIdList *names) {
-    assert(expressions->count != -1);
+    assert(expressions->count != (u32)-1);
 
     pushGroup(r);
     pushTokenWord(r, startingToken);
@@ -791,9 +791,9 @@ pushBinaryExpressionDocument(Render *r, ASTNode *node, TokenId outerOperator) {
 
     // Cares about different things depending on the outer and the inner operator
     bool outerDependentCase = outerNotAdd && (
-        outerNotMultipliaction && outerHasLowerPrecedence && innerPrec < getOperatorPrecedence2(TokenType_StarStar) ||
-        operatorsDontMatch && innerPrec == getOperatorPrecedence2(TokenType_Star) ||
-        outerNotMultipliaction && innerPrec == getOperatorPrecedence2(TokenType_StarStar)
+        (outerNotMultipliaction && outerHasLowerPrecedence && innerPrec < getOperatorPrecedence2(TokenType_StarStar)) ||
+        (operatorsDontMatch && innerPrec == getOperatorPrecedence2(TokenType_Star)) ||
+        (outerNotMultipliaction && innerPrec == getOperatorPrecedence2(TokenType_StarStar))
     );
 
     // Doesn't care about what the outer is, always is present as long as base is also true
@@ -1513,7 +1513,7 @@ pushStatementDocument(Render *r, ASTNode *node) {
             pushWord(r, wordSpace());
             pushExpressionDocument(r, statement->expression);
 
-            if(statement->returnParameters.count != -1) {
+            if(statement->returnParameters.count != (u32)-1) {
                 assert(stringMatch(LIT_TO_STR("returns"), r->tokens.tokenStrings[statement->expression->endToken + 1]));
                 assert(stringMatch(LIT_TO_STR("("), r->tokens.tokenStrings[statement->expression->endToken + 2]));
                 assert(stringMatch(LIT_TO_STR(")"), r->tokens.tokenStrings[statement->body->startToken - 1]));
@@ -1555,7 +1555,7 @@ pushStatementDocument(Render *r, ASTNode *node) {
                     openParenToken = catch->identifier + 1;
                 }
 
-                if(catch->parameters.count != -1) {
+                if(catch->parameters.count != (u32)-1) {
                     assert(stringMatch(LIT_TO_STR("("), r->tokens.tokenStrings[openParenToken]));
                     assert(stringMatch(LIT_TO_STR(")"), r->tokens.tokenStrings[catch->body->startToken - 1]));
                     pushTokenWord(r, openParenToken);
@@ -1961,11 +1961,11 @@ pushModifierInvocations(Render *r, ASTNodeList *modifiers) {
 
         ASTNodeModifierInvocation *invocation = &it->node.modifierInvocationNode;
         pushTypeDocument(r, invocation->identifier);
-        if(invocation->argumentsExpression.count != -1) {
+        if(invocation->argumentsExpression.count != (u32)-1) {
             ASTNodeListRanged *expressions = &invocation->argumentsExpression;
             TokenIdList *names = &invocation->argumentsName;
 
-            assert(expressions->count != -1);
+            assert(expressions->count != (u32)-1);
             TokenId startingToken = invocation->identifier->endToken + 1;
             pushCallArgumentListDocument(r, startingToken, expressions, names);
         }
@@ -2527,7 +2527,7 @@ pushMemberDocument(Render *r, ASTNode *member) {
             pushWord(r, wordSpace());
             pushTokenWord(r, modifier->name);
 
-            if(modifier->parameters.count != -1) {
+            if(modifier->parameters.count != (u32)-1) {
                 TokenId openParenToken = modifier->name + 1;
                 TokenId closeParenToken = modifier->parameters.count > 0
                     ? modifier->parameters.last->node.endToken + 1
@@ -2706,7 +2706,7 @@ closeDebugElement(ByteConcatenator *c) {
 }
 
 static void
-dumpDocument(Render *r, Arena *arena) {
+dumpDocument(Render *r) {
     const char *flag = getenv("DDOC");
     if(flag == NULL) {
         return;
@@ -2714,7 +2714,7 @@ dumpDocument(Render *r, Arena *arena) {
 
     FILE *output = fopen("document.csv", "wb");
     fprintf(output, "Type,Text Size,Text\n");
-    for(u32 i = 0; i < r->wordCount; i++) {
+    for(s32 i = 0; i < r->wordCount; i++) {
         Word *word = &r->words[i];
         fprintf(output, "%.*s,%u,%.*s\n",
                 (int)wordTypeToString(word->type).size, wordTypeToString(word->type).data,
@@ -2778,7 +2778,7 @@ renderTree(Arena *arena, ASTNode tree, String originalSource, TokenizeResult tok
     renderDocument(&render);
     gCyclesTable[Measurement_RenderDoc] += readCPUTimer();
 
-    dumpDocument(&render, arena);
+    dumpDocument(&render);
 
     return (String){ .data = render.writer.data, .size = render.writer.size };
 }
