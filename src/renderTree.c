@@ -144,7 +144,14 @@ static s8 nestActiveLut[WordType_Count] = {
 static u32 nestActiveMaskLUT[2] = { 0xffffffff, 0 };
 
 static void
-renderGroup(Writer *w, Word *words, s64 count, u32 nest) {
+renderDocument(Render *r) {
+    flushTrailing(r);
+
+    Writer *w = &r->writer;
+    Word *words = r->words;
+    s64 count = r->wordCount;
+
+    u32 nest = 0;
     u8 flatModeStack[64];
     u8 flatModeStackIndex = 0;
     bool flatMode = false;
@@ -173,14 +180,6 @@ renderGroup(Writer *w, Word *words, s64 count, u32 nest) {
 
         nest += nestActiveLut[word->type] & nestActiveMask;
     }
-}
-
-static void
-renderDocument(Render *r) {
-    flushTrailing(r);
-
-    u32 nest = 0;
-    renderGroup(&r->writer, r->words, r->wordCount, nest);
 }
 
 static void
