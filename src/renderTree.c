@@ -8,7 +8,7 @@ typedef struct Writer {
     u32 lineSize;
 } Writer;
 
-typedef enum WordType {
+typedef enum WordType: u8 {
     WordType_Text,
     WordType_Line,
     WordType_Space,
@@ -23,6 +23,15 @@ typedef enum WordType {
 
 typedef struct Word {
     WordType type;
+
+    // NOTE(radomski): This is for GroupPush only. It the number of words that we assume are flat.
+    // -1 means consider the entire group as flat.
+    // Anything else means:
+    //  - considers this many words as flat and sum their widths
+    //  - continue considering following words in break mode
+    //   - lines, hardbreaks, starting of comments finish the function
+    s8 assumedFlatCount;
+
     u32 textSize;
     u8 *text;
 } Word;
@@ -111,7 +120,7 @@ flushTrailing(Render *r) {
 }
 
 static bool
-fits(Word *words, s64 count, u64 remainingWidth) {
+fits(Word *words, s64 count, s8 assumedFlatCount, u64 remainingWidth) {
     u64 width = 0;
     s64 i = 0;
 
@@ -122,12 +131,13 @@ fits(Word *words, s64 count, u64 remainingWidth) {
         [WordType_GroupPop] = -1,
     };
 
-    for (; i < count && groupStack >= 0 && width <= remainingWidth; i++) {
+    s64 assumedFlatLimit = MIN(count, (s64)((u32)((s32)assumedFlatCount)));
+
+    for (; i < assumedFlatLimit && groupStack >= 0 && width <= remainingWidth; i++) {
         Word *word = &words[i];
 
-        groupStack += groupStackLUT[word->type];
-
         width += word->textSize;
+        groupStack += groupStackLUT[word->type];
     }
 
     for (;
@@ -170,7 +180,7 @@ renderDocument(Render *r) {
 
         if (word->type == WordType_GroupPush) {
             s32 remainingWidth = 120 - MIN(120, MAX(w->lineSize, w->indentSize * nest));
-            flatMode = fits(words + (i + 1), count - (i + 1), remainingWidth);
+            flatMode = fits(words + (i + 1), count - (i + 1), word->assumedFlatCount, remainingWidth);
             flatModeStack[++flatModeStackIndex] = flatMode;
             nestActiveMask = nestActiveMaskLUT[flatMode];
         } else if(word->type == WordType_GroupPop) {
@@ -192,7 +202,13 @@ renderDocument(Render *r) {
 
 static void
 pushGroup(Render *r) {
-    Word w = { .type = WordType_GroupPush };
+    Word w = { .type = WordType_GroupPush, .assumedFlatCount = -1 };
+    r->words[r->wordCount++] = w;
+}
+
+static void
+pushGroupAssumedFlat(Render *r, s8 assumedFlatCount) {
+    Word w = { .type = WordType_GroupPush, .assumedFlatCount = assumedFlatCount };
     r->words[r->wordCount++] = w;
 }
 
