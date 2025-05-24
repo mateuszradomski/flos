@@ -1446,10 +1446,13 @@ pushStatementDocument(Render *r, ASTNode *node) {
             pushGroup(r);
             pushWord(r, wordSoftline());
 
+            TokenId secondSemicolon = node->startToken + 3;
             if(statement->variableStatement != 0x0) {
                 pushStatementDocument(r, statement->variableStatement);
+                secondSemicolon = statement->variableStatement->endToken + 1;
             } else {
-                pushWord(r, wordText(LIT_TO_STR(";")));
+                assert(stringMatch(LIT_TO_STR(";"), r->tokens.tokenStrings[node->startToken + 2]));
+                pushTokenWord(r, node->startToken + 2);
             }
 
             if(statement->conditionExpression != 0x0) {
@@ -1457,9 +1460,11 @@ pushStatementDocument(Render *r, ASTNode *node) {
                 pushGroup(r);
                 pushExpressionDocument(r, statement->conditionExpression);
                 popGroup(r);
+                secondSemicolon = statement->conditionExpression->endToken + 1;
             }
 
-            pushWord(r, wordText(LIT_TO_STR(";")));
+            assert(stringMatch(LIT_TO_STR(";"), r->tokens.tokenStrings[secondSemicolon]));
+            pushTokenWord(r, secondSemicolon);
 
             if(statement->incrementExpression != 0x0) {
                 pushWord(r, wordLine());
