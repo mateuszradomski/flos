@@ -30,7 +30,7 @@
 | literalExpression                     |     YES |                                                   |
 | mappingType                           |     YES |                                                   |
 | modifierDefinition                    |     YES |                                                   |
-| namedFunctionCallExpression           |     YES |    One expression is not broken (longer than 120) |
+| namedFunctionCallExpression           |     YES |                                                   |
 | numberLiteralUnderscore               |     YES |                                                   |
 | operatorExpressions                   |     YES |                                                   |
 | pragmaDirective                       |     YES |                                                   |

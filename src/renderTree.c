@@ -1145,12 +1145,27 @@ expressionNest(ASTNode *node) {
 
 static void
 pushExpressionDocumentLinked(Render *r, ASTNode *node) {
-    pushGroup(r);
-    addNest(r, expressionNest(node));
-    pushWord(r, expressionLinkWord(node));
-    pushExpressionDocument(r, node);
-    addNest(r, -expressionNest(node));
-    popGroup(r);
+    if (node->type == ASTNodeType_FunctionCallExpression) {
+        ASTNodeFunctionCallExpression *function = &node->functionCallExpressionNode;
+
+        pushGroupAssumedFlat(r, 1);
+        pushWord(r, wordLine());
+        addNest(r, 1);
+
+        pushExpressionDocument(r, function->expression);
+        pushGroup(r);
+        pushCallArgumentListDocument(r, function->expression->endToken + 1, &function->argumentsExpression, &function->argumentsName);
+        popGroup(r);
+        addNest(r, -1);
+        popGroup(r);
+    } else {
+        pushGroup(r);
+        addNest(r, expressionNest(node));
+        pushWord(r, expressionLinkWord(node));
+        pushExpressionDocument(r, node);
+        addNest(r, -expressionNest(node));
+        popGroup(r);
+    }
 }
 
 static void pushYulExpressionDocument(Render *r, ASTNode *node);
