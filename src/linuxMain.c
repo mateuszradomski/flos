@@ -5,12 +5,40 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <math.h>
+#include <pthread.h>
 
-#define ANSI_RED   "\x1b[31m"
-#define ANSI_GREEN "\x1b[32m"
 #define ANSI_RESET "\x1b[0m"
+#define ANSI_RED   "\x1b[31m"
+#define ANSI_CYAN  "\x1b[36m"
+#define ANSI_GREEN "\x1b[32m"
 #define ANSI_GREY  "\x1b[90m"
 #define ANSI_MAGENTA "\x1b[35m"
+#define ANSI_YELLOW "\x1b[33m"
+#define ANSI_BLUE "\x1b[34m"
+
+#define ANSI_CYAN_LIGHT "\x1b[96m"
+#define ANSI_GREEN_LIGHT "\x1b[92m"
+#define ANSI_MAGENTA_LIGHT "\x1b[95m"
+
+#ifdef __linux__
+#include <sys/sysinfo.h>
+static u32
+getProcessorCount() {
+    return get_nprocs();
+}
+#elif __APPLE__
+#include <sys/sysctl.h>
+static u32
+getProcessorCount() {
+    int mib[] = { CTL_HW, HW_NCPU };
+
+    int numCPU;
+    size_t len = sizeof(numCPU);
+    sysctl(mib, 2, &numCPU, &len, NULL, 0);
+
+    return numCPU;
+}
+#endif
 
 typedef unsigned long long u64;
 
@@ -49,6 +77,23 @@ formatMain(Arena *arena, char **paths, u32 pathCount) {
     }
 
     return metrics;
+}
+
+typedef struct ThreadWork {
+    char **paths;
+    u32 pathCount;
+
+    FormatMetrics metrics;
+} ThreadWork;
+
+static void *
+threadWorker(void *arg) {
+    Arena arena = arenaCreate(32 * Megabyte, 32 * Kilobyte, 64);
+    ThreadWork *work = (ThreadWork *)arg;
+    work->metrics = formatMain(&arena, work->paths, work->pathCount);
+    arenaDestroy(&arena);
+
+    return 0x0;
 }
 
 typedef struct TestEntry {
@@ -143,7 +188,6 @@ repetitionTesterMain(Arena *arena, String content) {
 }
 
 int main(int argCount, char **args) {
-    Arena arena = arenaCreate(128 * Megabyte, 32 * Kilobyte, 64);
 
     char *filepath = "tests/parserbuilding.sol";
     bool repetitionTester = false;
@@ -155,23 +199,79 @@ int main(int argCount, char **args) {
     }
 
     if(repetitionTester) {
+        Arena arena = arenaCreate(16 * Megabyte, 32 * Kilobyte, 64);
         String content = readFile(&arena, filepath);
         repetitionTesterMain(&arena, content);
     } else {
+        Arena arena = arenaCreate(16 * Megabyte, 32 * Kilobyte, 64);
+
         u64 elapsed = -readCPUTimer();
-        FormatMetrics metrics = formatMain(&arena, args + 1, argCount - 1);
+        char **paths = args + 1;
+        u32 pathCount = argCount - 1;
+
+        u32 processorCount = getProcessorCount();
+
+        ThreadWork *jobs = arrayPush(&arena, ThreadWork, processorCount);
+        pthread_t *threads = arrayPush(&arena, pthread_t, processorCount);
+        u32 perJob = (pathCount + processorCount - 1) / processorCount;
+        for(u32 i = 0; i < processorCount; i++) {
+            jobs[i].paths = paths + perJob * i;
+            jobs[i].pathCount = MIN((s32)perJob, MAX(0, (s32)pathCount - (s32)(perJob * i)));
+
+            pthread_create(&threads[i], 0x0, threadWorker, &jobs[i]);
+        }
+
+        for(u32 i = 0; i < processorCount; i++) {
+            pthread_join(threads[i], 0x0);
+        }
+
         elapsed += readCPUTimer();
 
+        u32 inputBytes = 0;
+        for(u32 i = 0; i < processorCount; i++) {
+            inputBytes += jobs[i].metrics.inputBytes;
+        }
+
         double cpuFreq = readCPUFrequency();
-        printf(ANSI_MAGENTA "Formatted %d files in %f ms with throughput %f MB/s\n" ANSI_RESET, argCount - 1, (double)elapsed / cpuFreq * 1e3, ((metrics.inputBytes / ((double)elapsed / cpuFreq)) / 1e6));
-        printf("Timings:\n");
-        printf("  File read:  %9llu cycles, %f ms\n", metrics.fileRead,  (double)metrics.fileRead / cpuFreq * 1e3);
-        printf("  Tokenize:   %9llu cycles, %f ms\n", metrics.tokenize,  (double)metrics.tokenize / cpuFreq * 1e3);
-        printf("  Parse:      %9llu cycles, %f ms\n", metrics.parse,     (double)metrics.parse / cpuFreq * 1e3);
-        printf("  BuildDoc:   %9llu cycles, %f ms\n", metrics.buildDoc,  (double)metrics.buildDoc / cpuFreq * 1e3);
-        printf("  RenderDoc:  %9llu cycles, %f ms\n", metrics.renderDoc, (double)metrics.renderDoc / cpuFreq * 1e3);
-        printf("  ---------\n");
-        printf("  Sum:        %9llu cycles, %f ms\n", elapsed, (double)elapsed / cpuFreq * 1e3);
+        printf("Formatted %s%d%s files in %s%.0fms%s %s(%.0f MB/s)%s\n",
+               ANSI_CYAN_LIGHT,
+               argCount - 1,
+               ANSI_RESET,
+               ANSI_GREEN_LIGHT,
+               (double)elapsed / cpuFreq * 1e3,
+               ANSI_RESET,
+               ANSI_MAGENTA_LIGHT,
+               ((inputBytes / ((double)elapsed / cpuFreq)) / 1e6),
+               ANSI_RESET
+               );
+        FormatMetrics sum = { 0 };
+        for(u32 i = 0; i < processorCount; i++) {
+            FormatMetrics metrics = jobs[i].metrics;
+
+            sum.fileRead += metrics.fileRead;
+            sum.tokenize += metrics.tokenize;
+            sum.parse += metrics.parse;
+            sum.buildDoc += metrics.buildDoc;
+            sum.renderDoc += metrics.renderDoc;
+
+            u32 elapsedSum = metrics.fileRead + metrics.tokenize + metrics.parse + metrics.buildDoc + metrics.renderDoc;
+
+            // printf("Timings:\n");
+            // printf("  File read:  %9llu cycles, %f ms\n", metrics.fileRead,  (double)metrics.fileRead / cpuFreq * 1e3);
+            // printf("  Tokenize:   %9llu cycles, %f ms\n", metrics.tokenize,  (double)metrics.tokenize / cpuFreq * 1e3);
+            // printf("  Parse:      %9llu cycles, %f ms\n", metrics.parse,     (double)metrics.parse / cpuFreq * 1e3);
+            // printf("  BuildDoc:   %9llu cycles, %f ms\n", metrics.buildDoc,  (double)metrics.buildDoc / cpuFreq * 1e3);
+            // printf("  RenderDoc:  %9llu cycles, %f ms\n", metrics.renderDoc, (double)metrics.renderDoc / cpuFreq * 1e3);
+            // printf("  ---------\n");
+            // printf("  Sum:        %9llu cycles, %f ms\n", elapsed, (double)elapsedSum / cpuFreq * 1e3);
+        }
+
+        printf("Thread avg: %s%.0fms read%s, %s%.0fms token%s, %s%.0fms parse%s, %s%.0fms build%s, %s%.0fms render%s\n",
+               ANSI_YELLOW, (double)(sum.fileRead / processorCount ) / cpuFreq * 1e3, ANSI_RESET,
+               ANSI_BLUE, (double)(sum.tokenize / processorCount ) / cpuFreq * 1e3, ANSI_RESET,
+               ANSI_RED, (double)(sum.parse / processorCount ) / cpuFreq * 1e3, ANSI_RESET,
+               ANSI_GREEN, (double)(sum.buildDoc / processorCount ) / cpuFreq * 1e3, ANSI_RESET,
+               ANSI_CYAN, (double)(sum.renderDoc / processorCount ) / cpuFreq * 1e3, ANSI_RESET);
     }
 
 }
