@@ -70,15 +70,6 @@ readCPUFrequency()
 #endif
 }
 
-u64 gCyclesTable[64];
-
-enum MeasurementId {
-    Measurement_Tokenize = 0,
-    Measurement_Parse,
-    Measurement_BuildDoc,
-    Measurement_RenderDoc,
-};
-
 #define LIT_TO_STR(x) ((String){ .data = (u8 *)x, .size = sizeof(x) - 1 })
 
 const u32 Kilobyte = 1024;
@@ -381,6 +372,30 @@ arenaPush(Arena *arena, size_t size) {
     return result;
 }
 
+static u64
+arenaPos(Arena *arena) {
+    u64 result = 0;
+
+    if(arena) {
+        MemoryCursorNode *toCount = 0x0;
+        for(MemoryCursorNode *cursorNode = arena->cursorNode;
+            cursorNode != 0x0;
+            cursorNode = cursorNode->next) {
+            if(toCount) {
+                result += cursorTakenBytes(&toCount->cursor);
+            }
+
+            toCount = cursorNode;
+        }
+
+        if(toCount) {
+            result += cursorTakenBytes(&toCount->cursor);
+        }
+    }
+
+    return result;
+}
+
 static void
 arenaPop(Arena *arena, size_t size) {
     assert(arena);
@@ -393,15 +408,25 @@ arenaPop(Arena *arena, size_t size) {
 
         while(size > 0) {
             MemoryCursor *cursor = &cursorNode->cursor;
-            if(size > cursorTakenBytes(cursor)) {
-                size -= cursorTakenBytes(cursor);
-                cursor->cursorPointer = cursor->basePointer;
-                cursorNode = cursorNode->next;
-            } else {
-                cursor->cursorPointer -= size;
-                break;
-            }
+
+            u64 takenBytes = cursorTakenBytes(cursor);
+            u64 toSubtract = MIN(size, takenBytes);
+            u64 newOffset = takenBytes - toSubtract;
+
+            memset(cursor->basePointer + newOffset, 0, toSubtract);
+
+            size -= toSubtract;
+            cursor->cursorPointer = cursor->basePointer + newOffset;
+            cursorNode = cursorNode->next;
         }
+    }
+}
+
+static void
+arenaPopTo(Arena *arena, size_t pos) {
+    size_t currentPos = arenaPos(arena);
+    if(currentPos > pos) {
+        arenaPop(arena, currentPos - pos);
     }
 }
 

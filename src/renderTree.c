@@ -2801,20 +2801,3 @@ buildDocument(Render *r, ASTNode *tree, String originalSource, TokenizeResult to
     }
     popGroup(r);
 }
-
-static String
-renderTree(Arena *arena, ASTNode tree, String originalSource, TokenizeResult tokens) {
-    Render render = createRender(arena, originalSource, tokens);
-
-    gCyclesTable[Measurement_BuildDoc] -= readCPUTimer();
-    buildDocument(&render, &tree, originalSource, tokens);
-    gCyclesTable[Measurement_BuildDoc] += readCPUTimer();
-
-    gCyclesTable[Measurement_RenderDoc] -= readCPUTimer();
-    renderDocument(&render);
-    gCyclesTable[Measurement_RenderDoc] += readCPUTimer();
-
-    dumpDocument(&render);
-
-    return (String){ .data = render.writer.data, .size = render.writer.size };
-}

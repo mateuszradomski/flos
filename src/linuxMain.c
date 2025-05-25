@@ -14,14 +14,41 @@
 
 typedef unsigned long long u64;
 
-static u64
-formatMain(Arena *arena, String content) {
-    u64 elapsed = -readCPUTimer();
-    size_t memoryUsed = arenaFreeBytes(arena);
-    String result = format(arena, content);
-    memoryUsed -= arenaFreeBytes(arena);
-    elapsed += readCPUTimer();
-    return elapsed;
+typedef struct FormatMetrics {
+    u64 fileRead;
+    u64 tokenize;
+    u64 parse;
+    u64 buildDoc;
+    u64 renderDoc;
+
+    u64 memoryUsed;
+
+    u64 inputBytes;
+} FormatMetrics;
+
+static FormatMetrics
+formatMain(Arena *arena, char **paths, u32 pathCount) {
+    FormatMetrics metrics = { 0 };
+
+    for(int i = 0; i < pathCount; i++) {
+        u64 startPosition = arenaPos(arena);
+
+        metrics.fileRead -= readCPUTimer();
+        String content = readFile(arena, paths[i]);
+        metrics.fileRead += readCPUTimer();
+
+        FormatResult result = format(arena, content);
+
+        arenaPopTo(arena, startPosition);
+
+        metrics.inputBytes += content.size;
+        metrics.tokenize   += result.timings[Measurement_Tokenize];
+        metrics.parse      += result.timings[Measurement_Parse];
+        metrics.buildDoc   += result.timings[Measurement_BuildDoc];
+        metrics.renderDoc  += result.timings[Measurement_RenderDoc];
+    }
+
+    return metrics;
 }
 
 typedef struct TestEntry {
@@ -131,21 +158,18 @@ int main(int argCount, char **args) {
         String content = readFile(&arena, filepath);
         repetitionTesterMain(&arena, content);
     } else {
-        u64 inputBytes = 0;
-        u64 elapsed = 0;
-        for(int i = 0; i < argCount - 1; i++) {
-            String content = readFile(&arena, args[i + 1]);
-            inputBytes += content.size;
-            elapsed += formatMain(&arena, content);
-        }
+        u64 elapsed = -readCPUTimer();
+        FormatMetrics metrics = formatMain(&arena, args + 1, argCount - 1);
+        elapsed += readCPUTimer();
 
         double cpuFreq = readCPUFrequency();
-        printf(ANSI_MAGENTA "Formatted %d files in %f ms with throughput %f MB/s\n" ANSI_RESET, argCount - 1, (double)elapsed / cpuFreq * 1e3, ((inputBytes / ((double)elapsed / cpuFreq)) / 1e6));
+        printf(ANSI_MAGENTA "Formatted %d files in %f ms with throughput %f MB/s\n" ANSI_RESET, argCount - 1, (double)elapsed / cpuFreq * 1e3, ((metrics.inputBytes / ((double)elapsed / cpuFreq)) / 1e6));
         printf("Timings:\n");
-        printf("  Tokenize:   %9llu cycles, %f ms\n", gCyclesTable[Measurement_Tokenize], (double)gCyclesTable[Measurement_Tokenize] / cpuFreq * 1e3);
-        printf("  Parse:      %9llu cycles, %f ms\n", gCyclesTable[Measurement_Parse], (double)gCyclesTable[Measurement_Parse] / cpuFreq * 1e3);
-        printf("  BuildDoc:   %9llu cycles, %f ms\n", gCyclesTable[Measurement_BuildDoc], (double)gCyclesTable[Measurement_BuildDoc] / cpuFreq * 1e3);
-        printf("  RenderDoc:  %9llu cycles, %f ms\n", gCyclesTable[Measurement_RenderDoc], (double)gCyclesTable[Measurement_RenderDoc] / cpuFreq * 1e3);
+        printf("  File read:  %9llu cycles, %f ms\n", metrics.fileRead,  (double)metrics.fileRead / cpuFreq * 1e3);
+        printf("  Tokenize:   %9llu cycles, %f ms\n", metrics.tokenize,  (double)metrics.tokenize / cpuFreq * 1e3);
+        printf("  Parse:      %9llu cycles, %f ms\n", metrics.parse,     (double)metrics.parse / cpuFreq * 1e3);
+        printf("  BuildDoc:   %9llu cycles, %f ms\n", metrics.buildDoc,  (double)metrics.buildDoc / cpuFreq * 1e3);
+        printf("  RenderDoc:  %9llu cycles, %f ms\n", metrics.renderDoc, (double)metrics.renderDoc / cpuFreq * 1e3);
         printf("  ---------\n");
         printf("  Sum:        %9llu cycles, %f ms\n", elapsed, (double)elapsed / cpuFreq * 1e3);
     }

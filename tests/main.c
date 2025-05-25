@@ -262,12 +262,12 @@ testFormat(const MunitParameter params[], void* userData) {
     Arena arena = arenaCreate(1024*1024, 4096, 32);
     TestData data = readTestInput(&arena, path);
 
-    String result = stringTrim(format(&arena, data.input));
+    String result = stringTrim(format(&arena, data.input).source);
 
     showDifferences(&arena, result, data.output);
     munit_assert_true(stringMatch(result, data.output));
 
-    String result2 = stringTrim(format(&arena, result));
+    String result2 = stringTrim(format(&arena, result).source);
     munit_assert_true(stringMatch(result2, result));
     arenaDestroy(&arena);
 
