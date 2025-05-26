@@ -88,7 +88,7 @@ typedef struct ThreadWork {
 
 static void *
 threadWorker(void *arg) {
-    Arena arena = arenaCreate(32 * Megabyte, 32 * Kilobyte, 64);
+    Arena arena = arenaCreate(16 * Megabyte, 32 * Kilobyte, 64);
     ThreadWork *work = (ThreadWork *)arg;
     work->metrics = formatMain(&arena, work->paths, work->pathCount);
     arenaDestroy(&arena);

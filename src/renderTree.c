@@ -2762,7 +2762,7 @@ dumpDocument(Render *r) {
 
 static Render
 createRender(Arena *arena, String originalSource, TokenizeResult tokens) {
-    u32 scratchBufferCapacity = 8 * Megabyte;
+    u32 scratchBufferCapacity = originalSource.size * 2;
     u32 wordCount = MAX(131071, originalSource.size / 2);
     Render render = {
         .writer = {
