@@ -163,7 +163,6 @@ contract IfStatement {
             execute();
         } // comment7
         /* comment8 */
-
         /* comment9 */ else if /* comment10 */(anotherLongCondition) // comment11
         /* comment12 */ {
             execute();

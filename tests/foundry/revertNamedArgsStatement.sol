@@ -45,6 +45,7 @@ contract RevertNamedArgsStatement {
         //revert ({ });
 
         //revert EmptyError({});
+
         revert SimpleError({ val: 0 });
 
         revert ComplexError({ val: 0, ts: block.timestamp, message: "some reason" });

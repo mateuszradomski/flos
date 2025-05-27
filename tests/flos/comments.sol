@@ -1,19 +1,43 @@
 contract Comments {
-    //TODO(radomski): Extra newlines that shouldn't be here
     /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
     /*              SIMPLIFIED FIXED POINT OPERATIONS             */
     /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
-    function fn() {}
+    function fn() {
+    revert (
+            // comment3
+        );
+
+    revert (
+        1
+            // comment3
+        );
+
+    revert (
+            // comment3
+            1
+        );
+    }
 }
 // Above input, below output
 contract Comments {
-    //TODO(radomski): Extra newlines that shouldn't be here
     /*´:°•.°+.*•´.*:˚.°*.˚•´.°:°•.°•.*•´.*:˚.°*.˚•´.°:°•.°+.*•´.*:*/
-
     /*              SIMPLIFIED FIXED POINT OPERATIONS             */
-
     /*.•°:°.´+˚.*°.˚:*.´•*.+°.•°:´*.´•*.•°.•°:°.´:•˚°.*°.˚:*.´+°.•*/
 
-    function fn() { }
+    function fn() {
+        revert(
+            // comment3
+        );
+
+        revert(
+            1
+            // comment3
+        );
+
+        revert(
+            // comment3
+            1
+        );
+    }
 }

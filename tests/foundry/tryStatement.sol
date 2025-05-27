@@ -125,9 +125,7 @@ contract TryStatement {
 
         // comment1
         try /* comment2 */ unknown.lookup() // comment3
-        returns (
-            uint256
-        ) // comment4
+        returns (uint256) // comment4
         {
         } // comment5
         catch /* comment6 */ {

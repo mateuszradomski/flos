@@ -227,7 +227,7 @@ interface FunctionInterfaces {
 
     // function prefix
     function withComments( // function name postfix
-    // x1 prefix
+        // x1 prefix
         uint256 x1, // x1 postfix
 
         // x2 prefix
@@ -237,6 +237,7 @@ interface FunctionInterfaces {
             multi-line x3 prefix
         */
         uint256 x3 // x3 postfix
+
     )
         // pure prefix
         public // public postfix
@@ -248,11 +249,10 @@ interface FunctionInterfaces {
         modifier2 /*
                     mutliline modifier2 postfix
                     */
-
         // modifier3 prefix
         modifier3 // modifier3 postfix
         returns (
-        // y1 prefix
+            // y1 prefix
             uint256 y1, // y1 postfix
             // y2 prefix
             uint256 y2, // y2 postfix

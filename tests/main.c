@@ -266,6 +266,7 @@ testFormat(const MunitParameter params[], void* userData) {
     munit_assert_true(stringMatch(result, data.output));
 
     String result2 = stringTrim(format(&arena, result).source);
+    showDifferences(&arena, result, result2);
     munit_assert_true(stringMatch(result2, result));
     arenaDestroy(&arena);
 

@@ -310,6 +310,9 @@ preserveHardBreaksIntoDocument(Render *r, ASTNode *node) {
 
     // TODO(radomski): This shouln't be here
     for(u32 i = 0; inBetween.size > 0 && i < inBetween.size - 1; i++) {
+        if(inBetween.data[i] == '/' && inBetween.data[i + 1] == '/') {
+            return;
+        }
         if(inBetween.data[i] == '/' && inBetween.data[i + 1] == '*') {
             return;
         }
@@ -339,142 +342,106 @@ pushCommentsInRange(Render *r, u32 startOffset, u32 endOffset) {
         .size = endOffset - startOffset,
     };
 
-    if(input.size >= 2) {
-        u32 cursor = 0;
-        u32 previousCommentType = CommentType_None;
+    for(; input.size > 0 && !isWhitespace(input.data[0]) && input.data[0] != '/'; input.data++, input.size--) { }
 
-        while(true) {
-            u32 finished = true;
-            for(u32 i = cursor; i < input.size - 1; i++) {
-                u32 commentStart = i;
-                u32 commentEnd = i;
-                String comment = (String) { .data = 0x0, .size = 0 };
-                u32 commentType = CommentType_None;
+    if(input.size < 2) {
+        return;
+    }
 
-                if(input.data[i] == '/' && input.data[i + 1] == '/') {
-                    commentType = CommentType_SingleLine;
+    u32 i = 0;
+    u32 commentsWritten = 0;
+    while(i < input.size) {
+        // Absorb the whitespace and count newlines
+        u32 newlineCount = 0;
+        for(; i < input.size && isWhitespace(input.data[i]); i++) {
+            newlineCount += input.data[i] == '\n';
+        }
 
-                    u32 newlineIndex = i;
-                    for(; newlineIndex < input.size && input.data[newlineIndex] != '\n'; newlineIndex += 1) {}
-                    comment = (String) {
-                        .data = input.data + commentStart,
-                        .size = newlineIndex - commentStart
-                    };
-                    commentEnd = newlineIndex + 1;
-                } else if(input.data[i] == '/' && input.data[i + 1] == '*') {
-                    commentEnd = i + 2;
-                    bool isStarAligned = true;
-                    bool checkStarAlignment = false;
+        if(i < input.size && input.data[i] != '/') { break; }
 
-                    while(commentEnd < input.size - 1 && (input.data[commentEnd] != '*' || input.data[commentEnd + 1] != '/')) {
-                        if(input.data[commentEnd] == '\n') {
-                            checkStarAlignment = true;
-                        }
+        if(newlineCount > 0) {
+            u32 toInsert = MIN(newlineCount, 2);
+            for(u32 j = 0; j < toInsert; j++) {
+                pushTrailing(r, wordHardBreak());
+            }
+        } else if(i < input.size) {
+            pushTrailing(r, wordCommentStartSpace());
+        }
 
-                        if(checkStarAlignment && !(isWhitespace(input.data[commentEnd]) || input.data[commentEnd] == '*')) {
-                            isStarAligned = false;
-                        }
+        if(i >= input.size) { break; }
+        i += 1;
 
-                        if(checkStarAlignment && input.data[commentEnd] == '*') {
-                            checkStarAlignment = false;
-                        }
+        assert(input.size > i);
+        u32 commentStart = i - 1;
+        String comment = (String) { .data = 0x0, .size = 0 };
+        u32 commentType = CommentType_None;
+        if(input.data[i] == '/') {
+            commentType = CommentType_SingleLine;
 
-                        commentEnd += 1;
-                    }
-                    commentEnd += 2;
+            for(; i < input.size && input.data[i] != '\n'; i += 1) {}
+            comment = (String) {
+                .data = input.data + commentStart,
+                .size = i - commentStart
+            };
+            pushTrailing(r, wordText(stringTrim(comment)));
+            commentsWritten += 1;
+        } else if(input.data[i] == '*') {
+            i += 1;
 
-                    commentType = isStarAligned ? CommentType_StarAligned : CommentType_MultiLine;
-                    comment = (String) {
-                        .data = input.data + commentStart,
-                        .size = commentEnd - commentStart
-                    };
+            bool isStarAligned = true;
+            bool checkStarAlignment = false;
+
+            while(i < input.size - 1 && (input.data[i] != '*' || input.data[i + 1] != '/')) {
+                if(input.data[i] == '\n') {
+                    checkStarAlignment = true;
                 }
 
-                if(comment.size > 0) {
-                    assert(commentType != CommentType_None);
+                if(checkStarAlignment && !(isWhitespace(input.data[i]) || input.data[i] == '*')) {
+                    isStarAligned = false;
+                }
 
-                    u32 preceedingNewlines = 0;
-                    for(u32 j = cursor; j < commentStart; j++) { preceedingNewlines += input.data[j] == '\n'; }
+                if(checkStarAlignment && input.data[i] == '*') {
+                    checkStarAlignment = false;
+                }
 
-                    if(cursor == 0 && preceedingNewlines >= 2) {
+                i += 1;
+            }
+            i += 2;
+
+            commentType = isStarAligned ? CommentType_StarAligned : CommentType_MultiLine;
+            comment = (String) {
+                .data = input.data + commentStart,
+                .size = i - commentStart
+            };
+
+            commentsWritten += 1;
+            if(commentType == CommentType_StarAligned) {
+                String line = { .data = comment.data, .size = 0 };
+                u32 lineCount = 0;
+                for(u32 k = 0; k < comment.size; k++) {
+                    if(comment.data[k] == '\n') {
+                        lineCount += 1;
+                        if(lineCount > 1) { pushTrailing(r, wordSpace()); }
+                        pushTrailing(r, wordText(stringTrim(line)));
                         pushTrailing(r, wordHardBreak());
-                        pushTrailing(r, wordHardBreak());
-                    } else if(preceedingNewlines > 0) {
-                        pushTrailing(r, wordHardBreak());
-                    } else if(cursor == 0) {
-                        pushTrailing(r, wordCommentStartSpace());
-                    } else if(commentType != CommentType_SingleLine && previousCommentType != CommentType_SingleLine) {
-                        pushTrailing(r, wordSpace());
-                    }
-
-                    cursor = commentEnd;
-                    i = cursor - 1;
-
-                    // Write comment out
-                    if(commentType == CommentType_SingleLine) {
-                        previousCommentType = commentType;
-                        pushTrailing(r, wordText(stringTrim(comment)));
-                        pushTrailing(r, wordHardBreak());
-                    } else if(commentType == CommentType_StarAligned) {
-                        previousCommentType = commentType;
-                        String line = { .data = comment.data, .size = 0 };
-                        u32 lineCount = 0;
-                        for(u32 k = 0; k < comment.size; k++) {
-                            if(comment.data[k] == '\n') {
-                                lineCount += 1;
-                                if(lineCount > 1) { pushTrailing(r, wordSpace()); }
-                                pushTrailing(r, wordText(stringTrim(line)));
-                                pushTrailing(r, wordHardBreak());
-                                line = (String){ .data = line.data + line.size + 1, .size = 0 };
-                            } else {
-                                line.size += 1;
-                            }
-                        }
-
-                        if(line.size > 0) {
-                            if(lineCount > 1) { pushTrailing(r, wordSpace()); }
-                            pushTrailing(r, wordText(stringTrim(line)));
-                        }
-
-                        u8 *head = comment.data + comment.size;
-                        while(isWhitespace(*head)) {
-                            if(*head == '\n') {
-                                pushTrailing(r, wordHardBreak());
-                                break;
-                            }
-                            head++;
-                        }
+                        line = (String){ .data = line.data + line.size + 1, .size = 0 };
                     } else {
-                        previousCommentType = commentType;
-                        pushTrailing(r, wordText(stringTrim(comment)));
-
-                        u8 *head = comment.data + comment.size;
-                        while(isWhitespace(*head)) {
-                            if(*head == '\n') {
-                                pushTrailing(r, wordHardBreak());
-                                break;
-                            }
-                            head++;
-                        }
+                        line.size += 1;
                     }
-
-                    finished = false;
                 }
+
+                if(line.size > 0) {
+                    if(lineCount > 1) { pushTrailing(r, wordSpace()); }
+                    pushTrailing(r, wordText(stringTrim(line)));
+                }
+            } else {
+                pushTrailing(r, wordText(stringTrim(comment)));
             }
-
-            if(finished) {
-                break;
-            }
         }
+    }
 
-        u32 preceedingNewlines = 0;
-        for(u32 i = cursor; i < input.size; i++) {
-            preceedingNewlines += input.data[i] == '\n';
-        }
-
-        if(cursor != 0 && preceedingNewlines >= 2) {
-            pushTrailing(r, wordHardBreak());
-        }
+    if(commentsWritten == 0) {
+        r->trailingCount = 0;
     }
 }
 
@@ -588,11 +555,13 @@ pushCallArgumentListDocument(Render *r, TokenId startingToken, ASTNodeListRanged
         TokenId token = expressions->last->node.endToken + 1;
         token += names->count > 0;
         endToken = token;
+        pushWord(r, whitespace);
     } else {
         endToken = startingToken + 1;
     }
 
-    pushWord(r, whitespace);
+    flushTrailing(r);
+
     if(names->count > 0) {
         popNest(r);
         pushTokenWord(r, expressions->last->node.endToken + 1);
@@ -607,7 +576,7 @@ pushCallArgumentListDocument(Render *r, TokenId startingToken, ASTNodeListRanged
     assert(stringMatch(LIT_TO_STR(")"), r->tokens.tokenStrings[endToken]));
 }
 
-static void pushParametersDocument(Render *r, ASTNodeListRanged *parameters);
+static void pushParametersDocument(Render *r, TokenId openParenToken, ASTNodeListRanged *parameters);
 
 static void
 pushTypeDocument(Render *r, ASTNode *node) {
@@ -673,26 +642,11 @@ pushTypeDocument(Render *r, ASTNode *node) {
         } break;
         case ASTNodeType_FunctionType: {
             assert(stringMatch(LIT_TO_STR("function"), r->tokens.tokenStrings[node->startToken]));
-            assert(stringMatch(LIT_TO_STR("("), r->tokens.tokenStrings[node->startToken + 1]));
 
             pushTokenWord(r, node->startToken);
 
             pushGroup(r);
-            pushGroup(r);
-            pushTokenWord(r, node->startToken + 1);
-            pushWord(r, wordSoftline());
-            pushNest(r);
-            pushParametersDocument(r, &node->functionTypeNode.parameters);
-            popNest(r);
-
-            if(node->functionTypeNode.parameters.count > 0) {
-                assert(stringMatch(LIT_TO_STR(")"), r->tokens.tokenStrings[node->functionTypeNode.parameters.last->node.endToken + 1]));
-                pushTokenWord(r, node->functionTypeNode.parameters.last->node.endToken + 1);
-            } else {
-                assert(stringMatch(LIT_TO_STR(")"), r->tokens.tokenStrings[node->startToken + 2]));
-                pushTokenWord(r, node->startToken + 2);
-            }
-            popGroup(r);
+            pushParametersDocument(r, node->startToken + 1, &node->functionTypeNode.parameters);
 
             if(node->functionTypeNode.visibility != INVALID_TOKEN_ID) {
                 pushWord(r, wordLine());
@@ -712,11 +666,7 @@ pushTypeDocument(Render *r, ASTNode *node) {
                 pushGroup(r);
                 pushTokenWord(r, node->functionTypeNode.returnParameters.head->node.startToken - 2);
                 pushWord(r, wordSpace());
-                pushTokenWord(r, node->functionTypeNode.returnParameters.head->node.startToken - 1);
-                pushNest(r);
-                pushParametersDocument(r, &node->functionTypeNode.returnParameters);
-                popNest(r);
-                pushTokenWord(r, node->functionTypeNode.returnParameters.last->node.endToken + 1);
+                pushParametersDocument(r, node->functionTypeNode.returnParameters.head->node.startToken - 1, &node->functionTypeNode.returnParameters);
                 popGroup(r);
             }
             popGroup(r);
@@ -911,11 +861,11 @@ pushExpressionDocument(Render *r, ASTNode *node) {
             pushGroup(r);
             pushTokenWord(r, node->startToken);
             pushNest(r);
-            pushWord(r, wordSoftline());
             ASTNodeLink *element = tuple->elements.head;
-            pushGroup(r);
+
             TokenId commaToken = node->startToken;
             for(u32 i = 0; i < tuple->elements.count; i++, element = element->next) {
+                if(i == 0) { pushWord(r, wordSoftline()); pushGroup(r); }
                 bool isNamed = element->node.type != ASTNodeType_None;
                 if(isNamed) {
                     if(i > 0) { pushWord(r, wordLine()); }
@@ -927,10 +877,11 @@ pushExpressionDocument(Render *r, ASTNode *node) {
                     assert(stringMatch(LIT_TO_STR(","), r->tokens.tokenStrings[commaToken]));
                     pushTokenWord(r, commaToken);
                 }
+
+                if(i == tuple->elements.count - 1) { popGroup(r); pushWord(r, wordSoftline()); }
             }
-            popGroup(r);
+            flushTrailing(r); // TODO(radomski): This shouldn't be here?
             popNest(r);
-            pushWord(r, wordSoftline());
             pushTokenWord(r, node->endToken);
             popGroup(r);
         } break;
@@ -1561,13 +1512,7 @@ pushStatementDocument(Render *r, ASTNode *node) {
                 // TODO(radomski): Does the parameters list always gets blown
                 // into multiple lines or do we allow to get the parameters on
                 // the same line if they don't straddle the line limit
-                pushTokenWord(r, statement->expression->endToken + 2);
-                pushWord(r, wordSoftline());
-                pushNest(r);
-                pushParametersDocument(r, &statement->returnParameters);
-                popNest(r);
-                pushWord(r, wordSoftline());
-                pushTokenWord(r, statement->body->startToken - 1);
+                pushParametersDocument(r, statement->expression->endToken + 2, &statement->returnParameters);
             }
 
             pushWord(r, wordSpace());
@@ -1592,11 +1537,7 @@ pushStatementDocument(Render *r, ASTNode *node) {
                 }
 
                 if(catch->parameters.count != (u32)-1) {
-                    assert(stringMatch(LIT_TO_STR("("), r->tokens.tokenStrings[openParenToken]));
-                    assert(stringMatch(LIT_TO_STR(")"), r->tokens.tokenStrings[catch->body->startToken - 1]));
-                    pushTokenWord(r, openParenToken);
-                    pushParametersDocument(r, &catch->parameters);
-                    pushTokenWord(r, catch->body->startToken - 1);
+                    pushParametersDocument(r, openParenToken, &catch->parameters);
                 }
 
                 pushWord(r, wordSpace());
@@ -1965,9 +1906,21 @@ pushOverridesDocument(Render *r, TokenId overrideToken, ASTNodeListRanged *overr
 }
 
 static void
-pushParametersDocument(Render *r, ASTNodeListRanged *list) {
+pushParametersDocument(Render *r, TokenId openParenToken, ASTNodeListRanged *list) {
+    TokenId closeParenToken = list->count > 0
+        ? list->last->node.endToken + 1
+        : openParenToken + 1;
+
+    assert(stringMatch(LIT_TO_STR("("), r->tokens.tokenStrings[openParenToken]));
+    assert(stringMatch(LIT_TO_STR(")"), r->tokens.tokenStrings[closeParenToken]));
+
+    pushGroup(r);
+    pushTokenWord(r, openParenToken);
+    pushNest(r);
+
     ASTNodeLink *it = list->head;
     for(u32 i = 0; i < list->count; i++, it = it->next) {
+        if(i == 0) { pushWord(r, wordSoftline()); }
         ASTNodeVariableDeclaration *decl = &it->node.variableDeclarationNode;
         pushTypeDocument(r, decl->type);
 
@@ -1985,7 +1938,12 @@ pushParametersDocument(Render *r, ASTNodeListRanged *list) {
             pushTokenWord(r, it->next->node.variableDeclarationNode.type->startToken - 1);
             pushWord(r, wordLine());
         }
+        if(i == list->count - 1) { pushWord(r, wordSoftline()); }
     }
+
+    popNest(r);
+    pushTokenWord(r, closeParenToken);
+    popGroup(r);
 }
 
 static void
@@ -2421,22 +2379,7 @@ pushMemberDocument(Render *r, ASTNode *member) {
                 }
             }
 
-            u32 closeParenToken = function->parameters.count > 0
-                ? function->parameters.last->node.endToken + 1
-                : openParenToken + 1;
-
-            pushGroup(r);
-            pushTokenWord(r, openParenToken);
-            pushWord(r, wordSoftline());
-            pushNest(r);
-            pushParametersDocument(r, &function->parameters);
-            popNest(r);
-            pushWord(r, wordSoftline());
-            pushTokenWord(r, closeParenToken);
-            popGroup(r);
-
-            assert(stringMatch(LIT_TO_STR("("), r->tokens.tokenStrings[openParenToken]));
-            assert(stringMatch(LIT_TO_STR(")"), r->tokens.tokenStrings[closeParenToken]));
+            pushParametersDocument(r, openParenToken, &function->parameters);
 
             pushGroup(r);
             pushNest(r);
@@ -2463,20 +2406,13 @@ pushMemberDocument(Render *r, ASTNode *member) {
 
             if(function->returnParameters) {
                 assert(stringMatch(LIT_TO_STR("returns"), r->tokens.tokenStrings[function->returnParameters->startToken - 2]));
-                assert(stringMatch(LIT_TO_STR("("), r->tokens.tokenStrings[function->returnParameters->startToken - 1]));
-                assert(stringMatch(LIT_TO_STR(")"), r->tokens.tokenStrings[function->returnParameters->endToken + 1]));
 
                 pushWord(r, wordLine());
                 pushGroup(r);
                 pushTokenWord(r, function->returnParameters->startToken - 2);
                 pushWord(r, wordSpace());
-                pushTokenWord(r, function->returnParameters->startToken - 1);
-                pushWord(r, wordSoftline());
-                pushNest(r);
-                pushParametersDocument(r, function->returnParameters);
-                popNest(r);
-                pushWord(r, wordSoftline());
-                pushTokenWord(r, function->returnParameters->endToken + 1);
+
+                pushParametersDocument(r, function->returnParameters->startToken - 1, function->returnParameters);
                 popGroup(r);
             }
 
@@ -2504,24 +2440,11 @@ pushMemberDocument(Render *r, ASTNode *member) {
             pushTokenWord(r, member->startToken);
 
             TokenId openParenToken = member->startToken + 1;
-            TokenId closeParenToken = constructor->parameters.count > 0
-                ? constructor->parameters.last->node.endToken + 1
-                : openParenToken + 1;
-
-            pushGroup(r);
-            pushTokenWord(r, openParenToken);
-            pushWord(r, wordSoftline());
-            pushNest(r);
-            pushParametersDocument(r, &constructor->parameters);
-            popNest(r);
-            pushWord(r, wordSoftline());
-            pushTokenWord(r, closeParenToken);
-            popGroup(r);
+            pushParametersDocument(r, openParenToken, &constructor->parameters);
 
             pushGroup(r);
             pushNest(r);
             assert(stringMatch(LIT_TO_STR("("), r->tokens.tokenStrings[openParenToken]));
-            assert(stringMatch(LIT_TO_STR(")"), r->tokens.tokenStrings[closeParenToken]));
 
             if(constructor->modifiers.count > 0) {
                 pushWord(r, wordLine());
@@ -2565,16 +2488,7 @@ pushMemberDocument(Render *r, ASTNode *member) {
 
             if(modifier->parameters.count != (u32)-1) {
                 TokenId openParenToken = modifier->name + 1;
-                TokenId closeParenToken = modifier->parameters.count > 0
-                    ? modifier->parameters.last->node.endToken + 1
-                    : openParenToken + 1;
-
-                assert(stringMatch(LIT_TO_STR("("), r->tokens.tokenStrings[openParenToken]));
-                assert(stringMatch(LIT_TO_STR(")"), r->tokens.tokenStrings[closeParenToken]));
-
-                pushTokenWord(r, openParenToken);
-                pushParametersDocument(r, &modifier->parameters);
-                pushTokenWord(r, closeParenToken);
+                pushParametersDocument(r, openParenToken, &modifier->parameters);
             }
 
             if(modifier->virtual != INVALID_TOKEN_ID) {

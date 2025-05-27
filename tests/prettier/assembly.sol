@@ -291,7 +291,6 @@ contract Assembly {
     function commentsInAssemblyBlock() {
         assembly {
             /* foo bar baz */
-
             /* foobbbbbb */
         }
     }

@@ -60,7 +60,6 @@ contract RevertStatement {
         // comment2
         revert(
             // comment3
-
         );
 
         revert(message);

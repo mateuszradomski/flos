@@ -179,6 +179,7 @@ contract Comments2 {
 
 contract Comments3 is Interface1, Interface2, Interface3, Interface4, Interface5, Interface6 {
     // solhint-disable-previous-line no-empty-blocks
+
     function someFunction() { } /*1*/ /*2
     */
 }
@@ -222,7 +223,6 @@ interface Comments10 {
     // the first value
     // the second value
     // the lats value
-
     ) /* comment outside the parameters */ external;
 
     function someOtherFunction( /* checking for Block comment */) external;
