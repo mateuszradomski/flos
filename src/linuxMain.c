@@ -41,8 +41,6 @@ getProcessorCount() {
 }
 #endif
 
-typedef unsigned long long u64;
-
 typedef struct FormatMetrics {
     u64 fileRead;
     u64 tokenize;

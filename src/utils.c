@@ -11,7 +11,7 @@ typedef u32 bool;
 typedef u32 size_t;
 #endif
 
-#if defined(LINUX) || defined(WINDOWS)
+#ifndef WASM
 #include <stdint.h>
 #include <stddef.h>
 

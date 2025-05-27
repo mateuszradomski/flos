@@ -10,8 +10,6 @@
 #define ANSI_RESET "\x1b[0m"
 #define ANSI_GREY  "\x1b[90m"
 
-typedef unsigned long long u64;
-
 static u64
 consoleWidth() {
     struct winsize w;
