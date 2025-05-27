@@ -328,13 +328,6 @@ preserveHardBreaksIntoDocument(Render *r, ASTNode *node) {
     }
 }
 
-enum CommentType {
-    CommentType_None,
-    CommentType_SingleLine,
-    CommentType_MultiLine,
-    CommentType_StarAligned
-};
-
 static void
 pushCommentsInRange(Render *r, u32 startOffset, u32 endOffset) {
     String input = (String) {
@@ -342,9 +335,13 @@ pushCommentsInRange(Render *r, u32 startOffset, u32 endOffset) {
         .size = endOffset - startOffset,
     };
 
+    if(input.size <= 2) {
+        return;
+    }
+
     for(; input.size > 0 && !isWhitespace(input.data[0]) && input.data[0] != '/'; input.data++, input.size--) { }
 
-    if(input.size < 2) {
+    if(input.size <= 2) {
         return;
     }
 
@@ -368,26 +365,20 @@ pushCommentsInRange(Render *r, u32 startOffset, u32 endOffset) {
             pushTrailing(r, wordCommentStartSpace());
         }
 
-        if(i >= input.size) { break; }
-        i += 1;
+        u32 commentStart = i;
+        if(i++ >= input.size) { break; }
+        commentsWritten += 1;
 
-        assert(input.size > i);
-        u32 commentStart = i - 1;
-        String comment = (String) { .data = 0x0, .size = 0 };
-        u32 commentType = CommentType_None;
-        if(input.data[i] == '/') {
-            commentType = CommentType_SingleLine;
-
+        if(input.data[i++] == '/') {
             for(; i < input.size && input.data[i] != '\n'; i += 1) {}
-            comment = (String) {
+
+            String comment = {
                 .data = input.data + commentStart,
                 .size = i - commentStart
             };
-            pushTrailing(r, wordText(stringTrim(comment)));
-            commentsWritten += 1;
-        } else if(input.data[i] == '*') {
-            i += 1;
 
+            pushTrailing(r, wordText(stringTrim(comment)));
+        } else {
             bool isStarAligned = true;
             bool checkStarAlignment = false;
 
@@ -408,14 +399,12 @@ pushCommentsInRange(Render *r, u32 startOffset, u32 endOffset) {
             }
             i += 2;
 
-            commentType = isStarAligned ? CommentType_StarAligned : CommentType_MultiLine;
-            comment = (String) {
+            String comment = {
                 .data = input.data + commentStart,
                 .size = i - commentStart
             };
 
-            commentsWritten += 1;
-            if(commentType == CommentType_StarAligned) {
+            if(isStarAligned) {
                 String line = { .data = comment.data, .size = 0 };
                 u32 lineCount = 0;
                 for(u32 k = 0; k < comment.size; k++) {
