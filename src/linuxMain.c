@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <pthread.h>
+#include <stdatomic.h>
 
 #define ANSI_RESET "\x1b[0m"
 #define ANSI_RED   "\x1b[31m"
@@ -54,46 +55,49 @@ typedef struct FormatMetrics {
     u64 inputBytes;
 } FormatMetrics;
 
-static FormatMetrics
-formatMain(Arena *arena, char **paths, u32 pathCount) {
-    FormatMetrics metrics = { 0 };
-
-    for(int i = 0; i < pathCount; i++) {
-        u64 startPosition = arenaPos(arena);
-
-        metrics.fileRead -= readCPUTimer();
-        String content = readFile(arena, paths[i]);
-        metrics.fileRead += readCPUTimer();
-
-        FormatResult result = format(arena, content);
-
-        arenaPopTo(arena, startPosition);
-
-        metrics.inputBytes += content.size;
-        metrics.tokenize   += result.timings[Measurement_Tokenize];
-        metrics.parse      += result.timings[Measurement_Parse];
-        metrics.buildDoc   += result.timings[Measurement_BuildDoc];
-        metrics.renderDoc  += result.timings[Measurement_RenderDoc];
-    }
-
-    return metrics;
-}
+typedef struct {
+    char **paths;
+    u32     pathCount;
+    _Atomic u32 next;   /* atomic index of the next file to process */
+} WorkQueue;
 
 typedef struct ThreadWork {
-    char **paths;
-    u32 pathCount;
-
-    FormatMetrics metrics;
+    WorkQueue     *queue;
+    FormatMetrics  metrics;
 } ThreadWork;
 
 static void *
 threadWorker(void *arg) {
-    Arena arena = arenaCreate(16 * Megabyte, 32 * Kilobyte, 64);
-    ThreadWork *work = (ThreadWork *)arg;
-    work->metrics = formatMain(&arena, work->paths, work->pathCount);
-    arenaDestroy(&arena);
+    ThreadWork *tw = arg;
+    WorkQueue  *q  = tw->queue;
 
-    return 0x0;
+    Arena arena = arenaCreate(16 * Megabyte, 32 * Kilobyte, 64);
+    FormatMetrics m = {0};
+
+    for (;;) {
+        u32 i = atomic_fetch_add_explicit(&q->next, 1, memory_order_relaxed);
+        if (i >= q->pathCount) break;
+
+        u64 start = arenaPos(&arena);
+
+        m.fileRead -= readCPUTimer();
+        String content = readFile(&arena, q->paths[i]);
+        m.fileRead += readCPUTimer();
+
+        FormatResult r = format(&arena, content);
+
+        arenaPopTo(&arena, start);
+
+        m.inputBytes += content.size;
+        m.tokenize   += r.timings[Measurement_Tokenize];
+        m.parse      += r.timings[Measurement_Parse];
+        m.buildDoc   += r.timings[Measurement_BuildDoc];
+        m.renderDoc  += r.timings[Measurement_RenderDoc];
+    }
+
+    tw->metrics = m;
+    arenaDestroy(&arena);
+    return 0;
 }
 
 typedef struct TestEntry {
@@ -211,13 +215,12 @@ int main(int argCount, char **args) {
 
         u32 processorCount = getProcessorCount();
 
+        WorkQueue queue = { .paths = paths, .pathCount = pathCount, .next = 0 };
         ThreadWork *jobs = arrayPush(&arena, ThreadWork, processorCount);
         pthread_t *threads = arrayPush(&arena, pthread_t, processorCount);
-        u32 perJob = (pathCount + processorCount - 1) / processorCount;
-        for(u32 i = 0; i < processorCount; i++) {
-            jobs[i].paths = paths + perJob * i;
-            jobs[i].pathCount = MIN((s32)perJob, MAX(0, (s32)pathCount - (s32)(perJob * i)));
 
+        for(u32 i = 0; i < processorCount; i++) {
+            jobs[i].queue = &queue;
             pthread_create(&threads[i], 0x0, threadWorker, &jobs[i]);
         }
 
