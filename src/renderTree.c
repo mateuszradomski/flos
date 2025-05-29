@@ -16,8 +16,6 @@ typedef enum WordType: u8 {
     WordType_HardBreak,
     WordType_GroupPush,
     WordType_GroupPop,
-    WordType_NestPush,
-    WordType_NestPop,
     WordType_Count,
 } WordType;
 
@@ -31,6 +29,7 @@ typedef struct Word {
     //  - continue considering following words in break mode
     //   - lines, hardbreaks, starting of comments finish the function
     s8 assumedFlatCount;
+    s8 nestStep;
 
     u32 textSize;
     u8 *text;
@@ -154,11 +153,6 @@ fits(Word *words, s64 count, s8 assumedFlatCount, u64 remainingWidth) {
     return width <= remainingWidth;
 }
 
-static s8 nestActiveLut[WordType_Count] = {
-    [WordType_NestPush] = 1,
-    [WordType_NestPop] = -1,
-};
-
 static u32 nestActiveMaskLUT[2] = { 0xffffffff, 0 };
 
 static void
@@ -196,7 +190,7 @@ renderDocument(Render *r) {
             writeString(w, word->text, word->textSize);
         }
 
-        nest += nestActiveLut[word->type] & nestActiveMask;
+        nest += word->nestStep & nestActiveMask;
     }
 }
 
@@ -220,14 +214,12 @@ popGroup(Render *r) {
 
 static void
 pushNest(Render *r) {
-    Word w = { .type = WordType_NestPush };
-    r->words[r->wordCount++] = w;
+    r->words[r->wordCount - 1].nestStep += 1;
 }
 
 static void
 popNest(Render *r) {
-    Word w = { .type = WordType_NestPop };
-    r->words[r->wordCount++] = w;
+    r->words[r->wordCount - 1].nestStep -= 1;
 }
 
 static void
@@ -2587,8 +2579,6 @@ wordTypeToString(WordType type) {
         case WordType_HardBreak: return LIT_TO_STR("HardBreak");
         case WordType_GroupPush: return LIT_TO_STR("GroupPush");
         case WordType_GroupPop: return LIT_TO_STR("GroupPop");
-        case WordType_NestPush: return LIT_TO_STR("NestPush");
-        case WordType_NestPop: return LIT_TO_STR("NestPop");
         case WordType_Count: return LIT_TO_STR("Count");
     }
 }
