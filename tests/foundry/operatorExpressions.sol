@@ -52,8 +52,7 @@ function test() {
             idleTicks,
             actionsSold[ActionType.ACCELERATE] + i,
             ACCELERATE_SELL_PER_TICK
-        ) /
-        1e18;
+        ) / 1e18;
     other +=
         1e18 /
         getPrice(

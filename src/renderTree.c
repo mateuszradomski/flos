@@ -717,9 +717,20 @@ getOperatorPrecedence2(TokenType type) {
 static Word expressionLinkWord(ASTNode *node);
 static s32 expressionNest(ASTNode *node);
 
+static void pushExpressionDocumentAssignment(Render *r, ASTNode *node);
+
 static void
 pushBinaryExpressionDocument(Render *r, ASTNode *node, TokenId outerOperator) {
     ASTNodeBinaryExpression *binary = &node->binaryExpressionNode;
+
+    if(binary->operator >= TokenType_Equal && binary->operator <= TokenType_PercentEqual) {
+        pushExpressionDocument(r, binary->left);
+        pushWord(r, wordSpace());
+        pushTokenWord(r, binary->right->startToken - 1);
+        pushExpressionDocumentAssignment(r, binary->right);
+
+        return;
+    }
 
     bool onlyTwoElementBinaryExpression =
         outerOperator == TokenType_None &&
@@ -730,7 +741,7 @@ pushBinaryExpressionDocument(Render *r, ASTNode *node, TokenId outerOperator) {
     u32 innerPrec = getOperatorPrecedence2(binary->operator);
     bool startingPrecedence = outerPrecedence == 0;
     bool differingPrecedence = outerPrecedence != innerPrec;
-    bool openGroup = startingPrecedence || differingPrecedence;
+    bool openGroup = differingPrecedence;
 
     bool outerHigherThanAssignment = outerPrecedence > getOperatorPrecedence2(TokenType_Equal);
     bool notInequality = innerPrec != getOperatorPrecedence2(TokenType_LTick);
@@ -765,29 +776,16 @@ pushBinaryExpressionDocument(Render *r, ASTNode *node, TokenId outerOperator) {
     }
 
     pushWord(r, wordSpace());
-    pushTokenWord(r, binary->right->startToken - 1);
 
     if(onlyTwoElementBinaryExpression) { pushGroup(r); }
 
-    if(binary->operator >= TokenType_Equal && binary->operator <= TokenType_PercentEqual) {
-        pushWord(r, expressionLinkWord(binary->right));
-    } else {
-        pushWord(r, wordLine());
-    }
-
-    // only indent for the outermost binary expression
-    if(outerOperator == TokenType_None && binary->operator >= TokenType_Equal && binary->operator <= TokenType_PercentEqual) {
-        addNest(r, expressionNest(binary->right));
-    }
+    pushTokenWord(r, binary->right->startToken - 1);
+    pushWord(r, wordLine());
 
     if(binary->right->type == ASTNodeType_BinaryExpression) {
         pushBinaryExpressionDocument(r, binary->right, binary->operator);
     } else {
         pushExpressionDocument(r, binary->right);
-    }
-
-    if(outerOperator == TokenType_None && binary->operator >= TokenType_Equal && binary->operator <= TokenType_PercentEqual) {
-        addNest(r, -expressionNest(binary->right));
     }
 
     if(onlyTwoElementBinaryExpression) { popGroup(r); }
@@ -839,7 +837,9 @@ pushExpressionDocument(Render *r, ASTNode *node) {
             pushTokenWord(r, node->identifierExpressionNode.value);
         } break;
         case ASTNodeType_BinaryExpression: {
+            pushGroup(r);
             pushBinaryExpressionDocument(r, node, TokenType_None);
+            popGroup(r);
         } break;
         case ASTNodeType_TupleExpression: {
             assert(stringMatch(LIT_TO_STR("("), r->tokens.tokenStrings[node->startToken]));
@@ -1063,7 +1063,6 @@ expressionLinkWord(ASTNode *node) {
             bool complexCondition = node->terneryExpressionNode.condition->type == ASTNodeType_BinaryExpression;
             return complexCondition ? wordLine() : wordSpace();
         }
-        case ASTNodeType_FunctionCallExpression: return wordSpace();
         case ASTNodeType_TupleExpression: return wordSpace();
         default: return wordLine();
     }
@@ -1077,26 +1076,25 @@ expressionNest(ASTNode *node) {
             bool complexCondition = node->terneryExpressionNode.condition->type == ASTNodeType_BinaryExpression;
             return complexCondition ? 1 : 0;
         }
-        case ASTNodeType_FunctionCallExpression: return 0;
         case ASTNodeType_TupleExpression: return 0;
         default: return 1;
     }
 }
 
 static void
-pushExpressionDocumentLinked(Render *r, ASTNode *node) {
+pushExpressionDocumentAssignment(Render *r, ASTNode *node) {
     if (node->type == ASTNodeType_FunctionCallExpression) {
         ASTNodeFunctionCallExpression *function = &node->functionCallExpressionNode;
 
         pushGroupAssumedFlat(r, 1);
         pushWord(r, wordLine());
-        addNest(r, 1);
+        pushNest(r);
 
         pushExpressionDocument(r, function->expression);
         pushGroup(r);
         pushCallArgumentListDocument(r, function->expression->endToken + 1, &function->argumentsExpression, &function->argumentsName);
         popGroup(r);
-        addNest(r, -1);
+        popNest(r);
         popGroup(r);
     } else {
         pushGroup(r);
@@ -1222,7 +1220,7 @@ pushStatementDocument(Render *r, ASTNode *node) {
 
             pushTokenWord(r, node->startToken);
             if(node->returnStatementNode.expression != 0x0) {
-                pushExpressionDocumentLinked(r, node->returnStatementNode.expression);
+                pushExpressionDocumentAssignment(r, node->returnStatementNode.expression);
             }
             pushTokenWord(r, node->endToken);
         } break;
@@ -1296,7 +1294,7 @@ pushStatementDocument(Render *r, ASTNode *node) {
 
                 pushTokenWord(r, statement->initialValue->startToken - 1);
 
-                pushExpressionDocumentLinked(r, statement->initialValue);
+                pushExpressionDocumentAssignment(r, statement->initialValue);
             }
 
             pushTokenWord(r, node->endToken);
@@ -1347,7 +1345,7 @@ pushStatementDocument(Render *r, ASTNode *node) {
             pushTokenWord(r, statement->initialValue->startToken - 1);
             popGroup(r);
 
-            pushExpressionDocumentLinked(r, statement->initialValue);
+            pushExpressionDocumentAssignment(r, statement->initialValue);
             pushTokenWord(r, node->endToken);
         } break;
         case ASTNodeType_DoWhileStatement: {
@@ -2299,7 +2297,7 @@ pushMemberDocument(Render *r, ASTNode *member) {
             pushWord(r, wordSpace());
             pushTokenWord(r, constNode->identifier + 1);
 
-            pushExpressionDocumentLinked(r, constNode->expression);
+            pushExpressionDocumentAssignment(r, constNode->expression);
 
             pushTokenWord(r, member->endToken);
             popGroup(r);
@@ -2331,12 +2329,11 @@ pushMemberDocument(Render *r, ASTNode *member) {
             popGroup(r);
 
             if(decl->expression) {
-
                 assert(stringMatch(LIT_TO_STR("="), r->tokens.tokenStrings[decl->identifier + 1]));
                 pushWord(r, wordSpace());
                 pushTokenWord(r, decl->identifier + 1);
 
-                pushExpressionDocumentLinked(r, decl->expression);
+                pushExpressionDocumentAssignment(r, decl->expression);
             }
 
             pushTokenWord(r, member->endToken);
