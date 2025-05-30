@@ -69,7 +69,8 @@ threadWorker(void *arg) {
     ThreadWork *tw = arg;
     WorkQueue  *q  = tw->queue;
 
-    Arena arena = arenaCreate(16 * Megabyte, 32 * Kilobyte, 64);
+    Arena arena = arenaCreate(11 * Megabyte, 32 * Kilobyte, 64);
+    Arena parseArena = arenaCreate(5 * Megabyte, 32 * Kilobyte, 64);
     FormatMetrics m = {0};
 
     for (;;) {
@@ -77,14 +78,16 @@ threadWorker(void *arg) {
         if (i >= q->pathCount) break;
 
         u64 start = arenaPos(&arena);
+        u64 startParse = arenaPos(&parseArena);
 
         m.fileRead -= readCPUTimer();
         String content = readFile(&arena, q->paths[i]);
         m.fileRead += readCPUTimer();
 
-        FormatResult r = format(&arena, content);
+        FormatResult r = format(&arena, &parseArena, content);
 
         arenaPopTo(&arena, start);
+        arenaPopToZero(&parseArena, startParse);
 
         m.inputBytes += content.size;
         m.tokenize   += r.timings[Measurement_Tokenize];

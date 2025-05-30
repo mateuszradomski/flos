@@ -16,7 +16,7 @@ typedef struct FormatResult {
     u64 timings[8];
 } FormatResult;
 
-FormatResult format(Arena *arena, String input) {
+FormatResult format(Arena *arena, Arena *parseArena, String input) {
     FormatResult result = { 0 };
 
     result.timings[Measurement_Tokenize] -= readCPUTimer();
@@ -24,7 +24,7 @@ FormatResult format(Arena *arena, String input) {
     result.timings[Measurement_Tokenize] += readCPUTimer();
 
     result.timings[Measurement_Parse] -= readCPUTimer();
-    Parser parser = createParser(tokens, arena);
+    Parser parser = createParser(tokens, parseArena);
     ASTNode node = parseSourceUnit(&parser);
     result.timings[Measurement_Parse] += readCPUTimer();
 

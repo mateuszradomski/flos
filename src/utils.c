@@ -413,6 +413,30 @@ arenaPop(Arena *arena, size_t size) {
             u64 toSubtract = MIN(size, takenBytes);
             u64 newOffset = takenBytes - toSubtract;
 
+            size -= toSubtract;
+            cursor->cursorPointer = cursor->basePointer + newOffset;
+            cursorNode = cursorNode->next;
+        }
+    }
+}
+
+static void
+arenaPopZero(Arena *arena, size_t size) {
+    assert(arena);
+
+    if(size) {
+        MemoryCursorNode *cursorNode = arena->cursorNode;
+        if(!cursorNode) {
+            return;
+        }
+
+        while(size > 0) {
+            MemoryCursor *cursor = &cursorNode->cursor;
+
+            u64 takenBytes = cursorTakenBytes(cursor);
+            u64 toSubtract = MIN(size, takenBytes);
+            u64 newOffset = takenBytes - toSubtract;
+
             memset(cursor->basePointer + newOffset, 0, toSubtract);
 
             size -= toSubtract;
@@ -427,6 +451,14 @@ arenaPopTo(Arena *arena, size_t pos) {
     size_t currentPos = arenaPos(arena);
     if(currentPos > pos) {
         arenaPop(arena, currentPos - pos);
+    }
+}
+
+static void
+arenaPopToZero(Arena *arena, size_t pos) {
+    size_t currentPos = arenaPos(arena);
+    if(currentPos > pos) {
+        arenaPopZero(arena, currentPos - pos);
     }
 }
 
