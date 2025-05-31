@@ -51,6 +51,7 @@ typedef struct FormatMetrics {
     u64 memoryUsed;
 
     u64 inputBytes;
+    u64 inputFiles;
 } FormatMetrics;
 
 typedef struct {
@@ -94,6 +95,7 @@ threadWorker(void *arg) {
         m.parse      += r.timings[Measurement_Parse];
         m.buildDoc   += r.timings[Measurement_BuildDoc];
         m.renderDoc  += r.timings[Measurement_RenderDoc];
+        m.inputFiles += 1;
     }
 
     tw->metrics = m;
@@ -260,22 +262,21 @@ int main(int argCount, char **args) {
 
             u32 elapsedSum = metrics.fileRead + metrics.tokenize + metrics.parse + metrics.buildDoc + metrics.renderDoc;
 
-            // printf("Timings:\n");
-            // printf("  File read:  %9llu cycles, %f ms\n", metrics.fileRead,  (double)metrics.fileRead / cpuFreq * 1e3);
-            // printf("  Tokenize:   %9llu cycles, %f ms\n", metrics.tokenize,  (double)metrics.tokenize / cpuFreq * 1e3);
-            // printf("  Parse:      %9llu cycles, %f ms\n", metrics.parse,     (double)metrics.parse / cpuFreq * 1e3);
-            // printf("  BuildDoc:   %9llu cycles, %f ms\n", metrics.buildDoc,  (double)metrics.buildDoc / cpuFreq * 1e3);
-            // printf("  RenderDoc:  %9llu cycles, %f ms\n", metrics.renderDoc, (double)metrics.renderDoc / cpuFreq * 1e3);
-            // printf("  ---------\n");
-            // printf("  Sum:        %9llu cycles, %f ms\n", elapsed, (double)elapsedSum / cpuFreq * 1e3);
+            printf(" T%d - %llu files in %s%.0fms read%s, %s%.0fms token%s, %s%.0fms parse%s, %s%.0fms build%s, %s%.0fms render%s\n",
+                   i, metrics.inputFiles,
+                   ANSI_YELLOW, (double)(metrics.fileRead) / cpuFreq * 1e3, ANSI_RESET,
+                   ANSI_BLUE, (double)(metrics.tokenize) / cpuFreq * 1e3, ANSI_RESET,
+                   ANSI_RED, (double)(metrics.parse) / cpuFreq * 1e3, ANSI_RESET,
+                   ANSI_GREEN, (double)(metrics.buildDoc) / cpuFreq * 1e3, ANSI_RESET,
+                   ANSI_CYAN, (double)(metrics.renderDoc) / cpuFreq * 1e3, ANSI_RESET);
         }
 
         printf("Thread avg: %s%.0fms read%s, %s%.0fms token%s, %s%.0fms parse%s, %s%.0fms build%s, %s%.0fms render%s\n",
-               ANSI_YELLOW, (double)(sum.fileRead / processorCount ) / cpuFreq * 1e3, ANSI_RESET,
-               ANSI_BLUE, (double)(sum.tokenize / processorCount ) / cpuFreq * 1e3, ANSI_RESET,
-               ANSI_RED, (double)(sum.parse / processorCount ) / cpuFreq * 1e3, ANSI_RESET,
-               ANSI_GREEN, (double)(sum.buildDoc / processorCount ) / cpuFreq * 1e3, ANSI_RESET,
-               ANSI_CYAN, (double)(sum.renderDoc / processorCount ) / cpuFreq * 1e3, ANSI_RESET);
+               ANSI_YELLOW, (double)(sum.fileRead / processorCount) / cpuFreq * 1e3, ANSI_RESET,
+               ANSI_BLUE, (double)(sum.tokenize / processorCount) / cpuFreq * 1e3, ANSI_RESET,
+               ANSI_RED, (double)(sum.parse / processorCount) / cpuFreq * 1e3, ANSI_RESET,
+               ANSI_GREEN, (double)(sum.buildDoc / processorCount) / cpuFreq * 1e3, ANSI_RESET,
+               ANSI_CYAN, (double)(sum.renderDoc / processorCount) / cpuFreq * 1e3, ANSI_RESET);
     }
 
 }
