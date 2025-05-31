@@ -30,6 +30,7 @@ typedef struct Word {
     //   - lines, hardbreaks, starting of comments finish the function
     s8 assumedFlatCount;
     s8 nestStep;
+    s8 groupStep;
 
     u32 textSize;
     u8 *text;
@@ -125,18 +126,32 @@ fits(Word *words, s64 count, s8 assumedFlatCount, u64 remainingWidth) {
 
     s32 groupStack = 0;
 
-    static s8 groupStackLUT[WordType_Count] = {
-        [WordType_GroupPush] = 1,
-        [WordType_GroupPop] = -1,
-    };
-
     s64 assumedFlatLimit = MIN(count, (s64)((u32)((s32)assumedFlatCount)));
 
-    for (; i < assumedFlatLimit && groupStack >= 0 && width <= remainingWidth; i++) {
-        Word *word = &words[i];
+    while (i + 3 < assumedFlatLimit &&
+           groupStack >= 0 &&
+           width       <= remainingWidth)
+    {
+        width      += words[i].textSize;
+        groupStack += words[i++].groupStep;
+        if (groupStack < 0) break;
 
-        width += word->textSize;
-        groupStack += groupStackLUT[word->type];
+        width      += words[i].textSize;
+        groupStack += words[i++].groupStep;
+        if (groupStack < 0) break;
+
+        width      += words[i].textSize;
+        groupStack += words[i++].groupStep;
+        if (groupStack < 0) break;
+
+        width      += words[i].textSize;
+        groupStack += words[i++].groupStep;
+        if (groupStack < 0) break;
+    }
+
+    for (; i < assumedFlatLimit && groupStack >= 0 && width <= remainingWidth; ++i) {
+        width      += words[i].textSize;
+        groupStack += words[i].groupStep;
     }
 
     for (;
@@ -196,19 +211,19 @@ renderDocument(Render *r) {
 
 static void
 pushGroup(Render *r) {
-    Word w = { .type = WordType_GroupPush, .assumedFlatCount = -1 };
+    Word w = { .type = WordType_GroupPush, .assumedFlatCount = -1, .groupStep = 1 };
     r->words[r->wordCount++] = w;
 }
 
 static void
 pushGroupAssumedFlat(Render *r, s8 assumedFlatCount) {
-    Word w = { .type = WordType_GroupPush, .assumedFlatCount = assumedFlatCount };
+    Word w = { .type = WordType_GroupPush, .assumedFlatCount = assumedFlatCount, .groupStep = 1 };
     r->words[r->wordCount++] = w;
 }
 
 static void
 popGroup(Render *r) {
-    Word w = { .type = WordType_GroupPop };
+    Word w = { .type = WordType_GroupPop, .groupStep = -1 };
     r->words[r->wordCount++] = w;
 }
 
@@ -710,6 +725,58 @@ static Word expressionLinkWord(ASTNode *node);
 static s32 expressionNest(ASTNode *node);
 
 static void pushExpressionDocumentAssignment(Render *r, ASTNode *node);
+
+static bool
+shouldFlattenBinaryExpression(ASTNode *outerNode, ASTNode *innerNode) {
+    if(outerNode->type != ASTNodeType_BinaryExpression || innerNode->type != ASTNodeType_BinaryExpression) {
+        return false;
+    }
+
+    ASTNodeBinaryExpression *outerExpression = &outerNode->binaryExpressionNode;
+    ASTNodeBinaryExpression *innerExpression = &innerNode->binaryExpressionNode;
+
+    TokenType outerOperator = outerExpression->operator;
+    TokenType innerOperator = innerExpression->operator;
+
+    u32 outerPrecedence = getOperatorPrecedence2(outerOperator);
+    u32 innerPrec = getOperatorPrecedence2(innerOperator);
+    if(outerPrecedence != innerPrec) {
+        return false;
+    }
+
+    if(outerOperator == TokenType_StarStar) {
+        return false;
+    }
+
+    if(outerOperator == TokenType_EqualEqual && innerOperator == TokenType_EqualEqual) {
+        return false;
+    }
+
+    /*// x * y % z --> (x * y) % z*/
+    /*if (*/
+    /*    (nodeOp === "%" && multiplicativeOperators[parentOp]) ||*/
+    /*    (parentOp === "%" && multiplicativeOperators[nodeOp])*/
+    /*   ) {*/
+    /*    return false;*/
+    /*}*/
+    /**/
+    /*// x * y / z --> (x * y) / z*/
+    /*// x / y * z --> (x / y) * z*/
+    /*if (*/
+    /*    nodeOp !== parentOp &&*/
+    /*    multiplicativeOperators[nodeOp] &&*/
+    /*    multiplicativeOperators[parentOp]*/
+    /*   ) {*/
+    /*    return false;*/
+    /*}*/
+    /**/
+    /*// x << y << z --> (x << y) << z*/
+    /*if (bitshiftOperators[parentOp] && bitshiftOperators[nodeOp]) {*/
+    /*    return false;*/
+    /*}*/
+
+    return true;
+}
 
 static void
 pushBinaryExpressionDocument(Render *r, ASTNode *node, TokenId outerOperator) {
@@ -2652,11 +2719,11 @@ dumpDocument(Render *r) {
 
 static Render
 createRender(Arena *arena, String originalSource, TokenizeResult tokens) {
-    u32 scratchBufferCapacity = originalSource.size * 2;
-    u32 wordCount = MAX(131071, originalSource.size / 2);
+    u32 scratchBufferCapacity = (originalSource.size / 5);
+    u32 wordCount = (originalSource.size / 4) * 3;
     Render render = {
         .writer = {
-            .data = arrayPush(arena, u8, originalSource.size * 4),
+            .data = arrayPush(arena, u8, originalSource.size * 3),
             .size = 0,
             .capacity = originalSource.size * 4 ,
             .indentSize = 4,
