@@ -87,6 +87,12 @@ threadWorker(void *arg) {
 
         FormatResult r = format(&arena, &parseArena, content);
 
+        if(content.size != r.source.size || memcmp(content.data, r.source.data, content.size) != 0) {
+            FILE *f = fopen(q->paths[i], "wb");
+            fwrite(r.source.data, 1, r.source.size, f);
+            fclose(f);
+        }
+
         arenaPopTo(&arena, start);
         arenaPopToZero(&parseArena, startParse);
 
