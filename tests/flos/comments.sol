@@ -18,6 +18,13 @@ contract Comments {
             1
         );
     }
+
+    function startExitWithBurntTokens(bytes memory data) public returns (bytes memory) {
+        require(
+            msg.sender == address(topics.getField(2).toUint()), // from
+            "Withdrawer and burn exit tx do not match"
+        );
+    }
 }
 // Above input, below output
 contract Comments {
@@ -38,6 +45,13 @@ contract Comments {
         revert(
             // comment3
             1
+        );
+    }
+
+    function startExitWithBurntTokens(bytes memory data) public returns (bytes memory) {
+        require(
+            msg.sender == address(topics.getField(2).toUint()), // from
+            "Withdrawer and burn exit tx do not match"
         );
     }
 }

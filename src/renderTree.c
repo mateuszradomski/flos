@@ -361,7 +361,7 @@ pushCommentsInRange(Render *r, u32 startOffset, u32 endOffset) {
             newlineCount += input.data[i] == '\n';
         }
 
-        if(i < input.size && input.data[i] != '/') { break; }
+        if(i < input.size && input.data[i] != '/' && newlineCount == 0) { break; }
 
         if(newlineCount > 0) {
             u32 toInsert = MIN(newlineCount, 2);
@@ -371,6 +371,8 @@ pushCommentsInRange(Render *r, u32 startOffset, u32 endOffset) {
         } else if(i < input.size) {
             pushTrailing(r, wordCommentStartSpace());
         }
+
+        if(i < input.size && input.data[i] != '/') { break; }
 
         u32 commentStart = i;
         if(i++ >= input.size) { break; }
@@ -2719,7 +2721,7 @@ dumpDocument(Render *r) {
 
 static Render
 createRender(Arena *arena, String originalSource, TokenizeResult tokens) {
-    u32 scratchBufferCapacity = (originalSource.size / 5);
+    u32 scratchBufferCapacity = MAX(64 * Kilobyte, (originalSource.size / 5));
     u32 wordCount = (originalSource.size / 4) * 3;
     Render render = {
         .writer = {
