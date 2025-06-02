@@ -70,8 +70,8 @@ threadWorker(void *arg) {
     ThreadWork *tw = arg;
     WorkQueue  *q  = tw->queue;
 
-    Arena arena = arenaCreate(11 * Megabyte, 32 * Kilobyte, 64);
-    Arena parseArena = arenaCreate(5 * Megabyte, 32 * Kilobyte, 64);
+    Arena arena = arenaCreate(11 * Megabyte, 11 * Megabyte, 64);
+    Arena parseArena = arenaCreate(5 * Megabyte, 5 * Megabyte, 64);
     FormatMetrics m = {0};
 
     for (;;) {
