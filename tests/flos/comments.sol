@@ -42,6 +42,15 @@ contract Comments {
      *
      * - `to` cannot be the zero address.
      */
+
+    function makeSureCommentBreaksTuple() {
+        if(capacitorType_ == SINGLE_CAPACITOR) {
+            return (
+                // msg.sender is socket address
+                new SingleCapacitor(msg.sender, owner), new SingleDecapacitor(owner)
+            );
+        }
+    }
 }
 // Above input, below output
 contract Comments {
@@ -88,4 +97,14 @@ contract Comments {
      *
      * - `to` cannot be the zero address.
      */
+
+    function makeSureCommentBreaksTuple() {
+        if(capacitorType_ == SINGLE_CAPACITOR) {
+            return (
+                // msg.sender is socket address
+                new SingleCapacitor(msg.sender, owner),
+                new SingleDecapacitor(owner)
+            );
+        }
+    }
 }

@@ -915,7 +915,7 @@ pushExpressionDocument(Render *r, ASTNode *node) {
 
             TokenId commaToken = node->startToken;
             for(u32 i = 0; i < tuple->elements.count; i++, element = element->next) {
-                if(i == 0) { pushWord(r, wordSoftline()); pushGroup(r); }
+                if(i == 0) { pushWord(r, wordSoftline()); }
                 bool isNamed = element->node.type != ASTNodeType_None;
                 if(isNamed) {
                     if(i > 0) { pushWord(r, wordLine()); }
@@ -928,7 +928,7 @@ pushExpressionDocument(Render *r, ASTNode *node) {
                     pushTokenWord(r, commaToken);
                 }
 
-                if(i == tuple->elements.count - 1) { popGroup(r); pushWord(r, wordSoftline()); }
+                if(i == tuple->elements.count - 1) { pushWord(r, wordSoftline()); }
             }
             flushTrailing(r); // TODO(radomski): This shouldn't be here?
             popNest(r);
