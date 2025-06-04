@@ -32,6 +32,16 @@ contract Comments {
         address /* _depositSender */,
         bytes calldata _chainData
     ) external payable override onlyBridgehub {}
+
+    /** @dev Creates `amount` tokens and assigns them to `account`, increasing
+     * the total supply.
+     *
+     * Emits a {Transfer} event with `from` set to the zero address.
+     *
+     * Requirements
+     *
+     * - `to` cannot be the zero address.
+     */
 }
 // Above input, below output
 contract Comments {
@@ -68,4 +78,14 @@ contract Comments {
         address /* _depositSender */,
         bytes calldata _chainData
     ) external payable override onlyBridgehub { }
+
+    /** @dev Creates `amount` tokens and assigns them to `account`, increasing
+     * the total supply.
+     *
+     * Emits a {Transfer} event with `from` set to the zero address.
+     *
+     * Requirements
+     *
+     * - `to` cannot be the zero address.
+     */
 }
