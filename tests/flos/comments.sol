@@ -25,6 +25,13 @@ contract Comments {
             "Withdrawer and burn exit tx do not match"
         );
     }
+
+    function forwardedBridgeRecoverFailedTransfer(
+        uint256 /* _chainId */,
+        bytes32 /* _assetInfo */,
+        address /* _depositSender */,
+        bytes calldata _chainData
+    ) external payable override onlyBridgehub {}
 }
 // Above input, below output
 contract Comments {
@@ -54,4 +61,11 @@ contract Comments {
             "Withdrawer and burn exit tx do not match"
         );
     }
+
+    function forwardedBridgeRecoverFailedTransfer(
+        uint256 /* _chainId */,
+        bytes32 /* _assetInfo */,
+        address /* _depositSender */,
+        bytes calldata _chainData
+    ) external payable override onlyBridgehub { }
 }

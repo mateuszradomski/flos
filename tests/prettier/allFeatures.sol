@@ -634,9 +634,15 @@ contract Overrides {
     mapping(address => bool) public override varName;
     mapping(address => bool) public override(Foo) varName;
     mapping(address => bool) public override(Foo, Bar) varName;
-    mapping(address => bool)
-        public
-        override(Foo, Bar, Baz, Baaaz, Baaaaaaaaaaaaaaz, BazQuxBazQuxBazQux, Quuuuuuuuuuuuuux) varName;
+    mapping(address => bool) public override(
+        Foo,
+        Bar,
+        Baz,
+        Baaaz,
+        Baaaaaaaaaaaaaaz,
+        BazQuxBazQuxBazQux,
+        Quuuuuuuuuuuuuux
+    ) varName;
     modifier onlyOwner() virtual {
         _;
     }

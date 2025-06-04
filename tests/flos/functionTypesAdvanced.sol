@@ -68,8 +68,9 @@ contract FunctionTypesAdvanced {
     mapping(uint256 => function(bytes calldata) external returns (address)) public idToFunc;
 
     // Complex function type signature
-    function(mapping(address => uint256) storage, Callback memory) external returns (function() internal pure)
-        public complexFuncType;
+    function(mapping(address => uint256) storage, Callback memory) external returns (
+        function() internal pure
+    ) public complexFuncType;
 
     event FuncCalled(uint256 id);
 

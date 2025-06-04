@@ -647,16 +647,16 @@ pushTypeDocument(Render *r, ASTNode *node) {
             pushParametersDocument(r, node->startToken + 1, &node->functionTypeNode.parameters);
 
             if(node->functionTypeNode.visibility != INVALID_TOKEN_ID) {
-                pushWord(r, wordLine());
+                pushWord(r, wordSpace());
                 pushTokenWord(r, node->functionTypeNode.visibility);
             }
             if(node->functionTypeNode.stateMutability != INVALID_TOKEN_ID) {
-                pushWord(r, wordLine());
+                pushWord(r, wordSpace());
                 pushTokenWord(r, node->functionTypeNode.stateMutability);
             }
 
             if(node->functionTypeNode.returnParameters.count > 0) {
-                pushWord(r, wordLine());
+                pushWord(r, wordSpace());
                 assert(stringMatch(LIT_TO_STR("returns"), r->tokens.tokenStrings[node->functionTypeNode.returnParameters.head->node.startToken - 2]));
                 assert(stringMatch(LIT_TO_STR("("), r->tokens.tokenStrings[node->functionTypeNode.returnParameters.head->node.startToken - 1]));
                 assert(stringMatch(LIT_TO_STR(")"), r->tokens.tokenStrings[node->functionTypeNode.returnParameters.last->node.endToken + 1]));
@@ -1922,9 +1922,9 @@ pushInheritanceSpecifierDocument(Render *r, ASTNode *node) {
 }
 
 static void
-pushOverridesDocument(Render *r, TokenId overrideToken, ASTNodeListRanged *overrides) {
+pushOverridesDocument(Render *r, TokenId overrideToken, ASTNodeListRanged *overrides, Word whitespace) {
     if(overrideToken != INVALID_TOKEN_ID) {
-        pushWord(r, wordLine());
+        pushWord(r, whitespace);
         assert(stringMatch(LIT_TO_STR("override"), r->tokens.tokenStrings[overrideToken]));
         pushTokenWord(r, overrideToken);
         if(overrides->count > 0) {
@@ -2372,21 +2372,19 @@ pushMemberDocument(Render *r, ASTNode *member) {
             pushTypeDocument(r, decl->type);
 
             pushGroup(r);
-            pushNest(r);
             if(decl->visibility != INVALID_TOKEN_ID) {
-                pushWord(r, wordLine());
+                pushWord(r, wordSpace());
                 pushTokenWord(r, decl->visibility);
             }
             if(decl->mutability != INVALID_TOKEN_ID) {
-                pushWord(r, wordLine());
+                pushWord(r, wordSpace());
                 pushTokenWord(r, decl->mutability);
             }
 
-            pushOverridesDocument(r, decl->override, &decl->overrides);
+            pushOverridesDocument(r, decl->override, &decl->overrides, wordSpace());
 
             pushWord(r, wordSpace());
             pushTokenWord(r, decl->identifier);
-            popNest(r);
             popGroup(r);
 
             if(decl->expression) {
@@ -2444,7 +2442,7 @@ pushMemberDocument(Render *r, ASTNode *member) {
                 pushTokenWord(r, function->virtual);
             }
 
-            pushOverridesDocument(r, function->override, function->overrides);
+            pushOverridesDocument(r, function->override, function->overrides, wordLine());
 
             if(function->modifiers && function->modifiers->count > 0) {
                 pushWord(r, wordLine());
@@ -2543,7 +2541,7 @@ pushMemberDocument(Render *r, ASTNode *member) {
                 pushTokenWord(r, modifier->virtual);
             }
 
-            pushOverridesDocument(r, modifier->override, modifier->overrides);
+            pushOverridesDocument(r, modifier->override, modifier->overrides, wordLine());
 
             popGroup(r);
             if(modifier->body != 0x0) {
