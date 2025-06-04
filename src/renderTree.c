@@ -1009,13 +1009,19 @@ pushExpressionDocument(Render *r, ASTNode *node) {
             pushTokenWord(r, array->expression->endToken + 1);
             pushWord(r, wordSoftline());
             if(array->leftFenceExpression != 0x0) {
+                pushGroup(r);
                 pushExpressionDocument(r, array->leftFenceExpression);
+                popGroup(r);
+
                 pushTokenWord(r, array->leftFenceExpression->endToken + 1);
             } else {
                 pushTokenWord(r, array->expression->endToken + 2);
             }
             if(array->rightFenceExpression != 0x0) {
+                pushGroup(r);
+                pushWord(r, wordSoftline());
                 pushExpressionDocument(r, array->rightFenceExpression);
+                popGroup(r);
             }
             pushWord(r, wordSoftline());
             popNest(r);

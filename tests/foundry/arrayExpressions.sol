@@ -80,7 +80,8 @@ contract ArrayExpressions {
         msg.data[someVeryVeryVeryLongVariableNameThatDenotesTheStartOfTheMessageDataSlice:];
         msg.data[:someVeryVeryVeryLongVariableNameThatDenotesTheEndOfTheMessageDataSlice];
         msg.data[
-            someVeryVeryVeryLongVariableNameThatDenotesTheStartOfTheMessageDataSlice:someVeryVeryVeryLongVariableNameThatDenotesTheEndOfTheMessageDataSlice
+            someVeryVeryVeryLongVariableNameThatDenotesTheStartOfTheMessageDataSlice:
+            someVeryVeryVeryLongVariableNameThatDenotesTheEndOfTheMessageDataSlice
         ];
 
         /* ARRAY LITERAL */
