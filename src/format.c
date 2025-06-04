@@ -39,6 +39,6 @@ FormatResult format(Arena *arena, Arena *parseArena, String input) {
 
     dumpDocument(&render);
 
-    result.source = (String){ .data = render.writer.data, .size = render.writer.size };
+    result.source = stringTrimLeft((String){ .data = render.writer.data, .size = render.writer.size });
     return result;
 }

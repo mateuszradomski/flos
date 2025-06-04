@@ -555,6 +555,16 @@ stringCompare(String a, String b){
 }
 
 static String
+stringTrimLeft(String str) {
+    while(str.size > 0 && isWhitespace(str.data[0])) {
+        str.data++;
+        str.size--;
+    }
+
+    return str;
+}
+
+static String
 stringTrim(String str) {
     while(str.size > 0 && isWhitespace(str.data[0])) {
         str.data++;
