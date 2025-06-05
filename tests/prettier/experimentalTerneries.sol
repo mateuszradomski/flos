@@ -309,24 +309,24 @@ contract Conditional {
             : isDog() ? bark() : someReallyLargeExpression.thatWouldCauseALineBreak().willCauseAnIndentButNotParens();
 
         // multiline conditions and consequents/alternates:
-        string storage multilineConditionsConsequentsAndAlternates = (
-            isAnAdorableKittyCat() && (someReallyLongCondition || moreInThisLongCondition)
-        )
-            ? someReallyLargeExpression.thatWouldCauseALineBreak().willCauseAnIndentButNotParens()
-            : (isNotAnAdorableKittyCat() && (someReallyLongCondition || moreInThisLongCondition))
-                ? bark()
-                : shortCondition()
-                    ? shortConsequent()
-                    : someReallyLargeExpression.thatWouldCauseALineBreak().willCauseAnIndentButNotParens();
+        string storage multilineConditionsConsequentsAndAlternates =
+            (isAnAdorableKittyCat() && (someReallyLongCondition || moreInThisLongCondition))
+                ? someReallyLargeExpression.thatWouldCauseALineBreak().willCauseAnIndentButNotParens()
+                : (isNotAnAdorableKittyCat() && (someReallyLongCondition || moreInThisLongCondition))
+                    ? bark()
+                    : shortCondition()
+                        ? shortConsequent()
+                        : someReallyLargeExpression.thatWouldCauseALineBreak().willCauseAnIndentButNotParens();
 
         // Assignment also groups and indents as Variable Declaration:
-        assignment = (isAnAdorableKittyCat() && (someReallyLongCondition || moreInThisLongCondition))
-            ? someReallyLargeExpression.thatWouldCauseALineBreak().willCauseAnIndentButNotParens()
-            : (isNotAnAdorableKittyCat() && (someReallyLongCondition || moreInThisLongCondition))
-                ? bark()
-                : shortCondition()
-                    ? shortConsequent()
-                    : someReallyLargeExpression.thatWouldCauseALineBreak().willCauseAnIndentButNotParens();
+        assignment =
+            (isAnAdorableKittyCat() && (someReallyLongCondition || moreInThisLongCondition))
+                ? someReallyLargeExpression.thatWouldCauseALineBreak().willCauseAnIndentButNotParens()
+                : (isNotAnAdorableKittyCat() && (someReallyLongCondition || moreInThisLongCondition))
+                    ? bark()
+                    : shortCondition()
+                        ? shortConsequent()
+                        : someReallyLargeExpression.thatWouldCauseALineBreak().willCauseAnIndentButNotParens();
 
         // illustrating case of mostly short conditionals
         string storage mostlyShort =
@@ -341,21 +341,23 @@ contract Conditional {
                             : x == 6 ? "six" : "idk";
 
         // long conditional, short consequent/alternate, not chained - do indent after ?
-        string storage longConditional = (
-            bifornCringerMoshedPerplexSawder == 2 / askTrovenaBeenaDependsRowans &&
-            glimseGlyphsHazardNoopsTieTie >= averredBathersBoxroomBuggyNurl().anodyneCondosMalateOverateRetinol()
-        )
-            ? "foo"
-            : "bar";
+        string storage longConditional =
+            (
+                bifornCringerMoshedPerplexSawder == 2 / askTrovenaBeenaDependsRowans &&
+                glimseGlyphsHazardNoopsTieTie >= averredBathersBoxroomBuggyNurl().anodyneCondosMalateOverateRetinol()
+            )
+                ? "foo"
+                : "bar";
 
         // long conditional, short consequent/alternate, chained
         // (break on short consequents iff in chained ternary and its conditional broke)
-        string storage longConditionalChained = (
-            bifornCringerMoshedPerplexSawder == 2 / askTrovenaBeenaDependsRowans &&
-            glimseGlyphsHazardNoopsTieTie >= averredBathersBoxroomBuggyNurl().anodyneCondosMalateOverateRetinol()
-        )
-            ? "foo"
-            : anotherCondition ? "bar" : "baz";
+        string storage longConditionalChained =
+            (
+                bifornCringerMoshedPerplexSawder == 2 / askTrovenaBeenaDependsRowans &&
+                glimseGlyphsHazardNoopsTieTie >= averredBathersBoxroomBuggyNurl().anodyneCondosMalateOverateRetinol()
+            )
+                ? "foo"
+                : anotherCondition ? "bar" : "baz";
 
         // As a function parameter, don't add an extra indent:
         definition.encode(

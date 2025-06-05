@@ -237,13 +237,6 @@ popNest(Render *r) {
     r->words[r->wordCount - 1].nestStep -= 1;
 }
 
-static void
-addNest(Render *r, s32 nest) {
-    if(nest == 0) {}
-    else if(nest > 0) { pushNest(r); }
-    else if(nest < 0) { popNest(r); }
-}
-
 static bool
 isWordWhitespace(Word w) {
     return (
@@ -723,9 +716,6 @@ getOperatorPrecedence2(TokenType type) {
     }
 }
 
-static Word expressionLinkWord(ASTNode *node);
-static s32 expressionNest(ASTNode *node);
-
 static void pushExpressionDocumentAssignment(Render *r, ASTNode *node);
 
 static bool
@@ -1122,30 +1112,13 @@ pushExpressionDocument(Render *r, ASTNode *node) {
     }
 }
 
-static Word
-expressionLinkWord(ASTNode *node) {
-    switch(node->type){
-        case ASTNodeType_InlineArrayExpression: return wordSpace();
-        case ASTNodeType_TerneryExpression: {
-            bool complexCondition = node->terneryExpressionNode.condition->type == ASTNodeType_BinaryExpression;
-            return complexCondition ? wordLine() : wordSpace();
-        }
-        case ASTNodeType_TupleExpression: return wordSpace();
-        default: return wordLine();
+static ASTNodeType_Enum
+getNodeTypeStrippingParens(ASTNode *node) {
+    if(node->type == ASTNodeType_TupleExpression && node->tupleExpressionNode.elements.count == 1) {
+        return getNodeTypeStrippingParens(&node->tupleExpressionNode.elements.head->node);
     }
-}
 
-static s32
-expressionNest(ASTNode *node) {
-    switch(node->type){
-        case ASTNodeType_InlineArrayExpression: return 0;
-        case ASTNodeType_TerneryExpression: {
-            bool complexCondition = node->terneryExpressionNode.condition->type == ASTNodeType_BinaryExpression;
-            return complexCondition ? 1 : 0;
-        }
-        case ASTNodeType_TupleExpression: return 0;
-        default: return 1;
-    }
+    return node->type;
 }
 
 static void
@@ -1163,12 +1136,26 @@ pushExpressionDocumentAssignment(Render *r, ASTNode *node) {
         popGroup(r);
         popNest(r);
         popGroup(r);
+    } else if(node->type == ASTNodeType_InlineArrayExpression || node->type == ASTNodeType_TupleExpression) {
+        pushGroup(r);
+        pushWord(r, wordSpace());
+        pushExpressionDocument(r, node);
+        popGroup(r);
+    } else if(node->type == ASTNodeType_TerneryExpression) {
+        bool complexCondition = getNodeTypeStrippingParens(node->terneryExpressionNode.condition) == ASTNodeType_BinaryExpression;
+
+        pushGroup(r);
+        if(complexCondition) { pushNest(r); }
+        pushWord(r, complexCondition ? wordLine() : wordSpace());
+        pushExpressionDocument(r, node);
+        if(complexCondition) { popNest(r); }
+        popGroup(r);
     } else {
         pushGroup(r);
-        addNest(r, expressionNest(node));
-        pushWord(r, expressionLinkWord(node));
+        pushNest(r);
+        pushWord(r, wordLine());
         pushExpressionDocument(r, node);
-        addNest(r, -expressionNest(node));
+        popNest(r);
         popGroup(r);
     }
 }
