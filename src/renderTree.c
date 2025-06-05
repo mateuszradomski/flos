@@ -962,7 +962,6 @@ pushExpressionDocument(Render *r, ASTNode *node) {
             flushTrailing(r); // TODO(radomski): This shouldn't be here?
             pushGroup(r);
             pushNest(r);
-            pushWord(r, wordSoftline());
             pushTokenWord(r, member->memberName - 1);
             pushTokenWord(r, member->memberName);
             popNest(r);
