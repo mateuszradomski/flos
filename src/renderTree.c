@@ -794,7 +794,7 @@ pushBinaryExpressionDocument(Render *r, ASTNode *node, TokenId outerOperator) {
     u32 innerPrec = getOperatorPrecedence2(binary->operator);
     bool startingPrecedence = outerPrecedence == 0;
     bool differingPrecedence = outerPrecedence != innerPrec;
-    bool openGroup = differingPrecedence;
+    bool openGroup = differingPrecedence && !startingPrecedence;
 
     bool outerHigherThanAssignment = outerPrecedence > getOperatorPrecedence2(TokenType_Equal);
     bool notInequality = innerPrec != getOperatorPrecedence2(TokenType_LTick);
@@ -862,7 +862,6 @@ pushExpressionDocument(Render *r, ASTNode *node) {
         case ASTNodeType_StringLitExpression: {
             ASTNodeStringLitExpression *expression = &node->stringLitExpressionNode;
 
-            pushGroup(r);
             Word w = (node->type == ASTNodeType_HexStringLitExpression) ? wordText(LIT_TO_STR("hex")) :
                      (node->type == ASTNodeType_UnicodeStringLitExpression) ? wordText(LIT_TO_STR("unicode")) :
                      wordText(LIT_TO_STR(""));
@@ -876,7 +875,6 @@ pushExpressionDocument(Render *r, ASTNode *node) {
                 TokenId literal = listGetTokenId(&expression->values, i);
                 pushTokenAsStringWord(r, literal);
             }
-            popGroup(r);
         } break;
         case ASTNodeType_BoolLitExpression: {
             pushTokenWord(r, node->boolLitExpressionNode.value);
@@ -1136,10 +1134,8 @@ pushExpressionDocumentAssignment(Render *r, ASTNode *node) {
         popNest(r);
         popGroup(r);
     } else if(node->type == ASTNodeType_InlineArrayExpression || node->type == ASTNodeType_TupleExpression) {
-        pushGroup(r);
         pushWord(r, wordSpace());
         pushExpressionDocument(r, node);
-        popGroup(r);
     } else if(node->type == ASTNodeType_TerneryExpression) {
         bool complexCondition = getNodeTypeStrippingParens(node->terneryExpressionNode.condition) == ASTNodeType_BinaryExpression;
 
@@ -1165,13 +1161,13 @@ static void
 pushYulFunctionCallDocument(Render *r, ASTNode *node) {
     ASTNodeYulFunctionCallExpression *function = &node->yulFunctionCallExpressionNode;
 
-    pushGroup(r);
     pushTokenWord(r, function->identifier);
 
     assert(stringMatch(LIT_TO_STR("("), r->tokens.tokenStrings[function->identifier + 1]));
     pushTokenWord(r, function->identifier + 1);
 
     if (function->arguments.count > 0) {
+        pushGroup(r);
         pushNest(r);
         pushWord(r, wordSoftline());
 
@@ -1186,11 +1182,11 @@ pushYulFunctionCallDocument(Render *r, ASTNode *node) {
 
         popNest(r);
         pushWord(r, wordSoftline());
+        popGroup(r);
     }
 
     assert(stringMatch(LIT_TO_STR(")"), r->tokens.tokenStrings[node->endToken]));
     pushTokenWord(r, node->endToken);
-    popGroup(r);
 }
 
 static void
@@ -1445,11 +1441,9 @@ pushStatementDocument(Render *r, ASTNode *node) {
             pushGroup(r);
             pushTokenWord(r, node->startToken);
 
-            pushGroup(r);
             pushTokenWord(r, node->startToken + 1);
             pushExpressionDocument(r, statement->expression);
             pushTokenWord(r, statement->expression->endToken + 1);
-            popGroup(r);
 
             pushWord(r, wordSpace());
             popGroup(r);
