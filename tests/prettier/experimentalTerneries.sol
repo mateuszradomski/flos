@@ -361,12 +361,8 @@ contract Conditional {
 
         // As a function parameter, don't add an extra indent:
         definition.encode(
-            row[field] != "undefined"
-                ? row[field]
-                : definition.defaults != "undefined" ? definition.defaults : "null",
-            row[field] == "undefined"
-                ? definition.defaults == "undefined" ? "null" : definition.defaults
-                : row[field]
+            row[field] != "undefined" ? row[field] : definition.defaults != "undefined" ? definition.defaults : "null",
+            row[field] == "undefined" ? definition.defaults == "undefined" ? "null" : definition.defaults : row[field]
         );
 
         // Conditional as a condition

@@ -514,7 +514,9 @@ pushCallArgumentListDocument(Render *r, TokenId startingToken, ASTNodeListRanged
 
         ASTNodeLink *argument = expressions->head;
         for(u32 i = 0; i < expressions->count; i++, argument = argument->next) {
+            pushGroup(r);
             pushExpressionDocument(r, &argument->node);
+            popGroup(r);
             if(i < expressions->count - 1) {
                 // Add comma and space after each argument except the last one
                 pushTokenWord(r, argument->node.endToken + 1);
