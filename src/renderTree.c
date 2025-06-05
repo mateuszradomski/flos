@@ -1051,7 +1051,6 @@ pushExpressionDocument(Render *r, ASTNode *node) {
             assert(stringMatch(LIT_TO_STR("?"), r->tokens.tokenStrings[ternery->condition->endToken + 1]));
 
             pushGroup(r);
-            pushGroup(r);
             pushExpressionDocument(r, ternery->condition);
             popGroup(r);
 
@@ -1073,7 +1072,6 @@ pushExpressionDocument(Render *r, ASTNode *node) {
             popGroup(r);
 
             popNest(r);
-            popGroup(r);
         } break;
         case ASTNodeType_NamedParameterExpression: {
             ASTNodeNamedParametersExpression *named = &node->namedParametersExpressionNode;

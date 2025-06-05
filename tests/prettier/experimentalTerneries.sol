@@ -361,8 +361,12 @@ contract Conditional {
 
         // As a function parameter, don't add an extra indent:
         definition.encode(
-            row[field] != "undefined" ? row[field] : definition.defaults != "undefined" ? definition.defaults : "null",
-            row[field] == "undefined" ? definition.defaults == "undefined" ? "null" : definition.defaults : row[field]
+            row[field] != "undefined"
+                ? row[field]
+                : definition.defaults != "undefined" ? definition.defaults : "null",
+            row[field] == "undefined"
+                ? definition.defaults == "undefined" ? "null" : definition.defaults
+                : row[field]
         );
 
         // Conditional as a condition
@@ -378,7 +382,9 @@ contract Conditional {
 
     function examples2() {
         string storage message =
-            i % 3 == 0 && i % 5 == 0 ? "fizzbuzz" : i % 3 == 0 ? "fizz" : i % 5 == 0 ? "buzz" : String(i);
+            i % 3 == 0 && i % 5 == 0
+                ? "fizzbuzz"
+                : i % 3 == 0 ? "fizz" : i % 5 == 0 ? "buzz" : String(i);
 
         string storage paymentMessageShort =
             state == "success"
