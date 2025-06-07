@@ -344,7 +344,8 @@ contract Conditional {
         string storage longConditional =
             (
                 bifornCringerMoshedPerplexSawder == 2 / askTrovenaBeenaDependsRowans &&
-                glimseGlyphsHazardNoopsTieTie >= averredBathersBoxroomBuggyNurl().anodyneCondosMalateOverateRetinol()
+                    glimseGlyphsHazardNoopsTieTie >=
+                    averredBathersBoxroomBuggyNurl().anodyneCondosMalateOverateRetinol()
             )
                 ? "foo"
                 : "bar";
@@ -354,7 +355,8 @@ contract Conditional {
         string storage longConditionalChained =
             (
                 bifornCringerMoshedPerplexSawder == 2 / askTrovenaBeenaDependsRowans &&
-                glimseGlyphsHazardNoopsTieTie >= averredBathersBoxroomBuggyNurl().anodyneCondosMalateOverateRetinol()
+                    glimseGlyphsHazardNoopsTieTie >=
+                    averredBathersBoxroomBuggyNurl().anodyneCondosMalateOverateRetinol()
             )
                 ? "foo"
                 : anotherCondition ? "bar" : "baz";
