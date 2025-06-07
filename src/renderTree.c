@@ -290,30 +290,38 @@ wordLine(void) {
     return (Word) { .type = WordType_Line, .text = (u8 *)" ",  .textSize = 1 };
 }
 
+static bool
+containsSlash(u32 word) {
+    u32 mask = 0x2F2F2F2F;
+    u32 cmp  = word ^ mask;
+    u32 tmp  = ((cmp - 0x01010101) & ~cmp & 0x80808080);
+    return tmp != 0;
+}
+
 static void
 preserveHardBreaksIntoDocument(Render *r, ASTNode *node) {
     u32 tokenIndex = node->startToken;
 
-    String inBetween = { 0 };
-    if(tokenIndex == 0) {
-        inBetween.data = r->sourceBaseAddress;
-        inBetween.size = r->tokens.tokenStrings[tokenIndex].data - r->sourceBaseAddress;
-    } else {
-        String token = r->tokens.tokenStrings[tokenIndex];
-        String previousToken = r->tokens.tokenStrings[tokenIndex - 1];
+    String token = r->tokens.tokenStrings[tokenIndex];
+    String previousToken = r->tokens.tokenStrings[tokenIndex - 1];
 
-        inBetween.data = previousToken.data + previousToken.size;
-        inBetween.size = token.data >= inBetween.data ? token.data - inBetween.data : 0;
+    String inBetween = {
+        .data = previousToken.data + previousToken.size,
+        .size = token.data >= inBetween.data ? token.data - inBetween.data : 0,
+    };
+
+    u32 i = 0;
+    bool hasComment = false;
+    for (; i + 3 < inBetween.size && !hasComment; i += 4) {
+        hasComment = hasComment | (containsSlash(*((u32 *)(inBetween.data + i))));
     }
 
-    // TODO(radomski): This shouln't be here
-    for(u32 i = 0; inBetween.size > 0 && i < inBetween.size - 1; i++) {
-        if(inBetween.data[i] == '/' && inBetween.data[i + 1] == '/') {
-            return;
-        }
-        if(inBetween.data[i] == '/' && inBetween.data[i + 1] == '*') {
-            return;
-        }
+    for (; i < inBetween.size && !hasComment; i++) {
+        hasComment = hasComment | (inBetween.data[i] == '/');
+    }
+
+    if (hasComment) {
+        return;
     }
 
     u32 newlines = 0;
@@ -436,9 +444,8 @@ pushCommentsInRange(Render *r, u32 startOffset, u32 endOffset) {
 
 static void
 pushCommentsAfterToken(Render *r, TokenId token) {
-    String current = getTokenString(r->tokens, token);
-
     assert(token < r->tokens.count);
+    String current = getTokenString(r->tokens, token);
     String next = getTokenString(r->tokens, token + 1);
 
     u32 startOffset = (current.data - r->sourceBaseAddress) + current.size;
@@ -2737,7 +2744,7 @@ buildDocument(Render *r, ASTNode *tree, String originalSource, TokenizeResult to
 
     ASTNodeLink *child = tree->children.head;
     for(u32 i = 0; i < tree->children.count; i++, child = child->next) {
-        preserveHardBreaksIntoDocument(r, &child->node);
+        if(i != 0) preserveHardBreaksIntoDocument(r, &child->node);
         pushMemberDocument(r, &child->node);
     }
     popGroup(r);
