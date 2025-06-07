@@ -19,23 +19,23 @@ typedef struct FormatResult {
 FormatResult format(Arena *arena, Arena *parseArena, String input) {
     FormatResult result = { 0 };
 
-    result.timings[Measurement_Tokenize] -= readCPUTimer();
+    result.timings[Measurement_Tokenize] -= readTimer();
     TokenizeResult tokens = tokenize(input, arena);
-    result.timings[Measurement_Tokenize] += readCPUTimer();
+    result.timings[Measurement_Tokenize] += readTimer();
 
-    result.timings[Measurement_Parse] -= readCPUTimer();
+    result.timings[Measurement_Parse] -= readTimer();
     Parser parser = createParser(tokens, parseArena);
     ASTNode node = parseSourceUnit(&parser);
-    result.timings[Measurement_Parse] += readCPUTimer();
+    result.timings[Measurement_Parse] += readTimer();
 
-    result.timings[Measurement_BuildDoc] -= readCPUTimer();
+    result.timings[Measurement_BuildDoc] -= readTimer();
     Render render = createRender(arena, input, tokens);
     buildDocument(&render, &node, input, tokens);
-    result.timings[Measurement_BuildDoc] += readCPUTimer();
+    result.timings[Measurement_BuildDoc] += readTimer();
 
-    result.timings[Measurement_RenderDoc] -= readCPUTimer();
+    result.timings[Measurement_RenderDoc] -= readTimer();
     renderDocument(&render);
-    result.timings[Measurement_RenderDoc] += readCPUTimer();
+    result.timings[Measurement_RenderDoc] += readTimer();
 
     dumpDocument(&render);
 

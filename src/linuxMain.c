@@ -81,9 +81,9 @@ threadWorker(void *arg) {
         u64 start = arenaPos(&arena);
         u64 startParse = arenaPos(&parseArena);
 
-        m.fileRead -= readCPUTimer();
+        m.fileRead -= readTimer();
         String content = readFile(&arena, q->paths[i]);
-        m.fileRead += readCPUTimer();
+        m.fileRead += readTimer();
 
         FormatResult r = format(&arena, &parseArena, content);
 
@@ -125,17 +125,17 @@ repetitionTesterMain(Arena *arena, String content) {
     Render render = createRender(arena, content, tokens);
     Render cleanRender = render;
 
-    u64 startedAt = readCPUTimer();
+    u64 startedAt = readTimer();
     u64 maxTiming = 0;
     u64 minTiming = (u64)(-1);
     u64 timingSum = 0;
     u64 timingCount = 0;
-    u64 testDuration = 10 * readCPUFrequency();
+    u64 testDuration = 10 * NS_IN_SECOND;
 
-    while(startedAt + testDuration > readCPUTimer()) {
-        u64 timing = -readCPUTimer();
+    while(startedAt + testDuration > readTimer()) {
+        u64 timing = -readTimer();
         buildDocument(&render, &node, content, tokens);
-        timing += readCPUTimer();
+        timing += readTimer();
         render = cleanRender;
 
         timingSum += timing;
@@ -143,7 +143,7 @@ repetitionTesterMain(Arena *arena, String content) {
         maxTiming = maxTiming > timing ? maxTiming : timing;
         if(timing < minTiming) {
             minTiming = timing;
-            startedAt = readCPUTimer();
+            startedAt = readTimer();
         }
     }
 
@@ -156,16 +156,16 @@ repetitionTesterMain(Arena *arena, String content) {
 
     buildDocument(&render, &node, content, tokens);
 
-    startedAt = readCPUTimer();
+    startedAt = readTimer();
     maxTiming = 0;
     minTiming = (u64)(-1);
     timingSum = 0;
     timingCount = 0;
 
-    while(startedAt + testDuration > readCPUTimer()) {
-        u64 timing = -readCPUTimer();
+    while(startedAt + testDuration > readTimer()) {
+        u64 timing = -readTimer();
         renderDocument(&render);
-        timing += readCPUTimer();
+        timing += readTimer();
         render.writer = cleanRender.writer;
 
         timingSum += timing;
@@ -173,7 +173,7 @@ repetitionTesterMain(Arena *arena, String content) {
         maxTiming = maxTiming > timing ? maxTiming : timing;
         if(timing < minTiming) {
             minTiming = timing;
-            startedAt = readCPUTimer();
+            startedAt = readTimer();
         }
     }
 
@@ -184,7 +184,7 @@ repetitionTesterMain(Arena *arena, String content) {
         .runCount = timingCount,
     };
 
-    double cpuFreq = readCPUFrequency();
+    double cpuFreq = NS_IN_SECOND;
     printf("BuildDoc:\n");
     printf("  Minimum     %9llu cycles, %f ms, %f cycles/b\n", docBuild.minCycles, (double)docBuild.minCycles / cpuFreq * 1e3, (double)docBuild.minCycles / content.size);
     printf("  Average     %9llu cycles, %f ms, %f cycles/b\n", docBuild.avgCycles, (double)docBuild.avgCycles / cpuFreq * 1e3, (double)docBuild.avgCycles / content.size);
@@ -248,7 +248,7 @@ int main(int argCount, char **args) {
     } else {
         Arena arena = arenaCreate(16 * Megabyte, 32 * Kilobyte, 64);
 
-        u64 elapsed = -readCPUTimer();
+        u64 elapsed = -readTimer();
         char **paths = args + 1;
         u32 pathCount = argCount - 1;
 
@@ -267,23 +267,22 @@ int main(int argCount, char **args) {
             pthread_join(threads[i], 0x0);
         }
 
-        elapsed += readCPUTimer();
+        elapsed += readTimer();
 
         u32 inputBytes = 0;
         for(u32 i = 0; i < processorCount; i++) {
             inputBytes += jobs[i].metrics.inputBytes;
         }
 
-        double cpuFreq = readCPUFrequency();
         printf("Formatted %s%d%s files in %s%.0fms%s %s(%.0f MB/s)%s\n",
                ANSI_CYAN_LIGHT,
                argCount - 1,
                ANSI_RESET,
                ANSI_GREEN_LIGHT,
-               (double)elapsed / cpuFreq * 1e3,
+               (double)elapsed / 1e6,
                ANSI_RESET,
                ANSI_MAGENTA_LIGHT,
-               ((inputBytes / ((double)elapsed / cpuFreq)) / 1e6),
+               ((inputBytes / ((double)elapsed / NS_IN_SECOND)) / 1e6),
                ANSI_RESET
                );
         FormatMetrics sum = { 0 };
@@ -296,11 +295,11 @@ int main(int argCount, char **args) {
 
             fileCountDigits = MAX(fileCountDigits, (int)base10DigitCount(metrics.inputFiles));
 
-            double fileReadThroughput  = (metrics.inputBytes / ((double)metrics.fileRead  / cpuFreq)) / 1e6;
-            double tokenizeThroughput  = (metrics.inputBytes / ((double)metrics.tokenize  / cpuFreq)) / 1e6;
-            double parseThroughput     = (metrics.inputBytes / ((double)metrics.parse     / cpuFreq)) / 1e6;
-            double buildDocThroughput  = (metrics.inputBytes / ((double)metrics.buildDoc  / cpuFreq)) / 1e6;
-            double renderDocThroughput = (metrics.inputBytes / ((double)metrics.renderDoc / cpuFreq)) / 1e6;
+            double fileReadThroughput  = (metrics.inputBytes / ((double)metrics.fileRead  / NS_IN_SECOND)) / 1e6;
+            double tokenizeThroughput  = (metrics.inputBytes / ((double)metrics.tokenize  / NS_IN_SECOND)) / 1e6;
+            double parseThroughput     = (metrics.inputBytes / ((double)metrics.parse     / NS_IN_SECOND)) / 1e6;
+            double buildDocThroughput  = (metrics.inputBytes / ((double)metrics.buildDoc  / NS_IN_SECOND)) / 1e6;
+            double renderDocThroughput = (metrics.inputBytes / ((double)metrics.renderDoc / NS_IN_SECOND)) / 1e6;
 
             fileReadDigits  = MAX(fileReadDigits,  (int)base10DigitCount((u64)fileReadThroughput));
             tokenizeDigits  = MAX(tokenizeDigits,  (int)base10DigitCount((u64)tokenizeThroughput));
@@ -320,11 +319,11 @@ int main(int argCount, char **args) {
 
             u32 elapsedSum = metrics.fileRead + metrics.tokenize + metrics.parse + metrics.buildDoc + metrics.renderDoc;
 
-            double fileReadThroughput  = (metrics.inputBytes / ((double)metrics.fileRead  / cpuFreq)) / 1e6;
-            double tokenizeThroughput  = (metrics.inputBytes / ((double)metrics.tokenize  / cpuFreq)) / 1e6;
-            double parseThroughput     = (metrics.inputBytes / ((double)metrics.parse     / cpuFreq)) / 1e6;
-            double buildDocThroughput  = (metrics.inputBytes / ((double)metrics.buildDoc  / cpuFreq)) / 1e6;
-            double renderDocThroughput = (metrics.inputBytes / ((double)metrics.renderDoc / cpuFreq)) / 1e6;
+            double fileReadThroughput  = (metrics.inputBytes / ((double)metrics.fileRead  / NS_IN_SECOND)) / 1e6;
+            double tokenizeThroughput  = (metrics.inputBytes / ((double)metrics.tokenize  / NS_IN_SECOND)) / 1e6;
+            double parseThroughput     = (metrics.inputBytes / ((double)metrics.parse     / NS_IN_SECOND)) / 1e6;
+            double buildDocThroughput  = (metrics.inputBytes / ((double)metrics.buildDoc  / NS_IN_SECOND)) / 1e6;
+            double renderDocThroughput = (metrics.inputBytes / ((double)metrics.renderDoc / NS_IN_SECOND)) / 1e6;
 
             printf(" T%0*d - %*llu files @ %s%*.0fMB/s read%s, %s%*.0fMB/s token%s, %s%*.0fMB/s parse%s, %s%*.0fMB/s build%s, %s%*.0fMB/s render%s\n",
                    processorCountDigits, i, fileCountDigits, metrics.inputFiles,
@@ -336,11 +335,11 @@ int main(int argCount, char **args) {
         }
 
         printf("Thread avg: %s%.0fms read%s, %s%.0fms token%s, %s%.0fms parse%s, %s%.0fms build%s, %s%.0fms render%s\n",
-               ANSI_YELLOW, (double)(sum.fileRead / processorCount) / cpuFreq * 1e3, ANSI_RESET,
-               ANSI_BLUE, (double)(sum.tokenize / processorCount) / cpuFreq * 1e3, ANSI_RESET,
-               ANSI_RED, (double)(sum.parse / processorCount) / cpuFreq * 1e3, ANSI_RESET,
-               ANSI_GREEN, (double)(sum.buildDoc / processorCount) / cpuFreq * 1e3, ANSI_RESET,
-               ANSI_CYAN, (double)(sum.renderDoc / processorCount) / cpuFreq * 1e3, ANSI_RESET);
+               ANSI_YELLOW, (double)(sum.fileRead / processorCount)  / 1e6, ANSI_RESET,
+               ANSI_BLUE,   (double)(sum.tokenize / processorCount)  / 1e6, ANSI_RESET,
+               ANSI_RED,    (double)(sum.parse / processorCount)     / 1e6, ANSI_RESET,
+               ANSI_GREEN,  (double)(sum.buildDoc / processorCount)  / 1e6, ANSI_RESET,
+               ANSI_CYAN,   (double)(sum.renderDoc / processorCount) / 1e6, ANSI_RESET);
     }
 
 }

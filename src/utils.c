@@ -34,44 +34,16 @@ typedef struct String
     size_t size;
 } String;
 
-static u64
-readCPUTimer()
-{
-#if defined(__x86_64__) || defined(_M_AMD64)
-    return __rdtsc();
-#else
-    u64 tsc = 0;
-    asm volatile("mrs %0, cntvct_el0" : "=r"(tsc));
-    return tsc;
-#endif
-}
+#include <time.h>
+
+#define NS_IN_SECOND (1000000000LL)
 
 static u64
-readCPUFrequency()
-{
-    static u64 freq = 0;
-    if(freq) {
-        return freq;
-    }
+readTimer() {
+    struct timespec instant;
+    clock_gettime(CLOCK_MONOTONIC, &instant);
 
-#if defined(__x86_64__) || defined(_M_AMD64)
-    uint32_t eax, ebx, ecx, edx;
-
-    __asm__ volatile("cpuid" : "=a"(eax), "=b"(ebx), "=c"(ecx), "=d"(edx) : "a"(0x15));
-    if (eax && ebx && ecx) {
-        freq = (u64)ecx * ebx / eax;
-    }
-
-    __asm__ volatile("cpuid" : "=a"(eax), "=b"(ebx) : "a"(0x16) : "ecx", "edx");
-    if (eax) {
-        freq = (u64)eax * 1000000ULL;
-    }
-
-#else
-    asm volatile("mrs %0, cntfrq_el0" : "=r"(freq));
-#endif
-
-    return freq;
+    return instant.tv_sec * NS_IN_SECOND + instant.tv_nsec;
 }
 
 #define LIT_TO_STR(x) ((String){ .data = (u8 *)x, .size = sizeof(x) - 1 })
