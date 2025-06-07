@@ -49,25 +49,29 @@ readCPUTimer()
 static u64
 readCPUFrequency()
 {
+    static u64 freq = 0;
+    if(freq) {
+        return freq;
+    }
+
 #if defined(__x86_64__) || defined(_M_AMD64)
     uint32_t eax, ebx, ecx, edx;
 
     __asm__ volatile("cpuid" : "=a"(eax), "=b"(ebx), "=c"(ecx), "=d"(edx) : "a"(0x15));
     if (eax && ebx && ecx) {
-        return (u64)ecx * ebx / eax;
+        freq = (u64)ecx * ebx / eax;
     }
 
     __asm__ volatile("cpuid" : "=a"(eax), "=b"(ebx) : "a"(0x16) : "ecx", "edx");
     if (eax) {
-        return (u64)eax * 1000000ULL;
+        freq = (u64)eax * 1000000ULL;
     }
 
-    return 0;
 #else
-    u64 freq;
     asm volatile("mrs %0, cntfrq_el0" : "=r"(freq));
-    return freq;
 #endif
+
+    return freq;
 }
 
 #define LIT_TO_STR(x) ((String){ .data = (u8 *)x, .size = sizeof(x) - 1 })
