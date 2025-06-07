@@ -286,7 +286,7 @@ int main(int argCount, char **args) {
                );
         FormatMetrics sum = { 0 };
 
-        int processorCountDigits = (int)base10DigitCount(processorCount);
+        int processorCountDigits = (int)base10DigitCount(processorCount - 1);
         int fileCountDigits = 0;
         int fileReadDigits = 0, tokenizeDigits = 0, parseDigits = 0, buildDocDigits = 0, renderDocDigits = 0;
         for(u32 i = 0; i < processorCount; i++) {
