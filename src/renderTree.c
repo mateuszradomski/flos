@@ -292,8 +292,6 @@ wordLine(void) {
 
 static void
 preserveHardBreaksIntoDocument(Render *r, ASTNode *node) {
-    flushTrailing(r);
-
     u32 tokenIndex = node->startToken;
 
     String inBetween = { 0 };
