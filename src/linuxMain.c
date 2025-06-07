@@ -231,17 +231,16 @@ base10DigitCount(u64 v) {
 }
 
 int main(int argCount, char **args) {
-
-    char *filepath = "tests/parserbuilding.sol";
     bool repetitionTester = false;
 
     if(argCount == 3) {
         assert(stringMatch((String){ .data = (u8 *)args[1], .size = strlen(args[1]) }, LIT_TO_STR("rep")));
-        filepath = args[2];
         repetitionTester = true;
     }
 
     if(repetitionTester) {
+        char *filepath = args[2];
+
         Arena arena = arenaCreate(16 * Megabyte, 32 * Kilobyte, 64);
         String content = readFile(&arena, filepath);
         repetitionTesterMain(&arena, content);
