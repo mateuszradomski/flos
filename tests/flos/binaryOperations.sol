@@ -24,6 +24,11 @@ contract BinaryOperations {
             _config.maxResourceLimit,
             "SystemConfig: precision loss with target resource limit"
         );
+
+        fn(
+            bifornCringerMoshedPerplexSawder == 2 / askTrovenaBeenaDependsRowans &&
+            glimseGlyphsHazardNoopsTieTie >= averredBathersBoxroomBuggyNurl().anodyneCondosMalateOverateRetinolJimmyTime()
+        );
     }
 }
 // Above input, below output
@@ -69,6 +74,12 @@ contract BinaryOperations {
             ((_config.maxResourceLimit / _config.elasticityMultiplier) * _config.elasticityMultiplier) ==
                 _config.maxResourceLimit,
             "SystemConfig: precision loss with target resource limit"
+        );
+
+        fn(
+            bifornCringerMoshedPerplexSawder == 2 / askTrovenaBeenaDependsRowans &&
+                glimseGlyphsHazardNoopsTieTie >=
+                    averredBathersBoxroomBuggyNurl().anodyneCondosMalateOverateRetinolJimmyTime()
         );
     }
 }

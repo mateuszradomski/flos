@@ -819,34 +819,39 @@ pushBinaryExpressionDocument(Render *r, ASTNode *node, TokenId outerOperator) {
     bool alwaysPresentCase = innerPrec == getOperatorPrecedence2(TokenType_LeftShift) || (binary->operator == TokenType_Percent);
     bool addParens = base && (outerDependentCase || alwaysPresentCase);
 
-    if(openGroup || addParens) { pushGroup(r); }
-    if(addParens) { pushWord(r, wordText(LIT_TO_STR("("))); }
-
-    if(binary->left->type == ASTNodeType_BinaryExpression) {
-        pushBinaryExpressionDocument(r, binary->left, binary->operator);
-    } else {
+    if(addParens) {
         pushGroup(r);
-        pushExpressionDocument(r, binary->left);
+        pushWord(r, wordText(LIT_TO_STR("(")));
+        pushExpressionDocument(r, node);
+        pushWord(r, wordText(LIT_TO_STR(")")));
         popGroup(r);
-    }
-
-    pushWord(r, wordSpace());
-
-    if(onlyTwoElementBinaryExpression) { pushGroup(r); }
-
-    pushTokenWord(r, binary->right->startToken - 1);
-    pushWord(r, wordLine());
-
-    if(binary->right->type == ASTNodeType_BinaryExpression) {
-        pushBinaryExpressionDocument(r, binary->right, binary->operator);
+    } else if(openGroup) {
+        pushExpressionDocument(r, node);
     } else {
-        pushExpressionDocument(r, binary->right);
+        if(binary->left->type == ASTNodeType_BinaryExpression) {
+            pushBinaryExpressionDocument(r, binary->left, binary->operator);
+        } else {
+            pushGroup(r);
+            pushExpressionDocument(r, binary->left);
+            popGroup(r);
+        }
+
+        pushWord(r, wordSpace());
+
+        if(onlyTwoElementBinaryExpression) { pushGroup(r); }
+
+        pushTokenWord(r, binary->right->startToken - 1);
+        pushWord(r, wordLine());
+
+        if(binary->right->type == ASTNodeType_BinaryExpression) {
+            pushBinaryExpressionDocument(r, binary->right, binary->operator);
+        } else {
+            pushExpressionDocument(r, binary->right);
+        }
+
+        if(onlyTwoElementBinaryExpression) { popGroup(r); }
     }
 
-    if(onlyTwoElementBinaryExpression) { popGroup(r); }
-
-    if(addParens) { pushWord(r, wordText(LIT_TO_STR(")"))); }
-    if(openGroup || addParens) { popGroup(r); }
 }
 
 static void
