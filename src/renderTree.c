@@ -160,8 +160,6 @@ fits(Word *words, s64 count, s8 assumedFlatCount, u64 remainingWidth) {
     return width <= remainingWidth;
 }
 
-static u32 nestActiveMaskLUT[2] = { 0xffffffff, 0 };
-
 static void
 renderDocument(Render *r) {
     flushTrailing(r);
@@ -183,10 +181,10 @@ renderDocument(Render *r) {
             s32 remainingWidth = 120 - MIN(120, MAX(w->lineSize, nest));
             flatMode = fits(words + (i + 1), count - (i + 1), word->assumedFlatCount, remainingWidth);
             flatModeStack[++flatModeStackIndex] = flatMode;
-            nestActiveMask = nestActiveMaskLUT[flatMode];
+            nestActiveMask = ((u32)flatMode) - 1;
         } else if(word->type == WordType_GroupPop) {
             flatMode = flatModeStack[--flatModeStackIndex];
-            nestActiveMask = nestActiveMaskLUT[flatMode];
+            nestActiveMask = ((u32)flatMode) - 1;
         }
 
         if(word->type == WordType_HardBreak || (!flatMode && word->type == WordType_Line)) {
