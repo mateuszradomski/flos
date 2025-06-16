@@ -30,6 +30,10 @@ contract BinaryOperations {
             glimseGlyphsHazardNoopsTieTie >= averredBathersBoxroomBuggyNurl().anodyneCondosMalateOverateRetinolJimmyTime()
         );
     }
+
+    function binaryOperationsNotIndentedInArrayAccess() {
+        uint256 nPages = taskMetadataCopy[taskMetadataOffset + METADATA_TASK_HEADER_SIZE + 2 * treePair + METADATA_OFFSET_TREE_PAIR_N_PAGES + SOMETHING_RANDOM_TO_BREAK];
+    }
 }
 // Above input, below output
 contract BinaryOperations {
@@ -81,5 +85,16 @@ contract BinaryOperations {
                 glimseGlyphsHazardNoopsTieTie >=
                     averredBathersBoxroomBuggyNurl().anodyneCondosMalateOverateRetinolJimmyTime()
         );
+    }
+
+    function binaryOperationsAreIndentedInArrayAccess() {
+        uint256 nPages =
+            taskMetadataCopy[
+                taskMetadataOffset +
+                    METADATA_TASK_HEADER_SIZE +
+                    2 * treePair +
+                    METADATA_OFFSET_TREE_PAIR_N_PAGES +
+                    SOMETHING_RANDOM_TO_BREAK
+            ];
     }
 }
