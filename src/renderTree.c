@@ -842,6 +842,8 @@ pushBinaryExpressionDocument(Render *r, ASTNode *node, TokenId outerOperator) {
 
 }
 
+static void pushExpressionDocumentNoIndent(Render *r, ASTNode *node);
+
 static void
 pushExpressionDocument(Render *r, ASTNode *node) {
     switch(node->type){
@@ -932,23 +934,30 @@ pushExpressionDocument(Render *r, ASTNode *node) {
             pushNest(r);
             ASTNodeLink *element = tuple->elements.head;
 
-            TokenId commaToken = node->startToken;
-            for(u32 i = 0; i < tuple->elements.count; i++, element = element->next) {
-                if(i == 0) { pushWord(r, wordSoftline()); }
-                bool isNamed = element->node.type != ASTNodeType_None;
-                if(isNamed) {
-                    if(i > 0) { pushWord(r, wordLine()); }
-                    pushExpressionDocument(r, &element->node);
-                }
+            if(tuple->elements.count == 1 && element->node.type != ASTNodeType_None) {
+                pushWord(r, wordSoftline());
+                pushExpressionDocumentNoIndent(r, &element->node);
+                pushWord(r, wordSoftline());
+            } else {
+                TokenId commaToken = node->startToken;
+                for(u32 i = 0; i < tuple->elements.count; i++, element = element->next) {
+                    if(i == 0) { pushWord(r, wordSoftline()); }
+                    bool isNamed = element->node.type != ASTNodeType_None;
+                    if(isNamed) {
+                        if(i > 0) { pushWord(r, wordLine()); }
+                        pushExpressionDocument(r, &element->node);
+                    }
 
-                if(i < tuple->elements.count - 1) {
-                    commaToken = isNamed ? element->node.endToken + 1 : commaToken + 1;
-                    assert(stringMatch(LIT_TO_STR(","), r->tokens.tokenStrings[commaToken]));
-                    pushTokenWord(r, commaToken);
-                }
+                    if(i < tuple->elements.count - 1) {
+                        commaToken = isNamed ? element->node.endToken + 1 : commaToken + 1;
+                        assert(stringMatch(LIT_TO_STR(","), r->tokens.tokenStrings[commaToken]));
+                        pushTokenWord(r, commaToken);
+                    }
 
-                if(i == tuple->elements.count - 1) { pushWord(r, wordSoftline()); }
+                    if(i == tuple->elements.count - 1) { pushWord(r, wordSoftline()); }
+                }
             }
+
             flushTrailing(r); // TODO(radomski): This shouldn't be here?
             popNest(r);
             pushTokenWord(r, node->endToken);
