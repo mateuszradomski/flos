@@ -4,7 +4,6 @@ typedef struct Writer {
     u32 capacity;
 
     u32 indentSize;
-    u32 indentCount;
     u32 lineSize;
 } Writer;
 
@@ -54,9 +53,7 @@ typedef struct Render {
 } Render;
 
 static void
-commitIndent(Writer *w) {
-    u32 spaceCount = w->indentSize * w->indentCount;
-
+commitIndent(Writer *w, u32 spaceCount) {
     if(spaceCount <= 16) {
         u64 *output = (u64 *)(w->data + w->size);
         output[0] = 0x2020202020202020;
@@ -70,13 +67,13 @@ commitIndent(Writer *w) {
 }
 
 static void
-writeString(Writer *w, u8 *str, u32 size) {
+writeString(Writer *w, u8 *str, u32 size, u32 nest) {
     if (size == 0) {
         return;
     }
 
     if (w->lineSize == 0) {
-        commitIndent(w);
+        commitIndent(w, nest);
     }
 
     if (size <= 16) {
@@ -96,11 +93,6 @@ static void
 finishLine(Writer *w) {
     w->data[w->size++] = '\n';
     w->lineSize = 0;
-}
-
-static void
-setIndent(Writer *w, u32 indentCount) {
-    w->indentCount = indentCount;
 }
 
 static void
@@ -188,7 +180,7 @@ renderDocument(Render *r) {
         Word *word = &words[i];
 
         if (word->type == WordType_GroupPush) {
-            s32 remainingWidth = 120 - MIN(120, MAX(w->lineSize, w->indentSize * nest));
+            s32 remainingWidth = 120 - MIN(120, MAX(w->lineSize, nest));
             flatMode = fits(words + (i + 1), count - (i + 1), word->assumedFlatCount, remainingWidth);
             flatModeStack[++flatModeStackIndex] = flatMode;
             nestActiveMask = nestActiveMaskLUT[flatMode];
@@ -197,12 +189,10 @@ renderDocument(Render *r) {
             nestActiveMask = nestActiveMaskLUT[flatMode];
         }
 
-        setIndent(w, nest);
-
         if(word->type == WordType_HardBreak || (!flatMode && word->type == WordType_Line)) {
             finishLine(w);
         } else {
-            writeString(w, word->text, word->textSize);
+            writeString(w, word->text, word->textSize, nest);
         }
 
         nest += word->nestStep & nestActiveMask;
@@ -228,7 +218,7 @@ popGroup(Render *r) {
 }
 
 static void modifyNestAt(Render *r, s32 index, s32 delta) {
-    r->words[index].nestStep += delta;
+    r->words[index].nestStep += delta * r->writer.indentSize;
 }
 
 static void
