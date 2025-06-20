@@ -230,6 +230,46 @@ base10DigitCount(u64 v) {
     return log10I(v) + 1;
 }
 
+static void
+printThreadMetrics(ThreadWork *jobs, u32 processorCount) {
+    int processorCountDigits = (int)base10DigitCount(processorCount - 1);
+    printf(
+        "Thread : %sFiles%s : %sRead%s : %sToken%s : %sParse%s : %sBuild%s : %sRender%s : %sOverall%s\n",
+        ANSI_GREEN_LIGHT, ANSI_RESET,
+        ANSI_YELLOW,      ANSI_RESET,
+        ANSI_BLUE,        ANSI_RESET,
+        ANSI_RED,         ANSI_RESET,
+        ANSI_GREEN,       ANSI_RESET,
+        ANSI_CYAN,        ANSI_RESET,
+        ANSI_MAGENTA,     ANSI_RESET
+    );
+    for(u32 i = 0; i < processorCount; i++) {
+        FormatMetrics metrics = jobs[i].metrics;
+
+        u32 elapsedSum = metrics.fileRead + metrics.tokenize + metrics.parse + metrics.buildDoc + metrics.renderDoc;
+
+        double fileReadThroughput  = (metrics.inputBytes / ((double)metrics.fileRead  / NS_IN_SECOND)) / 1e6;
+        double tokenizeThroughput  = (metrics.inputBytes / ((double)metrics.tokenize  / NS_IN_SECOND)) / 1e6;
+        double parseThroughput     = (metrics.inputBytes / ((double)metrics.parse     / NS_IN_SECOND)) / 1e6;
+        double buildDocThroughput  = (metrics.inputBytes / ((double)metrics.buildDoc  / NS_IN_SECOND)) / 1e6;
+        double renderDocThroughput = (metrics.inputBytes / ((double)metrics.renderDoc / NS_IN_SECOND)) / 1e6;
+        double overallThroughput   = (metrics.inputBytes / ((double)elapsedSum        / NS_IN_SECOND)) / 1e6;
+
+        int leftPaddingForThread = 6 - processorCountDigits;
+        printf(
+               "%*s%0*d%s%*llu%s%s%*.0f%s%s%*.0f%s%s%*.0f%s%s%*.0f%s%s%*.0f%s%s%*.0f%s\n",
+               leftPaddingForThread, "T", processorCountDigits, i,
+               ANSI_GREEN_LIGHT, 3 + 5,  metrics.inputFiles, ANSI_RESET,
+               ANSI_YELLOW,      3 + 4,  fileReadThroughput, ANSI_RESET,
+               ANSI_BLUE,        3 + 5,  tokenizeThroughput, ANSI_RESET,
+               ANSI_RED,         3 + 5,     parseThroughput, ANSI_RESET,
+               ANSI_GREEN,       3 + 5,  buildDocThroughput, ANSI_RESET,
+               ANSI_CYAN,        3 + 6, renderDocThroughput, ANSI_RESET,
+               ANSI_MAGENTA,     3 + 7,   overallThroughput, ANSI_RESET
+            );
+    }
+}
+
 int main(int argCount, char **args) {
     bool repetitionTester = false;
 
@@ -273,6 +313,8 @@ int main(int argCount, char **args) {
             inputBytes += jobs[i].metrics.inputBytes;
         }
 
+        printThreadMetrics(jobs, processorCount);
+
         printf("Formatted %s%d%s files in %s%.0fms%s %s(%.0f MB/s)%s\n",
                ANSI_CYAN_LIGHT,
                argCount - 1,
@@ -284,61 +326,6 @@ int main(int argCount, char **args) {
                ((inputBytes / ((double)elapsed / NS_IN_SECOND)) / 1e6),
                ANSI_RESET
                );
-        FormatMetrics sum = { 0 };
-
-        int processorCountDigits = (int)base10DigitCount(processorCount - 1);
-        int fileCountDigits = 0;
-        int fileReadDigits = 0, tokenizeDigits = 0, parseDigits = 0, buildDocDigits = 0, renderDocDigits = 0;
-        for(u32 i = 0; i < processorCount; i++) {
-            FormatMetrics metrics = jobs[i].metrics;
-
-            fileCountDigits = MAX(fileCountDigits, (int)base10DigitCount(metrics.inputFiles));
-
-            double fileReadThroughput  = (metrics.inputBytes / ((double)metrics.fileRead  / NS_IN_SECOND)) / 1e6;
-            double tokenizeThroughput  = (metrics.inputBytes / ((double)metrics.tokenize  / NS_IN_SECOND)) / 1e6;
-            double parseThroughput     = (metrics.inputBytes / ((double)metrics.parse     / NS_IN_SECOND)) / 1e6;
-            double buildDocThroughput  = (metrics.inputBytes / ((double)metrics.buildDoc  / NS_IN_SECOND)) / 1e6;
-            double renderDocThroughput = (metrics.inputBytes / ((double)metrics.renderDoc / NS_IN_SECOND)) / 1e6;
-
-            fileReadDigits  = MAX(fileReadDigits,  (int)base10DigitCount((u64)fileReadThroughput));
-            tokenizeDigits  = MAX(tokenizeDigits,  (int)base10DigitCount((u64)tokenizeThroughput));
-            parseDigits     = MAX(parseDigits,     (int)base10DigitCount((u64)parseThroughput));
-            buildDocDigits  = MAX(buildDocDigits,  (int)base10DigitCount((u64)buildDocThroughput));
-            renderDocDigits = MAX(renderDocDigits, (int)base10DigitCount((u64)renderDocThroughput));
-        }
-
-        for(u32 i = 0; i < processorCount; i++) {
-            FormatMetrics metrics = jobs[i].metrics;
-
-            sum.fileRead += metrics.fileRead;
-            sum.tokenize += metrics.tokenize;
-            sum.parse += metrics.parse;
-            sum.buildDoc += metrics.buildDoc;
-            sum.renderDoc += metrics.renderDoc;
-
-            u32 elapsedSum = metrics.fileRead + metrics.tokenize + metrics.parse + metrics.buildDoc + metrics.renderDoc;
-
-            double fileReadThroughput  = (metrics.inputBytes / ((double)metrics.fileRead  / NS_IN_SECOND)) / 1e6;
-            double tokenizeThroughput  = (metrics.inputBytes / ((double)metrics.tokenize  / NS_IN_SECOND)) / 1e6;
-            double parseThroughput     = (metrics.inputBytes / ((double)metrics.parse     / NS_IN_SECOND)) / 1e6;
-            double buildDocThroughput  = (metrics.inputBytes / ((double)metrics.buildDoc  / NS_IN_SECOND)) / 1e6;
-            double renderDocThroughput = (metrics.inputBytes / ((double)metrics.renderDoc / NS_IN_SECOND)) / 1e6;
-
-            printf(" T%0*d - %*llu files @ %s%*.0fMB/s read%s, %s%*.0fMB/s token%s, %s%*.0fMB/s parse%s, %s%*.0fMB/s build%s, %s%*.0fMB/s render%s\n",
-                   processorCountDigits, i, fileCountDigits, metrics.inputFiles,
-                   ANSI_YELLOW, fileReadDigits,  fileReadThroughput, ANSI_RESET,
-                   ANSI_BLUE,   tokenizeDigits,  tokenizeThroughput, ANSI_RESET,
-                   ANSI_RED,    parseDigits,     parseThroughput, ANSI_RESET,
-                   ANSI_GREEN,  buildDocDigits,  buildDocThroughput, ANSI_RESET,
-                   ANSI_CYAN,   renderDocDigits, renderDocThroughput, ANSI_RESET);
-        }
-
-        printf("Thread avg: %s%.0fms read%s, %s%.0fms token%s, %s%.0fms parse%s, %s%.0fms build%s, %s%.0fms render%s\n",
-               ANSI_YELLOW, (double)(sum.fileRead / processorCount)  / 1e6, ANSI_RESET,
-               ANSI_BLUE,   (double)(sum.tokenize / processorCount)  / 1e6, ANSI_RESET,
-               ANSI_RED,    (double)(sum.parse / processorCount)     / 1e6, ANSI_RESET,
-               ANSI_GREEN,  (double)(sum.buildDoc / processorCount)  / 1e6, ANSI_RESET,
-               ANSI_CYAN,   (double)(sum.renderDoc / processorCount) / 1e6, ANSI_RESET);
     }
 
 }
