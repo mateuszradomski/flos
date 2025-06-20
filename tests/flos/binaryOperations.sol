@@ -31,7 +31,7 @@ contract BinaryOperations {
         );
     }
 
-    function binaryOperationsNotIndentedInArrayAccess() {
+    function binaryOperationsAreIndentedInArrayAccess() {
         uint256 nPages = taskMetadataCopy[taskMetadataOffset + METADATA_TASK_HEADER_SIZE + 2 * treePair + METADATA_OFFSET_TREE_PAIR_N_PAGES + SOMETHING_RANDOM_TO_BREAK];
     }
 }
