@@ -743,29 +743,6 @@ shouldFlattenBinaryExpression(ASTNode *outerNode, ASTNode *innerNode) {
         return false;
     }
 
-    /*// x * y % z --> (x * y) % z*/
-    /*if (*/
-    /*    (nodeOp === "%" && multiplicativeOperators[parentOp]) ||*/
-    /*    (parentOp === "%" && multiplicativeOperators[nodeOp])*/
-    /*   ) {*/
-    /*    return false;*/
-    /*}*/
-    /**/
-    /*// x * y / z --> (x * y) / z*/
-    /*// x / y * z --> (x / y) * z*/
-    /*if (*/
-    /*    nodeOp !== parentOp &&*/
-    /*    multiplicativeOperators[nodeOp] &&*/
-    /*    multiplicativeOperators[parentOp]*/
-    /*   ) {*/
-    /*    return false;*/
-    /*}*/
-    /**/
-    /*// x << y << z --> (x << y) << z*/
-    /*if (bitshiftOperators[parentOp] && bitshiftOperators[nodeOp]) {*/
-    /*    return false;*/
-    /*}*/
-
     return true;
 }
 

@@ -92,8 +92,6 @@ void javascriptPrintStringPtr(void *s) {
     printf("%.*s\n", (int)string->size, string->data);
 }
 void javascriptPrintNumber(u32 n) {}
-void traceBegin(u32 n) {}
-void traceEnd() {}
 #endif
 
 #ifdef WASM
@@ -106,8 +104,6 @@ unsigned int bumpPointer = (unsigned int)(&__heap_base);
 extern void javascriptPrintStringPtr(void *s);
 extern void javascriptThrowErrorStringPtr(void *s);
 extern void javascriptPrintNumber(u32 n);
-extern void traceBegin(u32 n);
-extern void traceEnd();
 
 static void unreachable() {
     __builtin_unreachable();
