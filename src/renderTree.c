@@ -1107,8 +1107,7 @@ pushExpressionDocumentAssignment(Render *r, ASTNode *node) {
         pushWord(r, wordLine());
         pushNest(r);
 
-        // TODO(radomski): I think this is not needed
-        pushExpressionDocumentNoIndent(r, function->expression);
+        pushExpressionDocument(r, function->expression);
         pushGroup(r);
         pushCallArgumentListDocument(r, function->expression->endToken + 1, &function->argumentsExpression, &function->argumentsName);
         popGroup(r);
@@ -1524,9 +1523,6 @@ pushStatementDocument(Render *r, ASTNode *node) {
                 pushTokenWord(r, statement->expression->endToken + 1);
                 pushWord(r, wordSpace());
 
-                // TODO(radomski): Does the parameters list always gets blown
-                // into multiple lines or do we allow to get the parameters on
-                // the same line if they don't straddle the line limit
                 pushParametersDocument(r, statement->expression->endToken + 2, &statement->returnParameters);
             }
 
