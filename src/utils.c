@@ -1039,19 +1039,21 @@ listGetU16(U16List *list, u32 index) {
 
 static String
 readFile(Arena *arena, const char *path) {
+    int fd = open(path, O_RDONLY);
+    if (fd < 0) {
+        return (String){0};
+    }
+
     struct stat st;
-    if (stat(path, &st) != 0) {
+    if (fstat(fd, &st) != 0) {
         return (String){0};
     }
 
     u64 len = (u64)st.st_size;
     u8 *content = arrayPush(arena, u8, len + 1);
 
-    int fd = open(path, O_RDONLY);
-    if (fd < 0)
-        return (String){0};
-
     ssize_t n = read(fd, content, len);
+    assert(n == len);
     close(fd);
 
     content[len] = 0;
