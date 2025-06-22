@@ -14,6 +14,10 @@ typedef u32 size_t;
 #ifndef WASM
 #include <stdint.h>
 #include <stddef.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <string.h>
 
 typedef uint8_t u8;
 typedef uint16_t u16;
@@ -1034,22 +1038,24 @@ listGetU16(U16List *list, u32 index) {
 }
 
 static String
-readFile(Arena *arena, char *path) {
-    FILE *fd = fopen(path, "rb");
-    fseek(fd, 0L, SEEK_END);
-    u32 contentLength = ftell(fd);
-
-    fseek(fd, 0L, SEEK_SET);
-    u8 *content = arrayPush(arena, u8, contentLength + 1);
-
-    for(u32 i = 0; i < contentLength; i++) {
-        content[i] = 0xaa;
+readFile(Arena *arena, const char *path) {
+    struct stat st;
+    if (stat(path, &st) != 0) {
+        return (String){0};
     }
-    int readBytes = fread(content, contentLength, 1, fd);
-    fclose(fd);
-    content[contentLength] = 0;
 
-    return (String) { .data = content, .size = contentLength };
+    u64 len = (u64)st.st_size;
+    u8 *content = arrayPush(arena, u8, len + 1);
+
+    int fd = open(path, O_RDONLY);
+    if (fd < 0)
+        return (String){0};
+
+    ssize_t n = read(fd, content, len);
+    close(fd);
+
+    content[len] = 0;
+    return (String){ .data = content, .size = (u32)(n >= 0 ? n : 0) };
 }
 
 typedef struct Buffer {
