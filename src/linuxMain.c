@@ -8,47 +8,12 @@
 #include <pthread.h>
 #include <stdatomic.h>
 
-#define ANSI_RESET "\x1b[0m"
-#define ANSI_RED   "\x1b[31m"
-#define ANSI_CYAN  "\x1b[36m"
-#define ANSI_GREEN "\x1b[32m"
-#define ANSI_GREY  "\x1b[90m"
-#define ANSI_MAGENTA "\x1b[35m"
-#define ANSI_YELLOW "\x1b[33m"
-#define ANSI_BLUE "\x1b[34m"
-
-#define ANSI_CYAN_LIGHT "\x1b[96m"
-#define ANSI_GREEN_LIGHT "\x1b[92m"
-#define ANSI_MAGENTA_LIGHT "\x1b[95m"
-
-#ifdef __linux__
-#include <sys/sysinfo.h>
-static u32
-getProcessorCount() {
-    return get_nprocs();
-}
-#elif __APPLE__
-#include <sys/sysctl.h>
-static u32
-getProcessorCount() {
-    int mib[] = { CTL_HW, HW_NCPU };
-
-    int numCPU;
-    size_t len = sizeof(numCPU);
-    sysctl(mib, 2, &numCPU, &len, NULL, 0);
-
-    return numCPU;
-}
-#endif
-
 typedef struct FormatMetrics {
     u64 fileRead;
     u64 tokenize;
     u64 parse;
     u64 buildDoc;
     u64 renderDoc;
-
-    u64 memoryUsed;
 
     u64 inputBytes;
     u64 inputFiles;
@@ -57,7 +22,7 @@ typedef struct FormatMetrics {
 typedef struct {
     char **paths;
     u32     pathCount;
-    _Atomic u32 next;   /* atomic index of the next file to process */
+    _Atomic u32 next;
 } WorkQueue;
 
 typedef struct ThreadWork {
@@ -68,7 +33,7 @@ typedef struct ThreadWork {
 static void *
 threadWorker(void *arg) {
     ThreadWork *tw = arg;
-    WorkQueue  *q  = tw->queue;
+    WorkQueue *q = tw->queue;
 
     Arena arena = arenaCreate(11 * Megabyte, 11 * Megabyte, 64);
     Arena parseArena = arenaCreate(5 * Megabyte, 5 * Megabyte, 64);
@@ -106,6 +71,7 @@ threadWorker(void *arg) {
 
     tw->metrics = m;
     arenaDestroy(&arena);
+    arenaDestroy(&parseArena);
     return 0;
 }
 
@@ -200,36 +166,6 @@ repetitionTesterMain(Arena *arena, String content) {
     printf("  Run count   %9llu\n", docRender.runCount);
 }
 
-static u64
-log10I(u64 v) {
-    u64 result = 0;
-    if (v >= 10000000000000000000ULL) return 19;
-    if (v >= 1000000000000000000ULL) return 18;
-    if (v >= 100000000000000000ULL) return 17;
-    if (v >= 10000000000000000ULL) return 16;
-    if (v >= 1000000000000000ULL) return 15;
-    if (v >= 100000000000000ULL) return 14;
-    if (v >= 10000000000000ULL) return 13;
-    if (v >= 1000000000000ULL) return 12;
-    if (v >= 100000000000ULL) return 11;
-    if (v >= 10000000000ULL) return 10;
-    if (v >= 1000000000ULL) return 9;
-    if (v >= 100000000ULL) return 8;
-    if (v >= 10000000ULL) return 7;
-    if (v >= 1000000ULL) return 6;
-    if (v >= 100000ULL) return 5;
-    if (v >= 10000ULL) return 4;
-    if (v >= 1000ULL) return 3;
-    if (v >= 100ULL) return 2;
-    if (v >= 10ULL) return 1;
-    return 0;
-}
-
-static u64
-base10DigitCount(u64 v) {
-    return log10I(v) + 1;
-}
-
 static void
 printThreadMetrics(ThreadWork *jobs, u32 processorCount) {
     int processorCountDigits = (int)base10DigitCount(processorCount - 1);
@@ -243,6 +179,7 @@ printThreadMetrics(ThreadWork *jobs, u32 processorCount) {
         ANSI_CYAN,        ANSI_RESET,
         ANSI_MAGENTA,     ANSI_RESET
     );
+
     for(u32 i = 0; i < processorCount; i++) {
         FormatMetrics metrics = jobs[i].metrics;
 
@@ -257,16 +194,16 @@ printThreadMetrics(ThreadWork *jobs, u32 processorCount) {
 
         int leftPaddingForThread = 6 - processorCountDigits;
         printf(
-               "%*s%0*d%s%*llu%s%s%*.0f%s%s%*.0f%s%s%*.0f%s%s%*.0f%s%s%*.0f%s%s%*.0f%s\n",
-               leftPaddingForThread, "T", processorCountDigits, i,
-               ANSI_GREEN_LIGHT, 3 + 5,  metrics.inputFiles, ANSI_RESET,
-               ANSI_YELLOW,      3 + 4,  fileReadThroughput, ANSI_RESET,
-               ANSI_BLUE,        3 + 5,  tokenizeThroughput, ANSI_RESET,
-               ANSI_RED,         3 + 5,     parseThroughput, ANSI_RESET,
-               ANSI_GREEN,       3 + 5,  buildDocThroughput, ANSI_RESET,
-               ANSI_CYAN,        3 + 6, renderDocThroughput, ANSI_RESET,
-               ANSI_MAGENTA,     3 + 7,   overallThroughput, ANSI_RESET
-            );
+            "%*s%0*d%s%*llu%s%s%*.0f%s%s%*.0f%s%s%*.0f%s%s%*.0f%s%s%*.0f%s%s%*.0f%s\n",
+            leftPaddingForThread, "T", processorCountDigits, i,
+            ANSI_GREEN_LIGHT, 3 + 5,  metrics.inputFiles, ANSI_RESET,
+            ANSI_YELLOW,      3 + 4,  fileReadThroughput, ANSI_RESET,
+            ANSI_BLUE,        3 + 5,  tokenizeThroughput, ANSI_RESET,
+            ANSI_RED,         3 + 5,     parseThroughput, ANSI_RESET,
+            ANSI_GREEN,       3 + 5,  buildDocThroughput, ANSI_RESET,
+            ANSI_CYAN,        3 + 6, renderDocThroughput, ANSI_RESET,
+            ANSI_MAGENTA,     3 + 7,   overallThroughput, ANSI_RESET
+        );
     }
 }
 
@@ -315,17 +252,12 @@ int main(int argCount, char **args) {
 
         printThreadMetrics(jobs, processorCount);
 
-        printf("Formatted %s%d%s files in %s%.0fms%s %s(%.0f MB/s)%s\n",
-               ANSI_CYAN_LIGHT,
-               argCount - 1,
-               ANSI_RESET,
-               ANSI_GREEN_LIGHT,
-               (double)elapsed / 1e6,
-               ANSI_RESET,
-               ANSI_MAGENTA_LIGHT,
-               ((inputBytes / ((double)elapsed / NS_IN_SECOND)) / 1e6),
-               ANSI_RESET
-               );
+        printf(
+            "Formatted %s%d%s files in %s%.0fms%s %s(%.0f MB/s)%s\n",
+            ANSI_CYAN_LIGHT,    argCount - 1,                                            ANSI_RESET,
+            ANSI_GREEN_LIGHT,   (double)elapsed / 1e6,                                   ANSI_RESET,
+            ANSI_MAGENTA_LIGHT, ((inputBytes / ((double)elapsed / NS_IN_SECOND)) / 1e6), ANSI_RESET
+        );
     }
 
 }

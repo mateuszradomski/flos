@@ -341,39 +341,6 @@ getTokenString(TokenizeResult tokens, TokenId tokenId) {
 }
 
 static void
-formatToken(String *output, TokenType tokenType, String string) {
-    u8 *head = output->data;
-
-    String token = tokenTypeToString(tokenType);
-    memcpy(head, token.data, token.size);
-    output->size += token.size;
-    head += token.size;
-
-    memcpy(head, " -> [ ", 6);
-    output->size += 6;
-    head += 6;
-
-    memcpy(head, string.data, string.size);
-    output->size += string.size;
-    head += string.size;
-
-    memcpy(head, " ]", 3);
-    output->size += 3;
-    head += 3;
-}
-
-static void
-printToken(Token token) {
-    u8 buffer[2048];
-    String message = {
-        .data = buffer,
-        .size = 0,
-    };
-    formatToken(&message, token.type, token.string);
-    javascriptPrintStringPtr(&message);
-}
-
-static void
 pushToken(TokenizeResult *result, TokenType tokenType, String string) {
     assert(result->count < result->capacity);
 
@@ -971,8 +938,6 @@ tokenize(String source, Arena *arena) {
     }
 
     pushToken(&result, TokenType_EOF, (String){0});
-
-    // arenaPop(arena, (result.capacity - result.count) * sizeof(Token));
 
     return result;
 }

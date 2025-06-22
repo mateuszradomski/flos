@@ -516,8 +516,6 @@ typedef struct ASTNodeLink {
     struct ASTNodeLink *next;
 } ASTNodeLink;
 
-#include "./src/serializer.c"
-
 typedef struct Parser {
     TokenizeResult tokens;
     u32 tokenCount;

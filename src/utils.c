@@ -1060,6 +1060,39 @@ readFile(Arena *arena, const char *path) {
     return (String){ .data = content, .size = (u32)(n >= 0 ? n : 0) };
 }
 
+#define ANSI_RESET   "\x1b[0m"
+#define ANSI_RED     "\x1b[31m"
+#define ANSI_CYAN    "\x1b[36m"
+#define ANSI_GREEN   "\x1b[32m"
+#define ANSI_GREY    "\x1b[90m"
+#define ANSI_MAGENTA "\x1b[35m"
+#define ANSI_YELLOW  "\x1b[33m"
+#define ANSI_BLUE    "\x1b[34m"
+
+#define ANSI_CYAN_LIGHT    "\x1b[96m"
+#define ANSI_GREEN_LIGHT   "\x1b[92m"
+#define ANSI_MAGENTA_LIGHT "\x1b[95m"
+
+#ifdef __linux__
+#include <sys/sysinfo.h>
+static u32
+getProcessorCount() {
+    return get_nprocs();
+}
+#elif __APPLE__
+#include <sys/sysctl.h>
+static u32
+getProcessorCount() {
+    int mib[] = { CTL_HW, HW_NCPU };
+
+    int numCPU;
+    size_t len = sizeof(numCPU);
+    sysctl(mib, 2, &numCPU, &len, NULL, 0);
+
+    return numCPU;
+}
+#endif
+
 typedef struct Buffer {
     u8 *data;
     size_t size;
@@ -1143,4 +1176,34 @@ byteConcatenatorFinish(ByteConcatenator *c) {
     }
 
     return (Buffer) { .data = data, .size = outputSize };
+}
+
+static u64
+log10I(u64 v) {
+    u64 result = 0;
+    if (v >= 10000000000000000000ULL) return 19;
+    if (v >= 1000000000000000000ULL) return 18;
+    if (v >= 100000000000000000ULL) return 17;
+    if (v >= 10000000000000000ULL) return 16;
+    if (v >= 1000000000000000ULL) return 15;
+    if (v >= 100000000000000ULL) return 14;
+    if (v >= 10000000000000ULL) return 13;
+    if (v >= 1000000000000ULL) return 12;
+    if (v >= 100000000000ULL) return 11;
+    if (v >= 10000000000ULL) return 10;
+    if (v >= 1000000000ULL) return 9;
+    if (v >= 100000000ULL) return 8;
+    if (v >= 10000000ULL) return 7;
+    if (v >= 1000000ULL) return 6;
+    if (v >= 100000ULL) return 5;
+    if (v >= 10000ULL) return 4;
+    if (v >= 1000ULL) return 3;
+    if (v >= 100ULL) return 2;
+    if (v >= 10ULL) return 1;
+    return 0;
+}
+
+static u64
+base10DigitCount(u64 v) {
+    return log10I(v) + 1;
 }
