@@ -66,6 +66,9 @@ enum {
     TokenType_Weeks,
     TokenType_Years,
     TokenType_Exclamation,
+    TokenType_Tylde,
+    TokenType_PlusPlus,
+    TokenType_MinusMinus,
     TokenType_Plus,
     TokenType_Minus,
     TokenType_Percent,
@@ -78,9 +81,6 @@ enum {
     TokenType_LeftShift,
     TokenType_RightShift,
     TokenType_RightShiftZero,
-    TokenType_Tylde,
-    TokenType_PlusPlus,
-    TokenType_MinusMinus,
     TokenType_LTick,
     TokenType_RTick,
     TokenType_LeftEqual,
@@ -284,6 +284,22 @@ tokenTypeToString(TokenType tokenType) {
         case TokenType_Count: return LIT_TO_STR("Count");
         case TokenType_EOF: return LIT_TO_STR("EOF");
         default: return LIT_TO_STR("<UNKNOWN>");
+    }
+}
+
+static u32
+getBinaryOperatorPrecedence(TokenType type) {
+    static s8 LUT[] = {
+        -5, -5, -4, -4, -4, -3, -7, -9,
+        -8, -6, -6, -6, -10, -10, -10, -10,
+        -11, -11, -12, -13, -14, -15, -15, -15,
+        -15, -15, -15, -15, -15, -15, -15, -15
+    };
+
+    if(type >= TokenType_Plus && type <= TokenType_PercentEqual) {
+        return LUT[type - TokenType_Plus];
+    } else {
+        return 0;
     }
 }
 

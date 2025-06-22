@@ -669,52 +669,6 @@ pushTypeDocument(Render *r, ASTNode *node) {
     }
 }
 
-static u32
-getOperatorPrecedence2(TokenType type) {
-    switch(type) {
-        case TokenType_PlusPlus:
-        case TokenType_MinusMinus:
-        case TokenType_Dot:
-        case TokenType_LParen:
-        case TokenType_LBrace:
-        case TokenType_LBracket: return -1;
-        case TokenType_StarStar: return -3;
-        case TokenType_Star:
-        case TokenType_Divide:
-        case TokenType_Percent: return -4;
-        case TokenType_Plus:
-        case TokenType_Minus: return -5;
-        case TokenType_LeftShift:
-        case TokenType_RightShift:
-        case TokenType_RightShiftZero: return -6;
-        case TokenType_Ampersand: return -7;
-        case TokenType_Carrot: return -8;
-        case TokenType_Pipe: return -9;
-        case TokenType_LeftEqual:
-        case TokenType_RightEqual:
-        case TokenType_LTick:
-        case TokenType_RTick: return -10;
-        case TokenType_EqualEqual:
-        case TokenType_NotEqual: return -11;
-        case TokenType_LogicalAnd: return -12;
-        case TokenType_LogicalOr: return -13;
-        case TokenType_QuestionMark: return -14;
-        case TokenType_Equal:
-        case TokenType_OrEqual:
-        case TokenType_XorEqual:
-        case TokenType_AndEqual:
-        case TokenType_LeftShiftEqual:
-        case TokenType_RightShiftEqual:
-        case TokenType_PlusEqual:
-        case TokenType_MinusEqual:
-        case TokenType_StarEqual:
-        case TokenType_DivideEqual:
-        case TokenType_PercentEqual: return -15;
-        case TokenType_None: return 0;
-        default: assert(false);
-    }
-}
-
 static void pushExpressionDocumentAssignment(Render *r, ASTNode *node);
 
 static bool
@@ -729,8 +683,8 @@ shouldFlattenBinaryExpression(ASTNode *outerNode, ASTNode *innerNode) {
     TokenType outerOperator = outerExpression->operator;
     TokenType innerOperator = innerExpression->operator;
 
-    u32 outerPrecedence = getOperatorPrecedence2(outerOperator);
-    u32 innerPrec = getOperatorPrecedence2(innerOperator);
+    u32 outerPrecedence = getBinaryOperatorPrecedence(outerOperator);
+    u32 innerPrec = getBinaryOperatorPrecedence(innerOperator);
     if(outerPrecedence != innerPrec) {
         return false;
     }
@@ -755,33 +709,33 @@ pushBinaryExpressionDocument(Render *r, ASTNode *node, TokenId outerOperator) {
         binary->left->type != ASTNodeType_BinaryExpression &&
         binary->right->type != ASTNodeType_BinaryExpression;
 
-    u32 outerPrecedence = getOperatorPrecedence2(outerOperator);
-    u32 innerPrec = getOperatorPrecedence2(binary->operator);
+    u32 outerPrecedence = getBinaryOperatorPrecedence(outerOperator);
+    u32 innerPrec = getBinaryOperatorPrecedence(binary->operator);
     bool startingPrecedence = outerPrecedence == 0;
     bool differingPrecedence = outerPrecedence != innerPrec;
     bool openGroup = differingPrecedence && !startingPrecedence;
 
-    bool outerHigherThanAssignment = outerPrecedence > getOperatorPrecedence2(TokenType_Equal);
-    bool notInequality = innerPrec != getOperatorPrecedence2(TokenType_LTick);
-    bool notEqualities = innerPrec != getOperatorPrecedence2(TokenType_EqualEqual);
-    bool outerNotInequality = outerPrecedence != getOperatorPrecedence2(TokenType_LTick);
-    bool outerNotEquality = outerPrecedence != getOperatorPrecedence2(TokenType_EqualEqual);
+    bool outerHigherThanAssignment = outerPrecedence > getBinaryOperatorPrecedence(TokenType_Equal);
+    bool notInequality = innerPrec != getBinaryOperatorPrecedence(TokenType_LTick);
+    bool notEqualities = innerPrec != getBinaryOperatorPrecedence(TokenType_EqualEqual);
+    bool outerNotInequality = outerPrecedence != getBinaryOperatorPrecedence(TokenType_LTick);
+    bool outerNotEquality = outerPrecedence != getBinaryOperatorPrecedence(TokenType_EqualEqual);
     bool base = !startingPrecedence && outerHigherThanAssignment && notInequality && notEqualities && outerNotInequality && outerNotEquality;
 
     bool outerHasLowerPrecedence = outerPrecedence < innerPrec;
-    bool outerNotAdd = outerPrecedence != getOperatorPrecedence2(TokenType_Plus);
-    bool outerNotMultipliaction = outerPrecedence != getOperatorPrecedence2(TokenType_Star);
+    bool outerNotAdd = outerPrecedence != getBinaryOperatorPrecedence(TokenType_Plus);
+    bool outerNotMultipliaction = outerPrecedence != getBinaryOperatorPrecedence(TokenType_Star);
     bool operatorsDontMatch = binary->operator != outerOperator;
 
     // Cares about different things depending on the outer and the inner operator
     bool outerDependentCase = outerNotAdd && (
-        (outerNotMultipliaction && outerHasLowerPrecedence && innerPrec < getOperatorPrecedence2(TokenType_StarStar)) ||
-        (operatorsDontMatch && innerPrec == getOperatorPrecedence2(TokenType_Star)) ||
-        (outerNotMultipliaction && innerPrec == getOperatorPrecedence2(TokenType_StarStar))
+        (outerNotMultipliaction && outerHasLowerPrecedence && innerPrec < getBinaryOperatorPrecedence(TokenType_StarStar)) ||
+        (operatorsDontMatch && innerPrec == getBinaryOperatorPrecedence(TokenType_Star)) ||
+        (outerNotMultipliaction && innerPrec == getBinaryOperatorPrecedence(TokenType_StarStar))
     );
 
     // Doesn't care about what the outer is, always is present as long as base is also true
-    bool alwaysPresentCase = innerPrec == getOperatorPrecedence2(TokenType_LeftShift) || (binary->operator == TokenType_Percent);
+    bool alwaysPresentCase = innerPrec == getBinaryOperatorPrecedence(TokenType_LeftShift) || (binary->operator == TokenType_Percent);
     bool addParens = base && (outerDependentCase || alwaysPresentCase);
 
     if(addParens) {
