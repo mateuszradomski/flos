@@ -774,10 +774,12 @@ pushBinaryExpressionDocument(Render *r, ASTNode *node, TokenId outerOperator) {
 }
 
 static void pushExpressionDocumentNoIndent(Render *r, ASTNode *node);
+static void pushExpressionDocumentOrMemberChain(Render *r, ASTNode *node);
+static void pushExpressionDocumentNoChaining(Render *r, ASTNode *node);
 
 static void
 pushExpressionDocument(Render *r, ASTNode *node) {
-    switch(node->type){
+    switch(node->type) {
         case ASTNodeType_NumberLitExpression: {
             pushTokenWord(r, node->numberLitExpressionNode.value);
             if(node->numberLitExpressionNode.subdenomination != INVALID_TOKEN_ID) {
@@ -917,7 +919,7 @@ pushExpressionDocument(Render *r, ASTNode *node) {
         case ASTNodeType_FunctionCallExpression: {
             ASTNodeFunctionCallExpression *function = &node->functionCallExpressionNode;
 
-            pushExpressionDocument(r, function->expression);
+            pushExpressionDocumentOrMemberChain(r, function->expression);
             pushGroup(r);
             pushCallArgumentListDocument(r, function->expression->endToken + 1, &function->argumentsExpression, &function->argumentsName);
             popGroup(r);
@@ -1072,6 +1074,7 @@ pushExpressionDocument(Render *r, ASTNode *node) {
             popGroup(r);
             pushTokenWord(r, node->endToken);
         } break;
+        case ASTNodeType_None: { break; }
         default: {
             assert(0);
         }
@@ -1099,6 +1102,121 @@ pushExpressionDocumentNoIndent(Render *r, ASTNode *node) {
 }
 
 static void
+pushExpressionDocumentNoChaining(Render *r, ASTNode *node) {
+    switch(node->type) {
+        case ASTNodeType_FunctionCallExpression: {
+            ASTNodeFunctionCallExpression *function = &node->functionCallExpressionNode;
+
+            pushExpressionDocumentNoChaining(r, function->expression);
+            pushGroup(r);
+            pushCallArgumentListDocument(r, function->expression->endToken + 1, &function->argumentsExpression, &function->argumentsName);
+            popGroup(r);
+        } break;
+        default: {
+            pushExpressionDocument(r, node);
+        }
+    }
+}
+
+static void
+pushExpressionDocumentOrMemberChain(Render *r, ASTNode *node) {
+    if(node->type == ASTNodeType_MemberAccessExpression) {
+        u32 groupStackIndex = 0;
+        ASTNode *groupStack[64] = { 0 };
+        groupStack[groupStackIndex++] = node;
+        bool wasMemberAccess = false;
+
+        ASTNode *visitor = node;
+        bool wasFnCall = true;
+        while(visitor) {
+            while(
+                visitor->type == ASTNodeType_ArrayAccessExpression ||
+                visitor->type == ASTNodeType_MemberAccessExpression
+            ) {
+                if(visitor->type == ASTNodeType_MemberAccessExpression) {
+                    visitor = visitor->memberAccessExpressionNode.expression;
+                } else {
+                    ASTNode *next = visitor->arrayAccessExpressionNode.expression;
+                    if(next->type == ASTNodeType_MemberAccessExpression) {
+                        visitor = next;
+                    } else {
+                        break;
+                    }
+                }
+            }
+
+            if(wasFnCall) {
+                groupStack[groupStackIndex++] = visitor;
+            }
+            wasFnCall = false;
+
+            while(visitor && visitor->type != ASTNodeType_MemberAccessExpression) {
+                if(visitor->type == ASTNodeType_FunctionCallExpression) {
+                    wasFnCall = true;
+                    visitor = visitor->functionCallExpressionNode.expression;
+                } else if (visitor->type == ASTNodeType_ArrayAccessExpression) {
+                    visitor = visitor->arrayAccessExpressionNode.expression;
+                } else {
+                    visitor = 0x0;
+                }
+            }
+        }
+
+        if(groupStackIndex <= 2) {
+            pushExpressionDocumentNoChaining(r, node);
+            return;
+        }
+
+        {
+            ASTNode *firstElement = groupStack[--groupStackIndex];
+            ASTNode *head = groupStack[groupStackIndex - 1];
+
+            bool wasFuncitonCall = false;
+            while(head != firstElement) {
+                ASTNode *next = 0x0;
+
+                if(head->type == ASTNodeType_FunctionCallExpression) {
+                    next = head->functionCallExpressionNode.expression;
+                } else if (head->type == ASTNodeType_ArrayAccessExpression) {
+                    next = head->arrayAccessExpressionNode.expression;
+                } else if (head->type == ASTNodeType_MemberAccessExpression) {
+                    next = head->functionCallExpressionNode.expression;
+
+                    if(wasFuncitonCall) { head = next; break; }
+                } else {
+                    assert(false);
+                }
+
+                wasFuncitonCall = head->type == ASTNodeType_FunctionCallExpression;
+                head = next;
+            }
+
+            if(head == firstElement && !wasFuncitonCall) {
+                firstElement = groupStack[--groupStackIndex];
+            } else {
+                firstElement = head;
+            }
+
+            pushExpressionDocumentNoChaining(r, firstElement);
+            firstElement->type = ASTNodeType_None;
+        }
+
+        pushNest(r);
+        Word whitespace = groupStackIndex >= 3 ? wordHardBreak() : wordSoftline();
+
+        for(s32 i = groupStackIndex - 1; i >= 0; --i) {
+            pushWord(r, whitespace);
+
+            pushExpressionDocumentNoChaining(r, groupStack[i]);
+            groupStack[i]->type = ASTNodeType_None;
+        }
+        popNest(r);
+    } else {
+        pushExpressionDocumentNoChaining(r, node);
+    }
+}
+
+static void
 pushExpressionDocumentAssignment(Render *r, ASTNode *node) {
     if (node->type == ASTNodeType_FunctionCallExpression) {
         ASTNodeFunctionCallExpression *function = &node->functionCallExpressionNode;
@@ -1107,10 +1225,13 @@ pushExpressionDocumentAssignment(Render *r, ASTNode *node) {
         pushWord(r, wordLine());
         pushNest(r);
 
-        pushExpressionDocument(r, function->expression);
+        pushGroup(r);
+        pushExpressionDocumentOrMemberChain(r, function->expression);
         pushGroup(r);
         pushCallArgumentListDocument(r, function->expression->endToken + 1, &function->argumentsExpression, &function->argumentsName);
         popGroup(r);
+        popGroup(r);
+
         popNest(r);
         popGroup(r);
     } else if(node->type == ASTNodeType_InlineArrayExpression || node->type == ASTNodeType_TupleExpression) {
@@ -1387,10 +1508,20 @@ pushStatementDocument(Render *r, ASTNode *node) {
 
             pushGroup(r);
             pushTokenWord(r, node->startToken);
-            pushWord(r, wordSpace());
 
-            pushStatementDocument(r, statement->body);
-            pushWord(r, wordSpace());
+            if(statement->body->type == ASTNodeType_BlockStatement) {
+                pushWord(r, wordSpace());
+                pushStatementDocument(r, statement->body);
+                pushWord(r, wordSpace());
+            } else {
+                pushGroup(r);
+                pushNest(r);
+                pushWord(r, wordLine());
+                pushStatementDocument(r, statement->body);
+                popNest(r);
+                popGroup(r);
+                pushWord(r, wordLine());
+            }
 
             pushGroup(r);
             TokenId openParen = statement->expression->startToken - 1;
@@ -1425,10 +1556,19 @@ pushStatementDocument(Render *r, ASTNode *node) {
             pushExpressionDocumentNoIndent(r, statement->expression);
             pushTokenWord(r, statement->expression->endToken + 1);
 
-            pushWord(r, wordSpace());
             popGroup(r);
 
-            pushStatementDocument(r, statement->body);
+            if(statement->body->type == ASTNodeType_BlockStatement) {
+                pushWord(r, wordSpace());
+                pushStatementDocument(r, statement->body);
+            } else {
+                pushGroup(r);
+                pushNest(r);
+                pushWord(r, wordLine());
+                pushStatementDocument(r, statement->body);
+                popNest(r);
+                popGroup(r);
+            }
         } break;
         case ASTNodeType_ForStatement: {
             ASTNodeForStatement *statement = &node->forStatementNode;
@@ -1476,8 +1616,17 @@ pushStatementDocument(Render *r, ASTNode *node) {
             pushTokenWord(r, statement->body->startToken - 1);
             popGroup(r);
 
-            pushWord(r, wordSpace());
-            pushStatementDocument(r, statement->body);
+            if(statement->body->type == ASTNodeType_BlockStatement) {
+                pushWord(r, wordSpace());
+                pushStatementDocument(r, statement->body);
+            } else {
+                pushGroup(r);
+                pushNest(r);
+                pushWord(r, wordLine());
+                pushStatementDocument(r, statement->body);
+                popNest(r);
+                popGroup(r);
+            }
         } break;
         case ASTNodeType_RevertStatement: {
             assert(stringMatch(LIT_TO_STR("revert"), r->tokens.tokenStrings[node->startToken]));

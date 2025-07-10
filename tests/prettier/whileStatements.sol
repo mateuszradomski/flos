@@ -45,14 +45,21 @@ contract WhileStatements {
 
         while(a < 100) a++;
 
-        while(a < 200) a = a.add(LONG_VARIABLE).add(LONG_VARIABLE).add(LONG_VARIABLE);
+        while(a < 200)
+            a = a
+                .add(LONG_VARIABLE)
+                .add(LONG_VARIABLE)
+                .add(LONG_VARIABLE);
 
         while(a < 300) {
             a++;
         }
 
         while(a < 400) {
-            a = a.add(LONG_VARIABLE).add(LONG_VARIABLE).add(LONG_VARIABLE);
+            a = a
+                .add(LONG_VARIABLE)
+                .add(LONG_VARIABLE)
+                .add(LONG_VARIABLE);
         }
 
         while(a < veryLongVariableName.add(LONG_VARIABLE).add(LONG_VARIABLE) * 500) a++;
@@ -68,14 +75,22 @@ contract WhileStatements {
 
         do a++; while(a < 100);
 
-        do a = a.add(LONG_VARIABLE).add(LONG_VARIABLE).add(LONG_VARIABLE); while(a < 200);
+        do
+            a = a
+                .add(LONG_VARIABLE)
+                .add(LONG_VARIABLE)
+                .add(LONG_VARIABLE);
+        while(a < 200);
 
         do {
             a++;
         } while(a < 300);
 
         do {
-            a = a.add(LONG_VARIABLE).add(LONG_VARIABLE).add(LONG_VARIABLE);
+            a = a
+                .add(LONG_VARIABLE)
+                .add(LONG_VARIABLE)
+                .add(LONG_VARIABLE);
         } while(a < 400);
 
         do a++; while(a < veryLongVariableName.add(LONG_VARIABLE).add(LONG_VARIABLE) * 500);

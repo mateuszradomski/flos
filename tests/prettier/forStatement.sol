@@ -50,14 +50,21 @@ contract ForStatements {
 
         for(uint i; i < 100; i++) a++;
 
-        for(i = 0; i < 100; i++) a = a.add(LONG_VARIABLE).add(LONG_VARIABLE).add(LONG_VARIABLE);
+        for(i = 0; i < 100; i++)
+            a = a
+                .add(LONG_VARIABLE)
+                .add(LONG_VARIABLE)
+                .add(LONG_VARIABLE);
 
         for(i = 0; i < 100; i++) {
             a++;
         }
 
         for(i = 0; i < 100; i++) {
-            a = a.add(LONG_VARIABLE).add(LONG_VARIABLE).add(LONG_VARIABLE);
+            a = a
+                .add(LONG_VARIABLE)
+                .add(LONG_VARIABLE)
+                .add(LONG_VARIABLE);
         }
 
         for(uint veryLongVariableName; veryLongVariableName < 100; veryLongVariableName++) a++;

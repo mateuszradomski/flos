@@ -115,14 +115,18 @@ contract MemberAccess {
         a.b.c.d;
         a.b().c.d;
         a.b.c.d();
-        a.b().c().d();
+        a
+            .b()
+            .c()
+            .d();
         veryLongVariable.veryLongMember.veryLongMember.veryLongMember.veryLongMember.veryLongMember;
         veryLongVariable.veryLongCall(veryLongAttribute).veryLongMember.veryLongMember.veryLongMember;
         veryLongVariable.veryLongMember.veryLongCall(veryLongAttribute).veryLongMember.veryLongMember;
         veryLongVariable.veryLongMember.veryLongMember.veryLongMember.veryLongCall(veryLongAttribute);
-        veryLongVariable.veryLongCall(veryLongAttribute).veryLongCall(veryLongAttribute).veryLongCall(
-            veryLongAttribute
-        );
+        veryLongVariable
+            .veryLongCall(veryLongAttribute)
+            .veryLongCall(veryLongAttribute)
+            .veryLongCall(veryLongAttribute);
         uint256[] memory amounts =
             IUniswapV2Router(routerAddress).swapExactTokensForTokens(
                 sourceAmount,
