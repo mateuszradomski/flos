@@ -178,9 +178,9 @@ renderDocument(Render *r) {
         Word *word = &words[i];
 
         if (word->type == WordType_GroupPush) {
+            flatModeStack[flatModeStackIndex++] = flatMode;
             s32 remainingWidth = 120 - MIN(120, MAX(w->lineSize, nest));
             flatMode = fits(words + (i + 1), count - (i + 1), word->assumedFlatCount, remainingWidth);
-            flatModeStack[++flatModeStackIndex] = flatMode;
             nestActiveMask = ((u32)flatMode) - 1;
         } else if(word->type == WordType_GroupPop) {
             flatMode = flatModeStack[--flatModeStackIndex];
