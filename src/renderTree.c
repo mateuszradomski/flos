@@ -917,12 +917,7 @@ pushExpressionDocument(Render *r, ASTNode *node) {
             pushTypeDocument(r, node->newExpressionNode.typeName);
         } break;
         case ASTNodeType_FunctionCallExpression: {
-            ASTNodeFunctionCallExpression *function = &node->functionCallExpressionNode;
-
-            pushExpressionDocumentOrMemberChain(r, function->expression);
-            pushGroup(r);
-            pushCallArgumentListDocument(r, function->expression->endToken + 1, &function->argumentsExpression, &function->argumentsName);
-            popGroup(r);
+            pushExpressionDocumentOrMemberChain(r, node);
         } break;
         case ASTNodeType_BaseType: {
             pushTokenWord(r, node->baseTypeNode.typeName);
@@ -1120,15 +1115,30 @@ pushExpressionDocumentNoChaining(Render *r, ASTNode *node) {
 
 static void
 pushExpressionDocumentOrMemberChain(Render *r, ASTNode *node) {
-    if(node->type == ASTNodeType_MemberAccessExpression) {
+    assert(node->type == ASTNodeType_FunctionCallExpression);
+    if(node->functionCallExpressionNode.expression->type == ASTNodeType_MemberAccessExpression) {
         u32 groupStackIndex = 0;
-        ASTNode *groupStack[64] = { 0 };
+        ASTNode *groupStack[128] = { 0 };
+
         groupStack[groupStackIndex++] = node;
-        bool wasMemberAccess = false;
 
         ASTNode *visitor = node;
-        bool wasFnCall = true;
+        bool wasFnCall = false;
         while(visitor) {
+            while(visitor && visitor->type != ASTNodeType_MemberAccessExpression) {
+                if(visitor->type == ASTNodeType_FunctionCallExpression) {
+                    wasFnCall = true;
+                    visitor = visitor->functionCallExpressionNode.expression;
+                } else if (visitor->type == ASTNodeType_ArrayAccessExpression) {
+                    visitor = visitor->arrayAccessExpressionNode.expression;
+                } else {
+                    visitor = 0;
+                }
+            }
+
+
+            if(!visitor) { break; }
+
             while(
                 visitor->type == ASTNodeType_ArrayAccessExpression ||
                 visitor->type == ASTNodeType_MemberAccessExpression
@@ -1146,19 +1156,9 @@ pushExpressionDocumentOrMemberChain(Render *r, ASTNode *node) {
             }
 
             if(wasFnCall) {
+                assert(groupStackIndex < ARRAY_LENGTH(groupStack));
                 groupStack[groupStackIndex++] = visitor;
-            }
-            wasFnCall = false;
-
-            while(visitor && visitor->type != ASTNodeType_MemberAccessExpression) {
-                if(visitor->type == ASTNodeType_FunctionCallExpression) {
-                    wasFnCall = true;
-                    visitor = visitor->functionCallExpressionNode.expression;
-                } else if (visitor->type == ASTNodeType_ArrayAccessExpression) {
-                    visitor = visitor->arrayAccessExpressionNode.expression;
-                } else {
-                    visitor = 0x0;
-                }
+                wasFnCall = false;
             }
         }
 
@@ -1171,7 +1171,7 @@ pushExpressionDocumentOrMemberChain(Render *r, ASTNode *node) {
             ASTNode *firstElement = groupStack[--groupStackIndex];
             ASTNode *head = groupStack[groupStackIndex - 1];
 
-            bool wasFuncitonCall = false;
+            bool wasFunctionCall = false;
             while(head != firstElement) {
                 ASTNode *next = 0x0;
 
@@ -1180,18 +1180,18 @@ pushExpressionDocumentOrMemberChain(Render *r, ASTNode *node) {
                 } else if (head->type == ASTNodeType_ArrayAccessExpression) {
                     next = head->arrayAccessExpressionNode.expression;
                 } else if (head->type == ASTNodeType_MemberAccessExpression) {
-                    next = head->functionCallExpressionNode.expression;
+                    next = head->memberAccessExpressionNode.expression;
 
-                    if(wasFuncitonCall) { head = next; break; }
+                    if(wasFunctionCall) { head = next; break; }
                 } else {
                     assert(false);
                 }
 
-                wasFuncitonCall = head->type == ASTNodeType_FunctionCallExpression;
+                wasFunctionCall = head->type == ASTNodeType_FunctionCallExpression;
                 head = next;
             }
 
-            if(head == firstElement && !wasFuncitonCall) {
+            if(head == firstElement && !wasFunctionCall) {
                 firstElement = groupStack[--groupStackIndex];
             } else {
                 firstElement = head;
@@ -1205,11 +1205,12 @@ pushExpressionDocumentOrMemberChain(Render *r, ASTNode *node) {
         Word whitespace = groupStackIndex >= 3 ? wordHardBreak() : wordSoftline();
 
         for(s32 i = groupStackIndex - 1; i >= 0; --i) {
+            ASTNode *entry = groupStack[i];
             pushWord(r, whitespace);
-
-            pushExpressionDocumentNoChaining(r, groupStack[i]);
-            groupStack[i]->type = ASTNodeType_None;
+            pushExpressionDocumentNoChaining(r, entry);
+            entry->type = ASTNodeType_None;
         }
+
         popNest(r);
     } else {
         pushExpressionDocumentNoChaining(r, node);
@@ -1219,17 +1220,12 @@ pushExpressionDocumentOrMemberChain(Render *r, ASTNode *node) {
 static void
 pushExpressionDocumentAssignment(Render *r, ASTNode *node) {
     if (node->type == ASTNodeType_FunctionCallExpression) {
-        ASTNodeFunctionCallExpression *function = &node->functionCallExpressionNode;
-
         pushGroupAssumedFlat(r, 1);
         pushWord(r, wordLine());
         pushNest(r);
 
         pushGroup(r);
-        pushExpressionDocumentOrMemberChain(r, function->expression);
-        pushGroup(r);
-        pushCallArgumentListDocument(r, function->expression->endToken + 1, &function->argumentsExpression, &function->argumentsName);
-        popGroup(r);
+        pushExpressionDocumentOrMemberChain(r, node);
         popGroup(r);
 
         popNest(r);

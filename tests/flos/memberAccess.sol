@@ -84,6 +84,55 @@ contract MemberAccess {
 
         obj.property[2].a[4].method().finalMethod(1+2).a(1+2);
     }
+
+    function _getBondTokenFinalFee() internal view returns (uint256) {
+        (memoryFrame.sequencerBatchEnd, memoryFrame.sequencerBatchAcc) = inputDataFrame.sequencerInbox
+            .proveInboxContainsMessage(sequencerBatchProof, assertion.afterState.inboxCount);
+
+        return
+            StoreInterface(finder.getImplementationAddress(OracleInterfaces.Store)).computeFinalFee(address(bondToken))
+                .rawValue;
+    }
+
+    function correctNestingAtTheLastElement() {
+        sharesMintedAsFees = _totalRewards
+            .mul(rewardsDistribution.totalFee)
+            .mul(_preTotalShares)
+            .div(
+                totalPooledEtherWithRewards
+                    .mul(rewardsDistribution.precisionPoints)
+                    .sub(_totalRewards.mul(rewardsDistribution.totalFee))
+                );
+
+        d = nA
+            .mul(s)
+            .div(AmplificationUtils.A_PRECISION)
+            .add(dP.mul(numTokens))
+            .mul(d)
+            .div(
+                nA
+                    .sub(AmplificationUtils.A_PRECISION)
+                    .mul(d)
+                    .div(AmplificationUtils.A_PRECISION)
+                    .add(numTokens.add(1).mul(dP))
+            );
+
+        return a0.add(a1.sub(a0).mul(block.timestamp.sub(t0)).div(t1.sub(t0)));
+
+        require(signedStakePower >= currentTotalStake.mul(2).div(3).add(1), "2/3+1 non-majority!");
+
+        if(approvals.add(disapprovals) >= LegacyToken(governanceToken).totalSupply().mul(quorumPercentage).div(100)) {}
+
+        return
+            (slots[slot].bidAmount == 0)
+                ? _defaultSlotSetBid[slotSet].add(
+                    _defaultSlotSetBid[slotSet]
+                        .mul(_outbidding)
+                        .div(
+                        uint128(10000) // two decimal precision
+                    )
+                ) : 123;
+    }
 }
 // Above input, below output
 contract MemberAccess {
@@ -236,5 +285,77 @@ contract MemberAccess {
             .method()
             .finalMethod(1 + 2)
             .a(1 + 2);
+    }
+
+    function _getBondTokenFinalFee() internal view returns (uint256) {
+        (memoryFrame.sequencerBatchEnd, memoryFrame.sequencerBatchAcc) =
+            inputDataFrame.sequencerInbox.proveInboxContainsMessage(
+                sequencerBatchProof,
+                assertion.afterState.inboxCount
+            );
+
+        return
+            StoreInterface(finder.getImplementationAddress(OracleInterfaces.Store)).computeFinalFee(
+                address(bondToken)
+            ).rawValue;
+    }
+
+    function correctNestingAtTheLastElement() {
+        sharesMintedAsFees = _totalRewards
+            .mul(rewardsDistribution.totalFee)
+            .mul(_preTotalShares)
+            .div(
+                totalPooledEtherWithRewards
+                    .mul(rewardsDistribution.precisionPoints)
+                    .sub(_totalRewards.mul(rewardsDistribution.totalFee))
+            );
+
+        d = nA
+            .mul(s)
+            .div(AmplificationUtils.A_PRECISION)
+            .add(dP.mul(numTokens))
+            .mul(d)
+            .div(
+                nA
+                    .sub(AmplificationUtils.A_PRECISION)
+                    .mul(d)
+                    .div(AmplificationUtils.A_PRECISION)
+                    .add(numTokens.add(1).mul(dP))
+            );
+
+        return a0.add(
+            a1
+                .sub(a0)
+                .mul(block.timestamp.sub(t0))
+                .div(t1.sub(t0))
+        );
+
+        require(
+            signedStakePower >=
+                currentTotalStake
+                    .mul(2)
+                    .div(3)
+                    .add(1),
+            "2/3+1 non-majority!"
+        );
+
+        if(
+            approvals.add(disapprovals) >=
+            LegacyToken(governanceToken)
+                .totalSupply()
+                .mul(quorumPercentage)
+                .div(100)
+        ) { }
+
+        return
+            (slots[slot].bidAmount == 0)
+                ? _defaultSlotSetBid[slotSet].add(
+                    _defaultSlotSetBid[slotSet]
+                        .mul(_outbidding)
+                        .div(
+                            uint128(10000) // two decimal precision
+                        )
+                )
+                : 123;
     }
 }
