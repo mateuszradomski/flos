@@ -511,6 +511,15 @@ stringPush(Arena *arena, size_t size) {
     return string;
 }
 
+static String
+stringCopy(Arena *arena, String v) {
+    String string = {};
+    string.data = arrayPush(arena, u8, v.size);
+    string.size = v.size;
+    memcpy(string.data, v.data, v.size);
+    return string;
+}
+
 static s32
 stringCompare(String a, String b){
     s32 result = 0;
@@ -601,6 +610,17 @@ stringStartsWith(String string, String prefix) {
     } else {
         string.size = prefix.size;
         return stringMatch(string, prefix);
+    }
+}
+
+static bool
+stringEndsWith(String string, String suffix) {
+    if(string.size < suffix.size) {
+        return false;
+    } else {
+        string.data += (string.size - suffix.size);
+        string.size = suffix.size;
+        return stringMatch(string, suffix);
     }
 }
 
@@ -755,9 +775,10 @@ stringPushfv(Arena *arena, const char *format, va_list args) {
     va_list args2;
     va_copy(args2, args);
 
-    u32 size = mr_vsnprintf(0x0, 0, format, args);
+    u32 size = mr_vsnprintf(0x0, 0, format, args) + 1;
     String result = stringPush(arena, size);
     mr_vsnprintf((char *)result.data, size, format, args2);
+    result.data[size - 1] = 0;
     return result;
 }
 

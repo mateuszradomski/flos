@@ -1,4 +1,5 @@
 #include "./src/format.c"
+#include "./src/platform.c"
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -7,6 +8,129 @@
 #include <math.h>
 #include <pthread.h>
 #include <stdatomic.h>
+
+typedef struct StringQueueElement {
+    char *path;
+    _Atomic u64 sequenceNumber;
+} StringQueueElement;
+
+typedef struct StringQueue {
+    // SPMC queue
+    _Atomic u64 tail;
+    u8 paddingTail[64 - sizeof(u64)];
+
+    u64 head;
+    StringQueueElement elements[512];
+} StringQueue;
+
+static void
+stringQueueEnqueueBlocking(StringQueue *q, char *path) {
+    for(;;) {
+        u64 mask = ARRAY_LENGTH(q->elements) - 1;
+        u64 position = q->head;
+        u64 index = position & mask;
+        StringQueueElement *element = q->elements + index;
+
+        u64 sequence = atomic_load_explicit(&element->sequenceNumber, memory_order_acquire);
+        if(sequence == position) {
+            q->head = position + 1;
+            element->path = path;
+            atomic_store_explicit(&element->sequenceNumber, position + 1, memory_order_release);
+            break;
+        } else if (sequence < position) {
+            sched_yield();
+        } else {
+            assert(false);
+        }
+    }
+}
+
+static char *
+stringQueueDequeueBlocking(StringQueue *q) {
+    for(;;) {
+        u64 mask = ARRAY_LENGTH(q->elements) - 1;
+        u64 position = atomic_load_explicit(&q->tail, memory_order_relaxed);
+        u64 index = position & mask;
+        StringQueueElement *element = q->elements + index;
+
+        u64 sequence = atomic_load_explicit(&element->sequenceNumber, memory_order_acquire);
+        if(sequence == position + 1) {
+            if(atomic_compare_exchange_weak(&q->tail, &position, position + 1)) {
+                atomic_store_explicit(&element->sequenceNumber, position + mask + 1, memory_order_release);
+
+                return element->path;
+            }
+        } else {
+            sched_yield();
+        }
+    }
+}
+
+typedef struct Walker {
+    StringQueue *queue;
+
+    // TODO(radomski): This should be growable
+    String directoryStack[256];
+    u32 directoryStackIndex;
+
+    Arena *arena;
+} Walker;
+
+static void
+walkerEnqueueFile(Walker *w, String parent, String path) {
+    if(stringEndsWith(path, LIT_TO_STR(".sol"))) {
+        String string = stringPushf(w->arena, "%s/%s", parent.data, path.data);
+        stringQueueEnqueueBlocking(w->queue, (char *)string.data);
+    }
+}
+
+static void
+walkerPushDirectory(Walker *w, String parent, String path) {
+    String string = stringPushf(w->arena, "%s/%s", parent.data, path.data);
+    w->directoryStack[w->directoryStackIndex++] = string;
+}
+
+static void
+fsWalker(Walker *w, char **paths, u32 pathCount) {
+    for(u32 i = 0; i < pathCount; i++) {
+        struct stat st = fileStat(paths[i]);
+        bool isDir = S_ISDIR(st.st_mode);
+        bool isFile = S_ISREG(st.st_mode);
+
+        String topPath = { .data = (u8 *)paths[i], .size = strlen(paths[i]) };
+        if(isFile && stringEndsWith(topPath, LIT_TO_STR(".sol"))) {
+            stringQueueEnqueueBlocking(w->queue, paths[i]);
+        } else if(isDir) {
+            w->directoryStack[w->directoryStackIndex++] = topPath;
+        }
+
+        while(w->directoryStackIndex > 0) {
+            String directory = w->directoryStack[w->directoryStackIndex - 1];
+            w->directoryStackIndex -= 1;
+            walkDirectory(w, w->arena, directory);
+        }
+    }
+}
+
+typedef struct WalkerMainParams {
+    Arena *arena;
+    StringQueue *queue;
+    char **paths;
+    u32 pathCount;
+} WalkerMainParams;
+
+static void *
+walkerThreadMain(void *arg) {
+    WalkerMainParams *params = (WalkerMainParams *)arg;
+    Walker walker = {
+        .arena = params->arena,
+        .queue = params->queue,
+    };
+
+    fsWalker(&walker, params->paths, params->pathCount);
+
+    return 0x0;
+}
 
 typedef struct FormatMetrics {
     u64 fileRead;
@@ -19,41 +143,35 @@ typedef struct FormatMetrics {
     u64 inputFiles;
 } FormatMetrics;
 
-typedef struct {
-    char **paths;
-    u32     pathCount;
-    _Atomic u32 next;
-} WorkQueue;
-
 typedef struct ThreadWork {
-    WorkQueue     *queue;
+    StringQueue   *queue;
     FormatMetrics  metrics;
 } ThreadWork;
 
 static void *
 threadWorker(void *arg) {
     ThreadWork *tw = arg;
-    WorkQueue *q = tw->queue;
+    StringQueue *q = tw->queue;
 
     Arena arena = arenaCreate(11 * Megabyte, 11 * Megabyte, 64);
     Arena parseArena = arenaCreate(5 * Megabyte, 5 * Megabyte, 64);
     FormatMetrics m = {0};
 
     for (;;) {
-        u32 i = atomic_fetch_add_explicit(&q->next, 1, memory_order_relaxed);
-        if (i >= q->pathCount) break;
+        char *path = stringQueueDequeueBlocking(q);
+        if(path == 0x0) { break; }
 
         u64 start = arenaPos(&arena);
         u64 startParse = arenaPos(&parseArena);
 
         m.fileRead -= readTimer();
-        String content = readFile(&arena, q->paths[i]);
+        String content = readFile(&arena, path);
         m.fileRead += readTimer();
 
         FormatResult r = format(&arena, &parseArena, content);
 
         if(content.size != r.source.size || memcmp(content.data, r.source.data, content.size) != 0) {
-            FILE *f = fopen(q->paths[i], "wb");
+            FILE *f = fopen(path, "wb");
             fwrite(r.source.data, 1, r.source.size, f);
             fclose(f);
         }
@@ -210,8 +328,7 @@ printThreadMetrics(ThreadWork *jobs, u32 processorCount) {
 int main(int argCount, char **args) {
     bool repetitionTester = false;
 
-    if(argCount == 3) {
-        assert(stringMatch((String){ .data = (u8 *)args[1], .size = strlen(args[1]) }, LIT_TO_STR("rep")));
+    if(argCount == 3 && stringMatch((String){ .data = (u8 *)args[1], .size = strlen(args[1]) }, LIT_TO_STR("rep"))) {
         repetitionTester = true;
     }
 
@@ -228,33 +345,53 @@ int main(int argCount, char **args) {
         char **paths = args + 1;
         u32 pathCount = argCount - 1;
 
+        StringQueue queue = { };
+        for(u32 i = 0; i < ARRAY_LENGTH(queue.elements); i++) {
+            queue.elements[i].sequenceNumber = i;
+        }
+
+        WalkerMainParams params = {
+            .arena = &arena,
+            .queue = &queue,
+            .paths = paths,
+            .pathCount = pathCount
+        };
+
+        pthread_t walkerThread;
+        pthread_create(&walkerThread, 0x0, walkerThreadMain, &params);
+
         u32 processorCount = getProcessorCount();
+        u32 formatterThreadCount = processorCount - 1;
+        ThreadWork *jobs = arrayPush(&arena, ThreadWork, formatterThreadCount);
+        pthread_t *threads = arrayPush(&arena, pthread_t, formatterThreadCount);
 
-        WorkQueue queue = { .paths = paths, .pathCount = pathCount, .next = 0 };
-        ThreadWork *jobs = arrayPush(&arena, ThreadWork, processorCount);
-        pthread_t *threads = arrayPush(&arena, pthread_t, processorCount);
-
-        for(u32 i = 0; i < processorCount; i++) {
+        for(u32 i = 0; i < formatterThreadCount; i++) {
             jobs[i].queue = &queue;
             pthread_create(&threads[i], 0x0, threadWorker, &jobs[i]);
         }
 
-        for(u32 i = 0; i < processorCount; i++) {
+        pthread_join(walkerThread, 0x0);
+        // All the files have been enqueued. Push poison pills to stop the formatters.
+        for(u32 i = 0; i < formatterThreadCount; i++) {
+            stringQueueEnqueueBlocking(&queue, 0x0);
+        }
+
+        for(u32 i = 0; i < formatterThreadCount; i++) {
             pthread_join(threads[i], 0x0);
         }
 
         elapsed += readTimer();
 
         u32 inputBytes = 0;
-        for(u32 i = 0; i < processorCount; i++) {
+        for(u32 i = 0; i < formatterThreadCount; i++) {
             inputBytes += jobs[i].metrics.inputBytes;
         }
 
-        printThreadMetrics(jobs, processorCount);
+        printThreadMetrics(jobs, formatterThreadCount);
 
         printf(
-            "Formatted %s%d%s files in %s%.0fms%s %s(%.0f MB/s)%s\n",
-            ANSI_CYAN_LIGHT,    argCount - 1,                                            ANSI_RESET,
+            "Formatted %s%llu%s files in %s%.0fms%s %s(%.0f MB/s)%s\n",
+            ANSI_CYAN_LIGHT,    queue.tail - formatterThreadCount,                       ANSI_RESET,
             ANSI_GREEN_LIGHT,   (double)elapsed / 1e6,                                   ANSI_RESET,
             ANSI_MAGENTA_LIGHT, ((inputBytes / ((double)elapsed / NS_IN_SECOND)) / 1e6), ANSI_RESET
         );
