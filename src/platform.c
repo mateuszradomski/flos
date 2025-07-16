@@ -1,3 +1,22 @@
+typedef struct Walker Walker;
+
+static void walkerEnqueueFile(Walker *w, String parent, String path);
+static void walkerPushDirectory(Walker *w, String parent, String path);
+
+enum FileType_Enum {
+    FileType_Unknown,
+    FileType_Directory,
+    FileType_File,
+};
+
+typedef u32 FileType;
+
+typedef struct Entry {
+    String name;
+    FileType type;
+    u32 entryLength;
+} Entry;
+
 #if __linux__
 #include <sys/stat.h>
 #include <pthread.h>
@@ -74,6 +93,79 @@ getProcessorCount() {
 }
 #endif
 
+#include <dirent.h>
+
+typedef struct KernelEntry {
+    u64 inode;
+    u64 offset;
+    u16 entryLength;
+    u8 fileType;
+    u8 name[];
+} KernelEntry;
+
+long getdents64(unsigned int fd, void *dirp, unsigned int count);
+
+static Entry
+decodeEntry(void *data) {
+    KernelEntry *kernelEntry = (KernelEntry *)data;
+
+    Entry entry = { 0 };
+
+    entry.entryLength = kernelEntry->entryLength;
+    u32 nameLength = strlen((char *)kernelEntry->name);
+
+    entry.name = (String){
+        .data = kernelEntry->name,
+        .size = nameLength,
+    };
+
+    switch(kernelEntry->fileType) {
+        case DT_DIR: entry.type = FileType_Directory; break;
+        case DT_REG: entry.type = FileType_File; break;
+        default: entry.type = FileType_Unknown; break;
+    }
+
+    return entry;
+}
+
+static void
+walkDirectory(Walker *w, Arena *arena, String path) {
+    u32 dirDataCapacity = 64 * Kilobyte;
+    u8 *dirData = arrayPushZero(arena, u8, dirDataCapacity);
+
+    int fd = open((char *)path.data, O_RDONLY);
+    if(fd == -1) {
+        printf("Failed to open dir: %s\n", path.data);
+        return;
+    }
+
+    int returned = -1;
+    long base = 0;
+    do {
+        returned = getdents64(fd, dirData, dirDataCapacity);
+        void *head = dirData;
+        void *end = head + returned;
+        while(head < end) {
+            Entry entry = decodeEntry(head);
+            head += entry.entryLength;
+
+            if(stringMatch(entry.name, LIT_TO_STR(".")) || stringMatch(entry.name, LIT_TO_STR(".."))) {
+                continue;
+            }
+
+            switch(entry.type) {
+                case FileType_File: {
+                    walkerEnqueueFile(w, path, entry.name);
+                } break;
+                case FileType_Directory: {
+                    walkerPushDirectory(w, path, entry.name);
+                } break;
+            }
+        }
+    } while(returned > 0);
+    close(fd);
+}
+
 #elif __APPLE__
 #include <sys/stat.h>
 #include <unistd.h>
@@ -111,25 +203,6 @@ closeFile(FileHandle handle) {
 }
 
 #include <sys/attr.h>
-
-typedef struct Walker Walker;
-
-static void walkerEnqueueFile(Walker *w, String parent, String path);
-static void walkerPushDirectory(Walker *w, String parent, String path);
-
-enum FileType_Enum {
-    FileType_Unknown,
-    FileType_Directory,
-    FileType_File,
-};
-
-typedef u32 FileType;
-
-typedef struct Entry {
-    String name;
-    FileType type;
-    u32 entryLength;
-} Entry;
 
 static Entry
 decodeAttr(void *data) {

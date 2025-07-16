@@ -1090,26 +1090,6 @@ readFile(Arena *arena, const char *path) {
 #define ANSI_GREEN_LIGHT   "\x1b[92m"
 #define ANSI_MAGENTA_LIGHT "\x1b[95m"
 
-#ifdef __linux__
-#include <sys/sysinfo.h>
-static u32
-getProcessorCount() {
-    return get_nprocs();
-}
-#elif __APPLE__
-#include <sys/sysctl.h>
-static u32
-getProcessorCount() {
-    int mib[] = { CTL_HW, HW_NCPU };
-
-    int numCPU;
-    size_t len = sizeof(numCPU);
-    sysctl(mib, 2, &numCPU, &len, NULL, 0);
-
-    return numCPU;
-}
-#endif
-
 typedef struct Buffer {
     u8 *data;
     size_t size;
