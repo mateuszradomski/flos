@@ -73,25 +73,12 @@ getCurrentThreadId() {
     return (u64)pthread_self();
 }
 
-#ifdef __linux__
 #include <sys/sysinfo.h>
+
 static u32
 getProcessorCount() {
     return get_nprocs();
 }
-#elif __APPLE__
-#include <sys/sysctl.h>
-static u32
-getProcessorCount() {
-    int mib[] = { CTL_HW, HW_NCPU };
-
-    int numCPU;
-    size_t len = sizeof(numCPU);
-    sysctl(mib, 2, &numCPU, &len, NULL, 0);
-
-    return numCPU;
-}
-#endif
 
 #include <dirent.h>
 
@@ -171,9 +158,21 @@ walkDirectory(Walker *w, Arena *arena, String path) {
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/mman.h>
+#include <sys/sysctl.h>
 
 typedef int FileHandle;
 typedef struct stat stat64_t;
+
+static u32
+getProcessorCount() {
+    int mib[] = { CTL_HW, HW_NCPU };
+
+    int numCPU;
+    size_t len = sizeof(numCPU);
+    sysctl(mib, 2, &numCPU, &len, NULL, 0);
+
+    return numCPU;
+}
 
 static stat64_t
 fileStat(const char *path) {
