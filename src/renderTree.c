@@ -66,6 +66,7 @@ commitIndent(Writer *w, u32 spaceCount) {
     w->lineSize = spaceCount;
 }
 
+__attribute__((no_sanitize("address")))
 static void
 writeString(Writer *w, u8 *str, u32 size, u32 nest) {
     if (size == 0) {
