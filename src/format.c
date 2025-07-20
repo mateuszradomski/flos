@@ -19,6 +19,11 @@ typedef struct FormatResult {
 FormatResult format(Arena *arena, Arena *parseArena, String input) {
     FormatResult result = { 0 };
 
+    if(input.size == 0) {
+        result.source = input;
+        return result;
+    }
+
     result.timings[Measurement_Tokenize] -= readTimer();
     TokenizeResult tokens = tokenize(input, arena);
     result.timings[Measurement_Tokenize] += readTimer();
