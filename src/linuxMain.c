@@ -66,12 +66,66 @@ stringQueueDequeueBlocking(StringQueue *q) {
     }
 }
 
+typedef struct StringBucket {
+    String values[256];
+    u32 count;
+    struct StringBucket *next;
+} StringBucket;
+
+typedef struct BucketedStringList {
+    StringBucket *first;
+    StringBucket *last;
+    u32 count;
+} BucketedStringList;
+
+static StringBucket *
+listPushString(BucketedStringList *list, String value, Arena *arena) {
+    StringBucket *bucket = 0x0;
+    if(list->count == 0) {
+        bucket = structPush(arena, StringBucket);
+        SLL_STACK_PUSH(list->first, bucket);
+    } else {
+        bucket = list->first;
+    }
+
+    if(bucket->count >= ARRAY_LENGTH(bucket->values)) {
+        bucket = structPush(arena, StringBucket);
+        SLL_STACK_PUSH(list->first, bucket);
+    }
+
+    bucket->values[bucket->count++] = value;
+    list->count += 1;
+
+    return bucket;
+}
+
+static String
+listPopString(BucketedStringList *list) {
+    StringBucket *bucket = list->first;
+    if(bucket->count == 0 && bucket->next && bucket->next->count > 0) {
+        list->first = bucket->next;
+
+        if(list->last) {
+            list->last->next = bucket;
+        }
+
+        list->last = bucket;
+        list->last->next = 0x0;
+
+        bucket = list->first;
+    }
+
+    assert(bucket->count > 0);
+    String result = bucket->values[--bucket->count];
+    list->count -= 1;
+
+    return result;
+}
+
 typedef struct Walker {
     StringQueue *queue;
 
-    // TODO(radomski): This should be growable
-    String directoryStack[256];
-    u32 directoryStackIndex;
+    BucketedStringList directoryStack;
 
     Arena *arena;
 } Walker;
@@ -87,7 +141,7 @@ walkerEnqueueFile(Walker *w, String parent, String path) {
 static void
 walkerPushDirectory(Walker *w, String parent, String path) {
     String string = stringPushf(w->arena, "%s/%s", parent.data, path.data);
-    w->directoryStack[w->directoryStackIndex++] = string;
+    listPushString(&w->directoryStack, string, w->arena);
 }
 
 static void
@@ -101,12 +155,11 @@ fsWalker(Walker *w, char **paths, u32 pathCount) {
         if(isFile && stringEndsWith(topPath, LIT_TO_STR(".sol"))) {
             stringQueueEnqueueBlocking(w->queue, paths[i]);
         } else if(isDir) {
-            w->directoryStack[w->directoryStackIndex++] = topPath;
+            listPushString(&w->directoryStack, topPath, w->arena);
         }
 
-        while(w->directoryStackIndex > 0) {
-            String directory = w->directoryStack[w->directoryStackIndex - 1];
-            w->directoryStackIndex -= 1;
+        while(w->directoryStack.count > 0) {
+            String directory = listPopString(&w->directoryStack);
             walkDirectory(w, w->arena, directory);
         }
     }
