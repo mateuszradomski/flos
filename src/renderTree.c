@@ -176,7 +176,8 @@ renderDocument(Render *r) {
 
     u32 nest = 0;
     u8 flatModeStack[64];
-    u8 flatModeStackIndex = 0;
+    u8 fullyFlatStack[64];
+    u8 stackIndex = 0;
     bool flatMode = false;
     u32 nestActiveMask = 0;
 
@@ -184,12 +185,23 @@ renderDocument(Render *r) {
         Word *word = &words[i];
 
         if (word->type == WordType_GroupPush) {
-            flatModeStack[flatModeStackIndex++] = flatMode;
-            s32 remainingWidth = 120 - MIN(120, MAX(w->lineSize, nest));
-            flatMode = fits(words + (i + 1), count - (i + 1), word->assumedFlatCount, remainingWidth);
+            bool isFullyFlat = word->assumedFlatCount == -1;
+            bool parentIsFullyFlat = stackIndex > 0 && fullyFlatStack[stackIndex - 1];
+
+            flatModeStack[stackIndex] = flatMode;
+            fullyFlatStack[stackIndex] = isFullyFlat;
+            stackIndex++;
+
+            // Optimization: if parent group fits and both are fully flat,
+            // this group will also fit (skip fits() calculation)
+            if (!(flatMode && isFullyFlat && parentIsFullyFlat)) {
+                s32 remainingWidth = 120 - MIN(120, MAX(w->lineSize, nest));
+                flatMode = fits(words + (i + 1), count - (i + 1), word->assumedFlatCount, remainingWidth);
+            }
             nestActiveMask = ((u32)flatMode) - 1;
         } else if(word->type == WordType_GroupPop) {
-            flatMode = flatModeStack[--flatModeStackIndex];
+            stackIndex--;
+            flatMode = flatModeStack[stackIndex];
             nestActiveMask = ((u32)flatMode) - 1;
         }
 
@@ -202,6 +214,7 @@ renderDocument(Render *r) {
         nest += word->nestStep & nestActiveMask;
     }
 }
+
 
 static void
 pushGroup(Render *r) {
