@@ -13,7 +13,9 @@
 static u64
 consoleWidth() {
     struct winsize w;
-    ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
+    if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &w) < 0) {
+        return 80;
+    }
     return w.ws_col;
 }
 

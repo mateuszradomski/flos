@@ -104,12 +104,17 @@ pushTrailing(Render *r, Word w) {
 
 static void
 flushTrailing(Render *r) {
-    for(u32 i = 0; i < r->trailingCount; i++) {
-        Word *out = r->words + r->wordCount++;
-        *out = r->trailing[i];
-    }
+    u32 count = r->trailingCount;
+    if (count == 0) return;
 
+    Word *out = r->words + r->wordCount;
+    Word *src = r->trailing;
+    r->wordCount += count;
     r->trailingCount = 0;
+
+    for(u32 i = 0; i < count; i++) {
+        out[i] = src[i];
+    }
 }
 
 static bool
@@ -242,9 +247,14 @@ isWordWhitespace(Word w) {
 
 static void
 pushWord(Render *r, Word w) {
+    u32 trailingCount = r->trailingCount;
+    if (trailingCount == 0) {
+        r->words[r->wordCount++] = w;
+        return;
+    }
+
     bool skipPassedWord =
-        r->trailingCount > 0 &&
-        r->trailing[r->trailingCount - 1].type == WordType_HardBreak &&
+        r->trailing[trailingCount - 1].type == WordType_HardBreak &&
         isWordWhitespace(w);
 
     flushTrailing(r);
@@ -337,6 +347,21 @@ pushCommentsInRange(Render *r, u32 startOffset, u32 endOffset) {
     if(input.size <= 2) {
         return;
     }
+
+    u32 size = input.size;
+    u8 *data = input.data;
+    bool hasSlash = false;
+    u32 k = 0;
+    for (; k + 3 < size; k += 4) {
+        hasSlash = containsSlash(*((u32 *)(data + k)));
+        if (hasSlash) break;
+    }
+    if (!hasSlash) {
+        for (; k < size; k++) {
+            if (data[k] == '/') { hasSlash = true; break; }
+        }
+    }
+    if (!hasSlash) return;
 
     for(; input.size > 0 && !isWhitespace(input.data[0]) && input.data[0] != '/'; input.data++, input.size--) { }
 
@@ -436,10 +461,8 @@ pushCommentsInRange(Render *r, u32 startOffset, u32 endOffset) {
 }
 
 static void
-pushCommentsAfterToken(Render *r, TokenId token) {
-    assert(token < r->tokens.count);
-    String current = getTokenString(r->tokens, token);
-    String next = getTokenString(r->tokens, token + 1);
+pushCommentsAfterTokenWithCurrent(Render *r, TokenId token, String current) {
+    String next = r->tokens.tokenStrings[token + 1];
 
     u32 startOffset = (current.data - r->sourceBaseAddress) + current.size;
     u32 endOffset = next.data ? next.data - r->sourceBaseAddress : r->tokens.sourceSize;
@@ -448,9 +471,16 @@ pushCommentsAfterToken(Render *r, TokenId token) {
 }
 
 static void
+pushCommentsAfterToken(Render *r, TokenId token) {
+    assert(token < r->tokens.count);
+    pushCommentsAfterTokenWithCurrent(r, token, r->tokens.tokenStrings[token]);
+}
+
+static void
 pushTokenWord(Render *r, TokenId token) {
-    pushWord(r, wordText(getTokenString(r->tokens, token)));
-    pushCommentsAfterToken(r, token);
+    String text = r->tokens.tokenStrings[token];
+    pushWord(r, wordText(text));
+    pushCommentsAfterTokenWithCurrent(r, token, text);
 }
 
 static void
