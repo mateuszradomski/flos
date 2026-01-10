@@ -1098,20 +1098,53 @@ pushExpressionDocumentNoIndent(Render *r, ASTNode *node) {
 }
 
 static void
-pushExpressionDocumentNoChaining(Render *r, ASTNode *node) {
+pushExpressionDocumentNoChainingUntil(Render *r, ASTNode *node, ASTNode *stopAt) {
+    if(node == stopAt) { return; }
+
     switch(node->type) {
         case ASTNodeType_FunctionCallExpression: {
             ASTNodeFunctionCallExpression *function = &node->functionCallExpressionNode;
 
-            pushExpressionDocumentNoChaining(r, function->expression);
+            pushExpressionDocumentNoChainingUntil(r, function->expression, stopAt);
             pushGroup(r);
             pushCallArgumentListDocument(r, function->expression->endToken + 1, &function->argumentsExpression, &function->argumentsName);
+            popGroup(r);
+        } break;
+        case ASTNodeType_ArrayAccessExpression: {
+            ASTNodeArrayAccessExpression *array = &node->arrayAccessExpressionNode;
+            pushExpressionDocumentNoChainingUntil(r, array->expression, stopAt);
+            pushGroup(r);
+            pushNest(r);
+            pushTokenWord(r, array->expression->endToken + 1);
+            pushWord(r, wordSoftline());
+            if(array->indexExpression != 0x0) {
+                pushExpressionDocument(r, array->indexExpression);
+            }
+            popNest(r);
+            pushWord(r, wordSoftline());
+            pushTokenWord(r, node->endToken);
+            popGroup(r);
+        } break;
+        case ASTNodeType_MemberAccessExpression: {
+            ASTNodeMemberAccessExpression *member = &node->memberAccessExpressionNode;
+            pushExpressionDocumentNoChainingUntil(r, member->expression, stopAt);
+            flushTrailing(r);
+            pushGroup(r);
+            pushNest(r);
+            pushTokenWord(r, member->memberName - 1);
+            pushTokenWord(r, member->memberName);
+            popNest(r);
             popGroup(r);
         } break;
         default: {
             pushExpressionDocument(r, node);
         }
     }
+}
+
+static void
+pushExpressionDocumentNoChaining(Render *r, ASTNode *node) {
+    pushExpressionDocumentNoChainingUntil(r, node, 0x0);
 }
 
 static void
@@ -1168,8 +1201,8 @@ pushExpressionDocumentOrMemberChain(Render *r, ASTNode *node) {
             return;
         }
 
+        ASTNode *firstElement = groupStack[--groupStackIndex];
         {
-            ASTNode *firstElement = groupStack[--groupStackIndex];
             ASTNode *head = groupStack[groupStackIndex - 1];
 
             bool wasFunctionCall = false;
@@ -1199,17 +1232,17 @@ pushExpressionDocumentOrMemberChain(Render *r, ASTNode *node) {
             }
 
             pushExpressionDocumentNoChaining(r, firstElement);
-            firstElement->type = ASTNodeType_None;
         }
 
         pushNest(r);
         Word whitespace = groupStackIndex >= 3 ? wordHardBreak() : wordSoftline();
 
+        ASTNode *stopAt = firstElement;
         for(s32 i = groupStackIndex - 1; i >= 0; --i) {
             ASTNode *entry = groupStack[i];
             pushWord(r, whitespace);
-            pushExpressionDocumentNoChaining(r, entry);
-            entry->type = ASTNodeType_None;
+            pushExpressionDocumentNoChainingUntil(r, entry, stopAt);
+            stopAt = entry;
         }
 
         popNest(r);
