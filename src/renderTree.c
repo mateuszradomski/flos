@@ -49,7 +49,6 @@ typedef struct Render {
     u32 wordCapacity;
 
     u32 trailingCount;
-    Word trailing[8192];
 } Render;
 
 static void
@@ -96,25 +95,21 @@ finishLine(Writer *w) {
     w->lineSize = 0;
 }
 
-static void
-pushTrailing(Render *r, Word w) {
-    assert(r->trailingCount < ARRAY_LENGTH(r->trailing));
-    r->trailing[r->trailingCount++] = w;
+static bool
+isWordWhitespaceType(WordType t) {
+    return (t == WordType_Space) | (t == WordType_CommentStartSpace) |
+           (t == WordType_Line)  | (t == WordType_HardBreak);
 }
 
 static void
-flushTrailing(Render *r) {
-    u32 count = r->trailingCount;
-    if (count == 0) return;
-
-    Word *out = r->words + r->wordCount;
-    Word *src = r->trailing;
-    r->wordCount += count;
+commitTrailing(Render *r) {
     r->trailingCount = 0;
+}
 
-    for(u32 i = 0; i < count; i++) {
-        out[i] = src[i];
-    }
+static void
+pushTrailing(Render *r, Word w) {
+    r->words[r->wordCount++] = w;
+    r->trailingCount++;
 }
 
 static bool
@@ -168,7 +163,7 @@ fits(Word *words, s64 count, s8 assumedFlatCount, u64 remainingWidth) {
 
 static void
 renderDocument(Render *r) {
-    flushTrailing(r);
+    commitTrailing(r);
 
     Writer *w = &r->writer;
     Word *words = r->words;
@@ -217,61 +212,68 @@ renderDocument(Render *r) {
 }
 
 static void
+insertWordBeforeTrailing(Render *r, Word w) {
+    u32 trailing = r->trailingCount;
+    if (trailing == 0) {
+        r->words[r->wordCount++] = w;
+        return;
+    }
+    s32 insertPos = r->wordCount - trailing;
+    for (u32 i = r->wordCount; i > (u32)insertPos; i--) {
+        r->words[i] = r->words[i - 1];
+    }
+    r->words[insertPos] = w;
+    r->wordCount++;
+}
+
+static void
 pushGroup(Render *r) {
     Word w = { .type = WordType_GroupPush, .assumedFlatCount = -1, .groupStep = 1 };
-    r->words[r->wordCount++] = w;
+    insertWordBeforeTrailing(r, w);
 }
 
 static void
 pushGroupAssumedFlat(Render *r, s8 assumedFlatCount) {
     Word w = { .type = WordType_GroupPush, .assumedFlatCount = assumedFlatCount, .groupStep = 1 };
-    r->words[r->wordCount++] = w;
+    insertWordBeforeTrailing(r, w);
 }
 
 static void
 popGroup(Render *r) {
     Word w = { .type = WordType_GroupPop, .groupStep = -1 };
-    r->words[r->wordCount++] = w;
+    insertWordBeforeTrailing(r, w);
 }
 
-static void modifyNestAt(Render *r, s32 index, s32 delta) {
+static void
+modifyNestAt(Render *r, s32 index, s32 delta) {
     r->words[index].nestStep += delta * r->writer.indentSize;
 }
 
 static void
 pushNest(Render *r) {
-    modifyNestAt(r, r->wordCount - 1, 1);
+    modifyNestAt(r, r->wordCount - 1 - r->trailingCount, 1);
 }
 
 static void
 popNest(Render *r) {
-    modifyNestAt(r, r->wordCount - 1, -1);
-}
-
-static bool
-isWordWhitespace(Word w) {
-    return (
-        w.type == WordType_Space ||
-        w.type == WordType_CommentStartSpace ||
-        w.type == WordType_Line ||
-        w.type == WordType_HardBreak
-    );
+    modifyNestAt(r, r->wordCount - 1 - r->trailingCount, -1);
 }
 
 static void
 pushWord(Render *r, Word w) {
-    u32 trailingCount = r->trailingCount;
-    if (trailingCount == 0) {
+    if (r->trailingCount == 0) {
         r->words[r->wordCount++] = w;
         return;
     }
 
-    bool skipPassedWord =
-        r->trailing[trailingCount - 1].type == WordType_HardBreak &&
-        isWordWhitespace(w);
+    Word last = r->words[r->wordCount - 1];
+    bool skip =
+        (last.type == WordType_HardBreak) &
+        isWordWhitespaceType(w.type);
 
-    flushTrailing(r);
-    if(!skipPassedWord) {
+    commitTrailing(r);
+
+    if (!skip) {
         r->words[r->wordCount++] = w;
     }
 }
@@ -382,10 +384,12 @@ pushCommentsInRange(Render *r, u32 startOffset, u32 endOffset) {
         return;
     }
 
+    s32 baseWordCount = r->wordCount;
+    u32 baseTrailing = r->trailingCount;
+
     u32 i = 0;
     u32 commentsWritten = 0;
     while(i < input.size) {
-        // Absorb the whitespace and count newlines
         u32 newlineCount = 0;
         for(; i < input.size && isWhitespace(input.data[i]); i++) {
             newlineCount += input.data[i] == '\n';
@@ -469,7 +473,8 @@ pushCommentsInRange(Render *r, u32 startOffset, u32 endOffset) {
     }
 
     if(commentsWritten == 0) {
-        r->trailingCount = 0;
+        r->wordCount = baseWordCount;
+        r->trailingCount = baseTrailing;
     }
 }
 
@@ -594,7 +599,7 @@ pushCallArgumentListDocument(Render *r, TokenId startingToken, ASTNodeListRanged
         endToken = startingToken + 1;
     }
 
-    flushTrailing(r);
+    commitTrailing(r);
 
     if(names->count > 0) {
         popNest(r);
@@ -871,11 +876,11 @@ pushExpressionDocument(Render *r, ASTNode *node) {
                 pushTokenWord(r, binary->right->startToken - 1);
                 pushExpressionDocumentAssignment(r, binary->right);
             } else {
-                s32 wordStartIndex = r->wordCount;
+                s32 wordStartIndex = r->wordCount - r->trailingCount;
 
                 pushBinaryExpressionDocument(r, node, TokenType_None);
 
-                s32 wordEndIndex = r->wordCount;
+                s32 wordEndIndex = r->wordCount - r->trailingCount;
                 s32 groupPushIndex = 0;
                 for(s32 i = wordStartIndex; i < wordEndIndex; i++) {
                     if(r->words[i].type == WordType_GroupPush) {
@@ -935,7 +940,7 @@ pushExpressionDocument(Render *r, ASTNode *node) {
                 }
             }
 
-            flushTrailing(r); // TODO(radomski): This shouldn't be here?
+            commitTrailing(r);
             popNest(r);
             pushTokenWord(r, node->endToken);
             popGroup(r);
@@ -969,7 +974,7 @@ pushExpressionDocument(Render *r, ASTNode *node) {
         case ASTNodeType_MemberAccessExpression: {
             ASTNodeMemberAccessExpression *member = &node->memberAccessExpressionNode;
             pushExpressionDocument(r, member->expression);
-            flushTrailing(r); // TODO(radomski): This shouldn't be here?
+            commitTrailing(r);
             pushGroup(r);
             pushNest(r);
             pushTokenWord(r, member->memberName - 1);
@@ -1171,7 +1176,7 @@ pushExpressionDocumentNoChainingUntil(Render *r, ASTNode *node, ASTNode *stopAt)
         case ASTNodeType_MemberAccessExpression: {
             ASTNodeMemberAccessExpression *member = &node->memberAccessExpressionNode;
             pushExpressionDocumentNoChainingUntil(r, member->expression, stopAt);
-            flushTrailing(r);
+            commitTrailing(r);
             pushGroup(r);
             pushNest(r);
             pushTokenWord(r, member->memberName - 1);
@@ -2924,6 +2929,8 @@ createRender(Arena *arena, String originalSource, TokenizeResult tokens) {
         .scratchBufferCapacity = scratchBufferCapacity,
         .scratchBufferSize = 0,
         .scratchBuffer = arrayPush(arena, u8, scratchBufferCapacity),
+
+        .trailingCount = 0,
     };
 
     return render;
