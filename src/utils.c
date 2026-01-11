@@ -1086,9 +1086,13 @@ readFile(Arena *arena, const char *path) {
 #define ANSI_YELLOW  "\x1b[33m"
 #define ANSI_BLUE    "\x1b[34m"
 
+#define ANSI_BOLD         "\033[1m"
+#define ANSI_DIM          "\033[2m"
+
 #define ANSI_CYAN_LIGHT    "\x1b[96m"
 #define ANSI_GREEN_LIGHT   "\x1b[92m"
 #define ANSI_MAGENTA_LIGHT "\x1b[95m"
+#define ANSI_WHITE_BRIGHT "\033[97m"
 
 typedef struct Buffer {
     u8 *data;

@@ -339,43 +339,97 @@ repetitionTesterMain(Arena *arena, String content) {
 
 static void
 printThreadMetrics(ThreadWork *jobs, u32 processorCount) {
-    int processorCountDigits = (int)base10DigitCount(processorCount - 1);
-    printf(
-        "Thread : %sFiles%s : %sRead%s : %sToken%s : %sParse%s : %sBuild%s : %sRender%s : %sOverall%s\n",
-        ANSI_GREEN_LIGHT, ANSI_RESET,
-        ANSI_YELLOW,      ANSI_RESET,
-        ANSI_BLUE,        ANSI_RESET,
-        ANSI_RED,         ANSI_RESET,
-        ANSI_GREEN,       ANSI_RESET,
-        ANSI_CYAN,        ANSI_RESET,
-        ANSI_MAGENTA,     ANSI_RESET
-    );
-
-    for(u32 i = 0; i < processorCount; i++) {
-        FormatMetrics metrics = jobs[i].metrics;
-
-        u32 elapsedSum = metrics.fileRead + metrics.tokenize + metrics.parse + metrics.buildDoc + metrics.renderDoc;
-
-        double fileReadThroughput  = (metrics.inputBytes / ((double)metrics.fileRead  / NS_IN_SECOND)) / 1e6;
-        double tokenizeThroughput  = (metrics.inputBytes / ((double)metrics.tokenize  / NS_IN_SECOND)) / 1e6;
-        double parseThroughput     = (metrics.inputBytes / ((double)metrics.parse     / NS_IN_SECOND)) / 1e6;
-        double buildDocThroughput  = (metrics.inputBytes / ((double)metrics.buildDoc  / NS_IN_SECOND)) / 1e6;
-        double renderDocThroughput = (metrics.inputBytes / ((double)metrics.renderDoc / NS_IN_SECOND)) / 1e6;
-        double overallThroughput   = (metrics.inputBytes / ((double)elapsedSum        / NS_IN_SECOND)) / 1e6;
-
-        int leftPaddingForThread = 6 - processorCountDigits;
-        printf(
-            "%*s%0*d%s%*llu%s%s%*.0f%s%s%*.0f%s%s%*.0f%s%s%*.0f%s%s%*.0f%s%s%*.0f%s\n",
-            leftPaddingForThread, "T", processorCountDigits, i,
-            ANSI_GREEN_LIGHT, 3 + 5,  metrics.inputFiles, ANSI_RESET,
-            ANSI_YELLOW,      3 + 4,  fileReadThroughput, ANSI_RESET,
-            ANSI_BLUE,        3 + 5,  tokenizeThroughput, ANSI_RESET,
-            ANSI_RED,         3 + 5,     parseThroughput, ANSI_RESET,
-            ANSI_GREEN,       3 + 5,  buildDocThroughput, ANSI_RESET,
-            ANSI_CYAN,        3 + 6, renderDocThroughput, ANSI_RESET,
-            ANSI_MAGENTA,     3 + 7,   overallThroughput, ANSI_RESET
-        );
+    u32 activeThreads = 0;
+    u64 totalFiles = 0, totalBytes = 0;
+    u64 totalRead = 0, totalToken = 0, totalParse = 0, totalBuild = 0, totalRender = 0;
+    
+    for (u32 i = 0; i < processorCount; i++) {
+        FormatMetrics m = jobs[i].metrics;
+        if (m.inputFiles == 0) continue;
+        activeThreads++;
+        totalFiles  += m.inputFiles;
+        totalBytes  += m.inputBytes;
+        totalRead   += m.fileRead;
+        totalToken  += m.tokenize;
+        totalParse  += m.parse;
+        totalBuild  += m.buildDoc;
+        totalRender += m.renderDoc;
     }
+    
+    if (activeThreads == 0) {
+        printf("  %s(No threads processed any files)%s\n", ANSI_DIM, ANSI_RESET);
+        return;
+    }
+
+    printf("\n");
+    printf("  %s┏━━━━━━━━━━┳━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━━━┓%s\n", 
+           ANSI_DIM, ANSI_RESET);
+    printf("  %s┃%s  %sThread%s  %s┃%s  %sFiles%s  %s┃%s   %sRead%s   %s┃%s  %sToken%s   %s┃%s  %sParse%s   %s┃%s  %sBuild%s   %s┃%s  %sRender%s  %s┃%s  %sOverall%s   %s┃%s\n",
+           ANSI_DIM, ANSI_RESET, ANSI_WHITE_BRIGHT,  ANSI_RESET, ANSI_DIM, ANSI_RESET,
+           ANSI_GREEN_LIGHT, ANSI_RESET, ANSI_DIM, ANSI_RESET,
+           ANSI_YELLOW,      ANSI_RESET, ANSI_DIM, ANSI_RESET,
+           ANSI_BLUE,        ANSI_RESET, ANSI_DIM, ANSI_RESET,
+           ANSI_RED,         ANSI_RESET, ANSI_DIM, ANSI_RESET,
+           ANSI_GREEN,       ANSI_RESET, ANSI_DIM, ANSI_RESET,
+           ANSI_CYAN,        ANSI_RESET, ANSI_DIM, ANSI_RESET,
+           ANSI_MAGENTA,     ANSI_RESET, ANSI_DIM, ANSI_RESET);
+    printf("  %s┃          ┃         ┃%s   %sMB/s%s   %s┃%s   %sMB/s%s   %s┃%s   %sMB/s%s   %s┃%s   %sMB/s%s   %s┃%s   %sMB/s%s   %s┃%s    %sMB/s%s    %s┃%s\n",
+           ANSI_DIM, ANSI_RESET,
+           ANSI_DIM, ANSI_RESET, ANSI_DIM, ANSI_RESET,
+           ANSI_DIM, ANSI_RESET, ANSI_DIM, ANSI_RESET,
+           ANSI_DIM, ANSI_RESET, ANSI_DIM, ANSI_RESET,
+           ANSI_DIM, ANSI_RESET, ANSI_DIM, ANSI_RESET,
+           ANSI_DIM, ANSI_RESET, ANSI_DIM, ANSI_RESET,
+           ANSI_DIM, ANSI_RESET, ANSI_DIM, ANSI_RESET);
+    printf("  %s┣━━━━━━━━━━╋━━━━━━━━━╋━━━━━━━━━━╋━━━━━━━━━━╋━━━━━━━━━━╋━━━━━━━━━━╋━━━━━━━━━━╋━━━━━━━━━━━━┫%s\n",
+           ANSI_DIM, ANSI_RESET);
+
+    for (u32 i = 0; i < processorCount; i++) {
+        FormatMetrics m = jobs[i].metrics;
+        if (m.inputFiles == 0) continue;
+
+        u64 elapsedSum = m.fileRead + m.tokenize + m.parse + m.buildDoc + m.renderDoc;
+
+        double readTP   = (m.inputBytes / ((double)m.fileRead  / NS_IN_SECOND)) / 1e6;
+        double tokenTP  = (m.inputBytes / ((double)m.tokenize  / NS_IN_SECOND)) / 1e6;
+        double parseTP  = (m.inputBytes / ((double)m.parse     / NS_IN_SECOND)) / 1e6;
+        double buildTP  = (m.inputBytes / ((double)m.buildDoc  / NS_IN_SECOND)) / 1e6;
+        double renderTP = (m.inputBytes / ((double)m.renderDoc / NS_IN_SECOND)) / 1e6;
+        double totalTP  = (m.inputBytes / ((double)elapsedSum  / NS_IN_SECOND)) / 1e6;
+
+        printf("  %s┃%s    %sT%-3u%s  %s┃%s %s%6llu%s  %s┃%s %s%8.1f%s %s┃%s %s%8.1f%s %s┃%s %s%8.1f%s %s┃%s %s%8.1f%s %s┃%s %s%8.1f%s %s┃%s  %s%8.1f%s  %s┃%s\n",
+               ANSI_DIM, ANSI_RESET, ANSI_WHITE_BRIGHT, i, ANSI_RESET, ANSI_DIM, ANSI_RESET,
+               ANSI_GREEN_LIGHT, (unsigned long long)m.inputFiles, ANSI_RESET, ANSI_DIM, ANSI_RESET,
+               ANSI_YELLOW,      readTP,   ANSI_RESET, ANSI_DIM, ANSI_RESET,
+               ANSI_BLUE,        tokenTP,  ANSI_RESET, ANSI_DIM, ANSI_RESET,
+               ANSI_RED,         parseTP,  ANSI_RESET, ANSI_DIM, ANSI_RESET,
+               ANSI_GREEN,       buildTP,  ANSI_RESET, ANSI_DIM, ANSI_RESET,
+               ANSI_CYAN,        renderTP, ANSI_RESET, ANSI_DIM, ANSI_RESET,
+               ANSI_MAGENTA,     totalTP,  ANSI_RESET, ANSI_DIM, ANSI_RESET);
+    }
+
+    printf("  %s┣━━━━━━━━━━╋━━━━━━━━━╋━━━━━━━━━━╋━━━━━━━━━━╋━━━━━━━━━━╋━━━━━━━━━━╋━━━━━━━━━━╋━━━━━━━━━━━━┫%s\n", ANSI_DIM, ANSI_RESET);
+
+    u64 elapsedTotal = totalRead + totalToken + totalParse + totalBuild + totalRender;
+    double sumReadTP   = (totalBytes / ((double)totalRead   / NS_IN_SECOND)) / 1e6;
+    double sumTokenTP  = (totalBytes / ((double)totalToken  / NS_IN_SECOND)) / 1e6;
+    double sumParseTP  = (totalBytes / ((double)totalParse  / NS_IN_SECOND)) / 1e6;
+    double sumBuildTP  = (totalBytes / ((double)totalBuild  / NS_IN_SECOND)) / 1e6;
+    double sumRenderTP = (totalBytes / ((double)totalRender / NS_IN_SECOND)) / 1e6;
+    double sumTotalTP  = (totalBytes / ((double)elapsedTotal / NS_IN_SECOND)) / 1e6;
+
+    printf("  %s┃%s  %s∑ Total%s %s┃%s %s%6llu%s  %s┃%s %s%8.1f%s %s┃%s %s%8.1f%s %s┃%s %s%8.1f%s %s┃%s %s%8.1f%s %s┃%s %s%8.1f%s %s┃%s  %s%8.1f%s  %s┃%s\n",
+           ANSI_DIM, ANSI_RESET, ANSI_WHITE_BRIGHT ANSI_BOLD, ANSI_RESET, ANSI_DIM, ANSI_RESET,
+           ANSI_GREEN_LIGHT ANSI_BOLD, (unsigned long long)totalFiles, ANSI_RESET, ANSI_DIM, ANSI_RESET,
+           ANSI_YELLOW ANSI_BOLD,      sumReadTP,   ANSI_RESET, ANSI_DIM, ANSI_RESET,
+           ANSI_BLUE ANSI_BOLD,        sumTokenTP,  ANSI_RESET, ANSI_DIM, ANSI_RESET,
+           ANSI_RED ANSI_BOLD,         sumParseTP,  ANSI_RESET, ANSI_DIM, ANSI_RESET,
+           ANSI_GREEN ANSI_BOLD,       sumBuildTP,  ANSI_RESET, ANSI_DIM, ANSI_RESET,
+           ANSI_CYAN ANSI_BOLD,        sumRenderTP, ANSI_RESET, ANSI_DIM, ANSI_RESET,
+           ANSI_MAGENTA ANSI_BOLD,     sumTotalTP,  ANSI_RESET, ANSI_DIM, ANSI_RESET);
+
+    printf("  %s┗━━━━━━━━━━┻━━━━━━━━━┻━━━━━━━━━━┻━━━━━━━━━━┻━━━━━━━━━━┻━━━━━━━━━━┻━━━━━━━━━━┻━━━━━━━━━━━━┛%s\n", ANSI_DIM, ANSI_RESET);
+    printf("\n");
 }
 
 int main(int argCount, char **args) {
