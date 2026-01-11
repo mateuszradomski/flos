@@ -183,8 +183,9 @@ renderDocument(Render *r) {
 
     for(s64 i = 0; i < count; i++) {
         Word *word = &words[i];
+        WordType type = word->type;
 
-        if (word->type == WordType_GroupPush) {
+        if (type == WordType_GroupPush) {
             bool isFullyFlat = word->assumedFlatCount == -1;
             bool parentIsFullyFlat = stackIndex > 0 && fullyFlatStack[stackIndex - 1];
 
@@ -199,13 +200,13 @@ renderDocument(Render *r) {
                 flatMode = fits(words + (i + 1), count - (i + 1), word->assumedFlatCount, remainingWidth);
             }
             nestActiveMask = ((u32)flatMode) - 1;
-        } else if(word->type == WordType_GroupPop) {
+        } else if(type == WordType_GroupPop) {
             stackIndex--;
             flatMode = flatModeStack[stackIndex];
             nestActiveMask = ((u32)flatMode) - 1;
         }
 
-        if(word->type == WordType_HardBreak || (!flatMode && word->type == WordType_Line)) {
+        if(type == WordType_HardBreak || (!flatMode && type == WordType_Line)) {
             finishLine(w);
         } else {
             writeString(w, word->text, word->textSize, nest);
@@ -214,7 +215,6 @@ renderDocument(Render *r) {
         nest += word->nestStep & nestActiveMask;
     }
 }
-
 
 static void
 pushGroup(Render *r) {
