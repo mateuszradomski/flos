@@ -398,6 +398,11 @@ int main(int argCount, char **args) {
         char **paths = args + 1;
         u32 pathCount = argCount - 1;
 
+        if(pathCount == 0) {
+            printf("Usage: %s <paths>\n", args[0]);
+            return 1;
+        }
+
         StringQueue queue = { };
         for(u32 i = 0; i < ARRAY_LENGTH(queue.elements); i++) {
             queue.elements[i].sequenceNumber = i;
