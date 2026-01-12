@@ -582,16 +582,22 @@ consumeUntilMultilineCommentEnd(ByteConsumer *c) {
     return read;
 }
 
+static void
+skipWhitespace(ByteConsumer *c) {
+    u8 *end = c->data + c->length;
+    while(c->head < end && isWhitespace(*c->head)) {
+        c->head++;
+    }
+}
+
 static TokenizeResult
 tokenize(String source, Arena *arena) {
     TokenizeResult result = allocateTokenSpace(arena, source.size, source.size);
 
     ByteConsumer c = createByteConsumer(source.data, source.size);
-    while(consumerGood(&c)) {
+    while(skipWhitespace(&c), consumerGood(&c)) {
         u8 byte = consumeByte(&c);
-        if(isWhitespace(byte)) {
-            continue;
-        } else if(isAlphabet(byte) || byte == '_' || byte == '$') {
+        if(isAlphabet(byte) || byte == '_' || byte == '$') {
             String symbol = { .data = c.head - 1, .size = 1 };
 
             while(consumerGood(&c)) {
