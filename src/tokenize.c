@@ -549,43 +549,7 @@ categorizeSymbol(String symbol) {
 static u32
 consumeUntilNewline(ByteConsumer *c) {
     u32 read = 0;
-#ifdef WASM
-    u32 SIMD_LANE_SIZE = sizeof(v128_t);
 
-    v128_t nlMask = wasm_i8x16_splat('\n');
-    for(;;) {
-        if(consumerGoodN(c, SIMD_LANE_SIZE)) {
-            String string = peekString(c, SIMD_LANE_SIZE);
-            v128_t bytes = wasm_v128_load(string.data);
-            v128_t nlCmp = wasm_i8x16_eq(bytes, nlMask);
-            u32 newlineMask = wasm_i8x16_bitmask(nlCmp);
-
-            if(newlineMask > 0) {
-                u32 toEat = countTrailingZeros(newlineMask);
-                toEat += 1; // we want to eat the newline as well
-                read += toEat;
-                advanceN(c, toEat);
-                break;
-            } else {
-                read += SIMD_LANE_SIZE;
-                advanceN(c, SIMD_LANE_SIZE);
-            }
-        } else {
-            while(consumerGood(c)) {
-                u8 nextByte = peekByte(c);
-                if(nextByte != '\n') {
-                    read += 1;
-                    consumeByte(c);
-                } else {
-                    break;
-                }
-            }
-
-            break;
-        }
-    }
-
-#else
     while(consumerGood(c)) {
         u8 nextByte = peekByte(c);
         if(nextByte != '\n') {
@@ -595,66 +559,14 @@ consumeUntilNewline(ByteConsumer *c) {
             break;
         }
     }
-#endif
+
     return read;
 }
 
 static u32
 consumeUntilMultilineCommentEnd(ByteConsumer *c) {
     u32 read = 0;
-#ifdef WASM
-    u32 SIMD_LANE_SIZE = sizeof(v128_t);
 
-    v128_t starMask = wasm_i8x16_splat('*');
-    v128_t slashMask = wasm_i8x16_splat('/');
-    for(;;) {
-        if(consumerGoodN(c, SIMD_LANE_SIZE)) {
-            String string = peekString(c, SIMD_LANE_SIZE);
-
-            v128_t bytes = wasm_v128_load(string.data);
-            v128_t starCmp = wasm_i8x16_eq(bytes, starMask);
-            u32 starMask = wasm_i8x16_bitmask(starCmp);
-
-            if(starMask > 0) {
-                if(countTrailingZeros(starMask) == 0) {
-                    v128_t slashCmp = wasm_i8x16_eq(bytes, slashMask);
-                    u32 slashMask = wasm_i8x16_bitmask(slashCmp);
-                    if(slashMask & 2) {
-                        read += 2;
-                        advanceN(c, 2);
-                        break;
-                    } else {
-                        read += 1;
-                        advanceN(c, 1);
-                    }
-                } else {
-                    u32 toEat = countTrailingZeros(starMask);
-                    read += toEat;
-                    advanceN(c, toEat);
-                }
-            } else {
-                read += SIMD_LANE_SIZE;
-                advanceN(c, SIMD_LANE_SIZE);
-            }
-        } else {
-            while(consumerGood(c)) {
-                String next2Bytes = peekString(c, 2);
-
-                if(stringMatch(next2Bytes, LIT_TO_STR("*/"))) {
-                    read += 2;
-                    consumeByte(c);
-                    consumeByte(c);
-                    break;
-                } else {
-                    read += 1;
-                    consumeByte(c);
-                }
-            }
-
-            break;
-        }
-    }
-#else
     while(consumerGood(c)) {
         String next2Bytes = peekString(c, 2);
 
@@ -668,7 +580,6 @@ consumeUntilMultilineCommentEnd(ByteConsumer *c) {
             consumeByte(c);
         }
     }
-#endif
 
     return read;
 }
