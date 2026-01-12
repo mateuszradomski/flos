@@ -548,18 +548,10 @@ categorizeSymbol(String symbol) {
 
 static u32
 consumeUntilNewline(ByteConsumer *c) {
-    u32 read = 0;
-
-    while(consumerGood(c)) {
-        u8 nextByte = peekByte(c);
-        if(nextByte != '\n') {
-            read += 1;
-            consumeByte(c);
-        } else {
-            break;
-        }
-    }
-
+    u32 remaining = c->length - (u32)(c->head - c->data);
+    u8 *found = memchr(c->head, '\n', remaining);
+    u32 read = found ? (u32)(found - c->head) : remaining;
+    c->head += read;
     return read;
 }
 
@@ -568,17 +560,23 @@ consumeUntilMultilineCommentEnd(ByteConsumer *c) {
     u32 read = 0;
 
     while(consumerGood(c)) {
-        String next2Bytes = peekString(c, 2);
-
-        if(stringMatch(next2Bytes, LIT_TO_STR("*/"))) {
-            read += 2;
-            consumeByte(c);
-            consumeByte(c);
+        u32 remaining = c->length - (u32)(c->head - c->data);
+        u8 *found = memchr(c->head, '*', remaining);
+        if(!found) {
+            read += remaining;
+            c->head += remaining;
             break;
-        } else {
-            read += 1;
-            consumeByte(c);
         }
+        u32 skip = (u32)(found - c->head);
+        read += skip;
+        c->head = found;
+        if(consumerGoodN(c, 2) && c->head[1] == '/') {
+            read += 2;
+            c->head += 2;
+            break;
+        }
+        read += 1;
+        c->head += 1;
     }
 
     return read;
