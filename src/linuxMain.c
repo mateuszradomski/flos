@@ -418,6 +418,12 @@ printThreadMetrics(ThreadWork *jobs, u32 processorCount) {
     double sumRenderTP = (totalBytes / ((double)totalRender / NS_IN_SECOND)) / 1e6;
     double sumTotalTP  = (totalBytes / ((double)elapsedTotal / NS_IN_SECOND)) / 1e6;
 
+    double sumReadPart   = ((double)totalRead / elapsedTotal) * 100;
+    double sumTokenPart  = ((double)totalToken / elapsedTotal) * 100;
+    double sumParsePart  = ((double)totalParse / elapsedTotal) * 100;
+    double sumBuildPart  = ((double)totalBuild / elapsedTotal) * 100;
+    double sumRenderPart = ((double)totalRender / elapsedTotal) * 100;
+
     printf("  %s┃%s  %s∑ Total%s %s┃%s %s%6llu%s  %s┃%s %s%8.1f%s %s┃%s %s%8.1f%s %s┃%s %s%8.1f%s %s┃%s %s%8.1f%s %s┃%s %s%8.1f%s %s┃%s  %s%8.1f%s  %s┃%s\n",
            ANSI_DIM, ANSI_RESET, ANSI_WHITE_BRIGHT ANSI_BOLD, ANSI_RESET, ANSI_DIM, ANSI_RESET,
            ANSI_GREEN_LIGHT ANSI_BOLD, (unsigned long long)totalFiles, ANSI_RESET, ANSI_DIM, ANSI_RESET,
@@ -427,6 +433,15 @@ printThreadMetrics(ThreadWork *jobs, u32 processorCount) {
            ANSI_GREEN ANSI_BOLD,       sumBuildTP,  ANSI_RESET, ANSI_DIM, ANSI_RESET,
            ANSI_CYAN ANSI_BOLD,        sumRenderTP, ANSI_RESET, ANSI_DIM, ANSI_RESET,
            ANSI_MAGENTA ANSI_BOLD,     sumTotalTP,  ANSI_RESET, ANSI_DIM, ANSI_RESET);
+    printf("  %s┃%s  %s   Part%s %s┃%s         %s┃%s %s%7.1f%%%s %s┃%s %s%7.1f%%%s %s┃%s %s%7.1f%%%s %s┃%s %s%7.1f%%%s %s┃%s %s%7.1f%%%s %s┃%s            %s┃%s\n",
+           ANSI_DIM, ANSI_RESET, ANSI_WHITE_BRIGHT ANSI_BOLD, ANSI_RESET, ANSI_DIM, ANSI_RESET,
+           ANSI_DIM, ANSI_RESET,
+           ANSI_YELLOW ANSI_BOLD,      sumReadPart, ANSI_RESET, ANSI_DIM, ANSI_RESET,
+           ANSI_BLUE ANSI_BOLD,        sumTokenPart,  ANSI_RESET, ANSI_DIM, ANSI_RESET,
+           ANSI_RED ANSI_BOLD,         sumParsePart,  ANSI_RESET, ANSI_DIM, ANSI_RESET,
+           ANSI_GREEN ANSI_BOLD,       sumBuildPart,  ANSI_RESET, ANSI_DIM, ANSI_RESET,
+           ANSI_CYAN ANSI_BOLD,        sumRenderPart, ANSI_RESET, ANSI_DIM, ANSI_RESET,
+           ANSI_DIM, ANSI_RESET);
 
     printf("  %s┗━━━━━━━━━━┻━━━━━━━━━┻━━━━━━━━━━┻━━━━━━━━━━┻━━━━━━━━━━┻━━━━━━━━━━┻━━━━━━━━━━┻━━━━━━━━━━━━┛%s\n", ANSI_DIM, ANSI_RESET);
     printf("\n");
