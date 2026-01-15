@@ -188,6 +188,7 @@ readTestInput(Arena *arena, char *path) {
 
   result.input = stringTrim(stringUnixLines(result.input));
   result.output = stringTrim(stringUnixLines(result.output));
+  result.input.data[result.input.size] = result.output.data[result.output.size] = 0;
 
   result.output.data[result.output.size] = 0;
 
@@ -267,6 +268,7 @@ testFormat(const MunitParameter params[], void* userData) {
     showDifferences(&arena, result, data.output);
     munit_assert_true(stringMatch(result, data.output));
 
+    result.data[result.size] = 0;
     String result2 = stringTrim(format(&arena, &arena, result).source);
     showDifferences(&arena, result, result2);
     munit_assert_true(stringMatch(result2, result));

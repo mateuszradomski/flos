@@ -380,7 +380,7 @@ tokenizeNumberLiteral(ByteConsumer *c, u8 byte) {
         String symbol = { .data = c->head - 1, .size = 2 };
         consumeByte(c);
 
-        while(consumerGood(c)) {
+        while(peekByte(c)) {
             u8 nextByte = peekByte(c);
             if(!(isHexDigit(nextByte) || nextByte == '_')) {
                 break;
@@ -397,7 +397,7 @@ tokenizeNumberLiteral(ByteConsumer *c, u8 byte) {
     } else {
         String symbol = { .data = c->head - 1, .size = 1 };
 
-        while(consumerGood(c)) {
+        while(peekByte(c)) {
             u8 nextByte = peekByte(c);
             if(!(isDigit(nextByte) || nextByte == '_')) {
                 break;
@@ -412,7 +412,7 @@ tokenizeNumberLiteral(ByteConsumer *c, u8 byte) {
             consumeByte(c);
         }
 
-        while(consumerGood(c)) {
+        while(peekByte(c)) {
             u8 nextByte = peekByte(c);
             if(!(isDigit(nextByte) || nextByte == '_')) {
                 break;
@@ -431,7 +431,7 @@ tokenizeNumberLiteral(ByteConsumer *c, u8 byte) {
                 consumeByte(c);
             }
 
-            while(consumerGood(c)) {
+            while(peekByte(c)) {
                 u8 nextByte = peekByte(c);
                 if(isDigit(nextByte) || nextByte == '_') {
                     symbol.size += 1;
@@ -566,7 +566,7 @@ static u32
 consumeUntilMultilineCommentEnd(ByteConsumer *c) {
     u32 read = 0;
 
-    while(consumerGood(c)) {
+    while(peekByte(c)) {
         u32 remaining = c->length - (u32)(c->head - c->data);
         u8 *found = memchr(c->head, '*', remaining);
         if(!found) {
@@ -591,8 +591,7 @@ consumeUntilMultilineCommentEnd(ByteConsumer *c) {
 
 static void
 skipWhitespace(ByteConsumer *c) {
-    u8 *end = c->data + c->length;
-    while(c->head < end && isWhitespace(*c->head)) {
+    while(isWhitespace(*c->head)) {
         c->head++;
     }
 }
@@ -601,8 +600,10 @@ static TokenizeResult
 tokenize(String source, Arena *arena) {
     TokenizeResult result = allocateTokenSpace(arena, source.size, source.size);
 
+    assert(source.data[source.size] == 0);
     ByteConsumer c = createByteConsumer(source.data, source.size);
-    while(skipWhitespace(&c), consumerGood(&c)) {
+    while(true) {
+        skipWhitespace(&c);
         u8 byte = consumeByte(&c);
         if(isAlphabet(byte) || byte == '_' || byte == '$') {
             String symbol = { .data = c.head - 1, .size = 1 };
@@ -619,7 +620,7 @@ tokenize(String source, Arena *arena) {
                 consumeByte(&c);
                 String symbol = { .data = c.head, .size = 0 };
 
-                while(consumerGood(&c)) {
+                while(peekByte(&c)) {
                     u8 nextByte = consumeByte(&c);
                     if(nextByte == delimiter) {
                         break;
@@ -643,7 +644,7 @@ tokenize(String source, Arena *arena) {
                 consumeByte(&c);
                 String symbol = { .data = c.head, .size = 0 };
 
-                while(consumerGood(&c)) {
+                while(peekByte(&c)) {
                     u8 nextByte = consumeByte(&c);
                     if(nextByte == delimiter) {
                         break;
@@ -682,7 +683,7 @@ tokenize(String source, Arena *arena) {
         } else if(byte == '"') {
             String symbol = { .data = c.head, .size = 0 };
             u32 escapeCount = 0;
-            while(consumerGood(&c)) {
+            while(peekByte(&c)) {
                 u8 nextByte = consumeByte(&c);
                 if(nextByte == '"' && (escapeCount & 1) == 0) {
                     break;
@@ -696,7 +697,7 @@ tokenize(String source, Arena *arena) {
         } else if(byte == '\'') {
             String symbol = { .data = c.head, .size = 0 };
             u32 escapeCount = 0;
-            while(consumerGood(&c)) {
+            while(peekByte(&c)) {
                 u8 nextByte = consumeByte(&c);
                 if(nextByte == '\'' && (escapeCount & 1) == 0) {
                     break;
@@ -864,14 +865,17 @@ tokenize(String source, Arena *arena) {
             }
         } else if(byte == '?') {
             pushToken(&result, TokenType_QuestionMark, (String){ .data = c.head - 1, .size = 1 });
+        } else if(byte == '\0') {
+            pushToken(&result, TokenType_EOF, (String){0});
+            goto end;
         } else {
             javascriptPrintString("Ouch! Unhandled character: ");
             javascriptPrintNumber(byte);
             assert(false);
         }
     }
+end:
 
-    pushToken(&result, TokenType_EOF, (String){0});
 
     return result;
 }

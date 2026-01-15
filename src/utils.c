@@ -812,11 +812,6 @@ createByteConsumer(u8 *data, u32 length) {
 }
 
 static u32
-consumerGood(ByteConsumer *c) {
-    return c->head < c->end;
-}
-
-static u32
 consumerGoodN(ByteConsumer *c, u32 size) {
     return c->head + size <= c->end;
 }
