@@ -365,6 +365,13 @@ pushToken(TokenizeResult *result, TokenType tokenType, String string) {
     result->count += 1;
 }
 
+static const u8 isIdentifierChar[256] = {
+    ['_'] = 1, ['$'] = 1,
+    ['0' ... '9'] = 1,
+    ['A' ... 'Z'] = 1,
+    ['a' ... 'z'] = 1,
+};
+
 static Token
 tokenizeNumberLiteral(ByteConsumer *c, u8 byte) {
     u8 nextByte = peekByte(c);
@@ -600,14 +607,10 @@ tokenize(String source, Arena *arena) {
         if(isAlphabet(byte) || byte == '_' || byte == '$') {
             String symbol = { .data = c.head - 1, .size = 1 };
 
-            while(consumerGood(&c)) {
-                u8 nextByte = peekByte(&c);
-                if(nextByte == '_' || nextByte == '$' || isAlphabet(nextByte) || isDigit(nextByte)) {
-                    symbol.size += 1;
-                    consumeByte(&c);
-                } else {
-                    break;
-                }
+            u8 *end = c.data + c.length;
+            while(c.head < end && isIdentifierChar[*c.head]) {
+                symbol.size++;
+                c.head++;
             }
 
             u8 nextByte = peekByte(&c);

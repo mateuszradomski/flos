@@ -795,6 +795,7 @@ stringPushf(Arena *arena, const char *format, ...) {
 typedef struct ByteConsumer {
     u8 *data;
     u8 *head;
+    u8 *end;
     u32 length;
 } ByteConsumer;
 
@@ -803,6 +804,7 @@ createByteConsumer(u8 *data, u32 length) {
     ByteConsumer result = {
         .data = data,
         .head = data,
+        .end = data + length,
         .length = length,
     };
 
@@ -811,12 +813,12 @@ createByteConsumer(u8 *data, u32 length) {
 
 static u32
 consumerGood(ByteConsumer *c) {
-    return (c->head - c->data) < c->length;
+    return c->head < c->end;
 }
 
 static u32
 consumerGoodN(ByteConsumer *c, u32 size) {
-    return ((c->head - c->data) + size - 1) < c->length;
+    return c->head + size <= c->end;
 }
 
 static void
@@ -826,19 +828,16 @@ advanceN(ByteConsumer *c, u32 size) {
 
 static u8
 consumeByte(ByteConsumer *c) {
-    assert(consumerGood(c));
     return *(c->head++);
 }
 
 static u8
 peekByte(ByteConsumer *c) {
-    assert(consumerGood(c));
     return *(c->head);
 }
 
 static u16
 consumeWord(ByteConsumer *c) {
-    assert(consumerGoodN(c, 2));
     u16 result = *(u16 *)c->head;
     c->head += 2;
     return result;
@@ -846,13 +845,11 @@ consumeWord(ByteConsumer *c) {
 
 static u16
 peekWord(ByteConsumer *c) {
-    assert(consumerGoodN(c, 2));
     return *(u16 *)c->head;
 }
 
 static u32
 consumeDWord(ByteConsumer *c) {
-    assert(consumerGoodN(c, 4));
     u32 result = *(u32 *)c->head;
     c->head += 4;
     return result;
@@ -860,7 +857,6 @@ consumeDWord(ByteConsumer *c) {
 
 static u32
 peekDWord(ByteConsumer *c) {
-    assert(consumerGoodN(c, 4));
     return *(u32 *)c->head;
 }
 
