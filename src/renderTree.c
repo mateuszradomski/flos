@@ -2,8 +2,6 @@ typedef struct Writer {
     u8 *data;
     u32 size;
     u32 capacity;
-
-    u32 indentSize;
     u32 lineSize;
 } Writer;
 
@@ -36,6 +34,8 @@ typedef struct Word {
 } Word;
 
 typedef struct Render {
+    u32 indentSize;
+
     Writer writer;
     TokenizeResult tokens;
     u8 *sourceBaseAddress;
@@ -246,7 +246,7 @@ popGroup(Render *r) {
 
 static void
 modifyNestAt(Render *r, s32 index, s32 delta) {
-    r->words[index].nestStep += delta * r->writer.indentSize;
+    r->words[index].nestStep += delta * r->indentSize;
 }
 
 static void
@@ -384,11 +384,7 @@ pushCommentsInRange(Render *r, u32 startOffset, u32 endOffset) {
         return;
     }
 
-    s32 baseWordCount = r->wordCount;
-    u32 baseTrailing = r->trailingCount;
-
     u32 i = 0;
-    u32 commentsWritten = 0;
     while(i < input.size) {
         u32 newlineCount = 0;
         for(; i < input.size && isWhitespace(input.data[i]); i++) {
@@ -410,7 +406,6 @@ pushCommentsInRange(Render *r, u32 startOffset, u32 endOffset) {
 
         u32 commentStart = i;
         if(i++ >= input.size) { break; }
-        commentsWritten += 1;
 
         if(input.data[i++] == '/') {
             for(; i < input.size && input.data[i] != '\n'; i += 1) {}
@@ -467,14 +462,9 @@ pushCommentsInRange(Render *r, u32 startOffset, u32 endOffset) {
                     pushTrailing(r, wordText(stringTrim(line)));
                 }
             } else {
-                pushTrailing(r, wordText(stringTrim(comment)));
+                pushTrailing(r, wordText(comment));
             }
         }
-    }
-
-    if(commentsWritten == 0) {
-        r->wordCount = baseWordCount;
-        r->trailingCount = baseTrailing;
     }
 }
 
@@ -2912,11 +2902,11 @@ createRender(Arena *arena, String originalSource, TokenizeResult tokens) {
     u32 scratchBufferCapacity = MAX(64 * Kilobyte, (originalSource.size / 5));
     u32 wordCount = (originalSource.size / 4) * 3;
     Render render = {
+        .indentSize = 4,
         .writer = {
             .data = arrayPush(arena, u8, originalSource.size * 3),
             .size = 0,
             .capacity = originalSource.size * 4 ,
-            .indentSize = 4,
         },
         .tokens = tokens,
         .sourceBaseAddress = originalSource.data,
