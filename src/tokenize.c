@@ -450,7 +450,7 @@ tokenizeNumberLiteral(ByteConsumer *c, u8 byte) {
 }
 
 static TokenType
-categorizeSymbol(String symbol) {
+categorizeSymbolSwitch(String symbol) {
     switch(symbol.size) {
         case 2: {
             if(stringMatch(symbol, LIT_TO_STR("as"))) return TokenType_As;
@@ -551,6 +551,43 @@ categorizeSymbol(String symbol) {
             return TokenType_Symbol;
         }
     }
+}
+
+#include "src/table.h"
+
+static TokenType
+categorizeSymbolPTable(String symbol) {
+    const u8 *actual = symbol.data;
+    u32 size = (u32)symbol.size;
+
+    u32 preHash = (((u32)*(u16 *)actual) << 16) | ((u32)*(u16 *)(actual + size - 2));
+    u32 index = ((preHash * 0x064197c7u) >> 22) & 255;
+
+    if(keywordPreHashes[index] != preHash) {
+        return TokenType_Symbol;
+    }
+
+    if(keywordLens[index] != size) {
+        return TokenType_Symbol;
+    }
+
+    if(size <= 4) {
+        return keywordTypes[index];
+    }
+
+    const u8 *expected = (const u8 *)keywordTexts[index];
+    u64 diff = *(u64 *)actual ^ *(u64 *)expected;
+    if (size < 8) {
+        diff <<= (8 - size) << 3;
+    } else if (size > 8) {
+        diff |= *(u64 *)(actual + size - 8) ^ *(u64 *)(expected + size - 8);
+    }
+    return diff == 0 ? keywordTypes[index] : TokenType_Symbol;
+}
+
+static TokenType
+categorizeSymbol(String symbol) {
+    return categorizeSymbolPTable(symbol);
 }
 
 static u32
