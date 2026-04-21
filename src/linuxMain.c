@@ -254,20 +254,136 @@ typedef struct TestEntry {
 } TestEntry;
 
 static void
+printBenchHeader(void) {
+    printf("  %-10s  %7s %7s %7s      %6s %6s %6s     %8s\n",
+           "", "--- ms", "(min/avg", "max) ---", "- cyc/b", "(min/avg", "max) -", "");
+    printf("  %-10s  %7s %7s %7s      %6s %6s %6s     %8s\n",
+           "Stage", "min", "avg", "max", "min", "avg", "max", "runs");
+}
+
+static void
+printBenchEntry(const char *name, TestEntry t, double cpuFreq, u64 contentSize) {
+    double toMs  = 1000.0 / cpuFreq;
+    double toCpb = 1.0 / (double)contentSize;
+
+    printf("  %-10s  %7.3f %7.3f %7.3f      %6.2f %6.2f %6.2f     %8llu\n",
+           name,
+           t.minCycles * toMs,  t.avgCycles * toMs,  t.maxCycles * toMs,
+           t.minCycles * toCpb, t.avgCycles * toCpb, t.maxCycles * toCpb,
+           t.runCount);
+}
+
+static void
+printCountdown(u64 startedAt, u64 testDuration, u64 *lastWholeSecond, const char *label) {
+    u64 now = readTimer();
+    u64 endAt = startedAt + testDuration;
+    u64 remaining = (endAt > now) ? (endAt - now) : 0;
+    u64 wholeSecond = remaining / NS_IN_SECOND;
+    if(wholeSecond != *lastWholeSecond) {
+        printf("\r  %s: %llu seconds left... ", label, (unsigned long long)wholeSecond);
+        fflush(stdout);
+        *lastWholeSecond = wholeSecond;
+    }
+}
+
+static void
+clearCountdownLine(void) {
+    printf("\r\033[K");
+    fflush(stdout);
+}
+
+static void
 repetitionTesterMain(Arena *arena, String content) {
-    TokenizeResult tokens = tokenize(content, arena);
-    Parser parser = createParser(tokens, arena);
-    ASTNode node = parseSourceUnit(&parser);
-
-    Render render = createRender(arena, content, tokens);
-    Render cleanRender = render;
-
     u64 startedAt = readTimer();
     u64 maxTiming = 0;
     u64 minTiming = (u64)(-1);
     u64 timingSum = 0;
     u64 timingCount = 0;
     u64 testDuration = 10 * NS_IN_SECOND;
+    u64 lastWhole = (u64)-1;
+
+    TokenizeResult tokens;
+
+    while(startedAt + testDuration > readTimer()) {
+        u64 start = arenaPos(arena);
+
+        u64 timing = -readTimer();
+        tokens = tokenize(content, arena);
+        timing += readTimer();
+
+        arenaPopTo(arena, start);
+
+        timingSum += timing;
+        timingCount += 1;
+        maxTiming = maxTiming > timing ? maxTiming : timing;
+        if(timing < minTiming) {
+            minTiming = timing;
+            startedAt = readTimer();
+        }
+
+        printCountdown(startedAt, testDuration, &lastWhole, "Tokenize");
+    }
+    clearCountdownLine();
+
+    TestEntry lex = {
+        .minCycles = minTiming,
+        .maxCycles = maxTiming,
+        .avgCycles = timingSum / timingCount,
+        .runCount = timingCount,
+    };
+
+    tokens = tokenize(content, arena);
+    Parser parser;
+    ASTNode node;
+
+    startedAt = readTimer();
+    maxTiming = 0;
+    minTiming = (u64)(-1);
+    timingSum = 0;
+    timingCount = 0;
+    lastWhole = (u64)-1;
+
+    while(startedAt + testDuration > readTimer()) {
+        u64 start = arenaPos(arena);
+
+        u64 timing = -readTimer();
+        parser = createParser(tokens, arena);
+        node = parseSourceUnit(&parser);
+        timing += readTimer();
+
+        arenaPopToZero(arena, start);
+
+        timingSum += timing;
+        timingCount += 1;
+        maxTiming = maxTiming > timing ? maxTiming : timing;
+        if(timing < minTiming) {
+            minTiming = timing;
+            startedAt = readTimer();
+        }
+        printCountdown(startedAt, testDuration, &lastWhole, "Parse");
+    }
+    clearCountdownLine();
+
+    TestEntry parse = {
+        .minCycles = minTiming,
+        .maxCycles = maxTiming,
+        .avgCycles = timingSum / timingCount,
+        .runCount = timingCount,
+    };
+
+    tokens = tokenize(content, arena);
+    parser = createParser(tokens, arena);
+    node = parseSourceUnit(&parser);
+
+    Render render = createRender(arena, content, tokens);
+    Render cleanRender = render;
+
+    startedAt = readTimer();
+    maxTiming = 0;
+    minTiming = (u64)(-1);
+    timingSum = 0;
+    timingCount = 0;
+    lastWhole = (u64)-1;
 
     while(startedAt + testDuration > readTimer()) {
         u64 timing = -readTimer();
@@ -282,7 +398,9 @@ repetitionTesterMain(Arena *arena, String content) {
             minTiming = timing;
             startedAt = readTimer();
         }
+        printCountdown(startedAt, testDuration, &lastWhole, "Document build");
     }
+    clearCountdownLine();
 
     TestEntry docBuild = {
         .minCycles = minTiming,
@@ -298,6 +416,7 @@ repetitionTesterMain(Arena *arena, String content) {
     minTiming = (u64)(-1);
     timingSum = 0;
     timingCount = 0;
+    lastWhole = (u64)-1;
 
     while(startedAt + testDuration > readTimer()) {
         u64 timing = -readTimer();
@@ -312,7 +431,10 @@ repetitionTesterMain(Arena *arena, String content) {
             minTiming = timing;
             startedAt = readTimer();
         }
+
+        printCountdown(startedAt, testDuration, &lastWhole, "Document render");
     }
+    clearCountdownLine();
 
     TestEntry docRender = {
         .minCycles = minTiming,
@@ -322,19 +444,11 @@ repetitionTesterMain(Arena *arena, String content) {
     };
 
     double cpuFreq = NS_IN_SECOND;
-    printf("BuildDoc:\n");
-    printf("  Minimum     %9llu cycles, %f ms, %f cycles/b\n", docBuild.minCycles, (double)docBuild.minCycles / cpuFreq * 1e3, (double)docBuild.minCycles / content.size);
-    printf("  Average     %9llu cycles, %f ms, %f cycles/b\n", docBuild.avgCycles, (double)docBuild.avgCycles / cpuFreq * 1e3, (double)docBuild.avgCycles / content.size);
-    printf("  Maximum     %9llu cycles, %f ms, %f cycles/b\n", docBuild.maxCycles, (double)docBuild.maxCycles / cpuFreq * 1e3, (double)docBuild.maxCycles / content.size);
-    printf("  ---------\n");
-    printf("  Run count   %9llu\n", docBuild.runCount);
-    printf("\n");
-    printf("RenderDoc:\n");
-    printf("  Minimum     %9llu cycles, %f ms, %f cycles/b\n", docRender.minCycles, (double)docRender.minCycles / cpuFreq * 1e3, (double)docRender.minCycles / content.size);
-    printf("  Average     %9llu cycles, %f ms, %f cycles/b\n", docRender.avgCycles, (double)docRender.avgCycles / cpuFreq * 1e3, (double)docRender.avgCycles / content.size);
-    printf("  Maximum     %9llu cycles, %f ms, %f cycles/b\n", docRender.maxCycles, (double)docRender.maxCycles / cpuFreq * 1e3, (double)docRender.maxCycles / content.size);
-    printf("  ---------\n");
-    printf("  Run count   %9llu\n", docRender.runCount);
+    printBenchHeader();
+    printBenchEntry("Tokenize",  lex,       cpuFreq, content.size);
+    printBenchEntry("Parse",     parse,     cpuFreq, content.size);
+    printBenchEntry("BuildDoc",  docBuild,  cpuFreq, content.size);
+    printBenchEntry("RenderDoc", docRender, cpuFreq, content.size);
 }
 
 static void
