@@ -785,37 +785,74 @@ isFixedPointNumberType(String string, String fixedPointPrefix) {
     return false;
 }
 
+u32 firstCharBaseTypeLUT =
+    (1 << ('a' - 'a')) |
+    (1 << ('b' - 'a')) |
+    (1 << ('f' - 'a')) |
+    (1 << ('i' - 'a')) |
+    (1 << ('s' - 'a')) |
+    (1 << ('u' - 'a')) |
+    (1 << ('v' - 'a'));
+
 static bool
 isBaseTypeName(String string) {
-    static String elementaryTypeNames[] = {
-        LIT_TO_STR("address"),
-        LIT_TO_STR("bool"),
-        LIT_TO_STR("string"),
-        LIT_TO_STR("byte"),
-        LIT_TO_STR("bytes"),
-        LIT_TO_STR("int"),
-        LIT_TO_STR("var"),
-        LIT_TO_STR("uint"),
-        LIT_TO_STR("fixed"),
-        LIT_TO_STR("ufixed"),
-    };
-
-    if(isSizedType(string, LIT_TO_STR("int"), 8, 256, 8) ||
-       isSizedType(string, LIT_TO_STR("uint"), 8, 256, 8) ||
-       isSizedType(string, LIT_TO_STR("bytes"), 1, 32, 1)) {
-        return true;
+    if(
+        string.size <= 2 || string.size > 12 ||
+        !isLowerAlphabet(string.data[0]) ||
+        (firstCharBaseTypeLUT & (1 << (string.data[0] - 'a'))) == 0
+    ) {
+        return false;
     }
 
-    for(u32 i = 0; i < ARRAY_LENGTH(elementaryTypeNames); i++) {
-        if(stringMatch(string, elementaryTypeNames[i])) {
-            return true;
+    switch(string.size) {
+        case 3: {
+            if(stringMatch(string, LIT_TO_STR("int"))) return true;
+            if(stringMatch(string, LIT_TO_STR("var"))) return true;
+            return false;
+        } break;
+        case 4: {
+            if(stringMatch(string, LIT_TO_STR("bool"))) return true;
+            if(stringMatch(string, LIT_TO_STR("byte"))) return true;
+            if(stringMatch(string, LIT_TO_STR("uint"))) return true;
+        } break;
+        case 5: {
+            if(stringMatch(string, LIT_TO_STR("bytes"))) return true;
+            if(stringMatch(string, LIT_TO_STR("fixed"))) return true;
+        } break;
+        case 6: {
+            if(stringMatch(string, LIT_TO_STR("string"))) return true;
+            if(stringMatch(string, LIT_TO_STR("ufixed"))) return true;
+        } break;
+        case 7: {
+            if(stringMatch(string, LIT_TO_STR("address"))) return true;
+            if(stringMatch(string, LIT_TO_STR("uint256"))) return true;
+            if(stringMatch(string, LIT_TO_STR("bytes32"))) return true;
+        } break;
+    }
+
+    switch(string.data[0]) {
+        case 'i': {
+            if(string.size > 6) return false;
+            return isSizedType(string, LIT_TO_STR("int"), 8, 256, 8);
+        }
+        case 'u': {
+            if(string.size <= 7)
+                return isSizedType(string, LIT_TO_STR("uint"), 8, 256, 8);
+            if(string.size >= 9)
+                return isFixedPointNumberType(string, LIT_TO_STR("ufixed"));
+            return false;
+        }
+        case 'b': {
+            if(string.size < 6) return false;
+            return isSizedType(string, LIT_TO_STR("bytes"), 1, 32, 1);
+        }
+        case 'f': {
+            if(string.size < 8 || string.size > 11) return false;
+            return isFixedPointNumberType(string, LIT_TO_STR("fixed"));
         }
     }
 
-    bool isFixed = isFixedPointNumberType(string, LIT_TO_STR("fixed"));
-    bool isUFixed = isFixedPointNumberType(string, LIT_TO_STR("ufixed"));
-
-    return isFixed || isUFixed;
+    return false;
 }
 
 static bool parseType(Parser *parser, ASTNode *node);

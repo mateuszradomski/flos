@@ -485,6 +485,11 @@ isAlphabet(char c) {
 }
 
 static bool
+isLowerAlphabet(char c) {
+    return (c >= 'a' & c <= 'z');
+}
+
+static bool
 isDigit(char c) {
     return (c >= '0' & c <= '9');
 }
