@@ -117,7 +117,6 @@ enum {
     TokenType_UnicodeStringLit,
     TokenType_NumberLit,
     TokenType_HexNumberLit,
-    TokenType_Comment,
     TokenType_Constructor,
     TokenType_Szabo,
     TokenType_Finney,
@@ -279,7 +278,6 @@ tokenTypeToString(TokenType tokenType) {
         case TokenType_NumberLit: return LIT_TO_STR("NumberLit");
         case TokenType_HexNumberLit: return LIT_TO_STR("HexNumberLit");
         case TokenType_UnicodeStringLit: return LIT_TO_STR("UnicodeStringLit");
-        case TokenType_Comment: return LIT_TO_STR("Comment");
         case TokenType_Constructor: return LIT_TO_STR("Constructor");
         case TokenType_Count: return LIT_TO_STR("Count");
         case TokenType_EOF: return LIT_TO_STR("EOF");
@@ -701,14 +699,10 @@ tokenize(String source, Arena *arena) {
                 String symbol = { .data = c.head - 1, .size = 2 };
                 consumeByte(&c);
                 symbol.size += consumeUntilMultilineCommentEnd(&c);
-
-                // pushToken(&result, TokenType_Comment, symbol);
             } else if(nextByte == '/') {
                 String symbol = { .data = c.head - 1, .size = 2 };
                 consumeByte(&c);
                 symbol.size += consumeUntilNewline(&c);
-
-                // pushToken(&result, TokenType_Comment, symbol);
             } else if(nextByte == '=') {
                 consumeByte(&c);
                 String symbol = { .data = c.head - 2, .size = 2 };

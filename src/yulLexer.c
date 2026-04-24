@@ -190,10 +190,6 @@ advanceYulToken(YulLexer *lexer) {
             result.type = YulTokenType_RParen;
             result.string = tokenString;
         } break;
-        case TokenType_Comment: {
-            result.type = YulTokenType_Comment;
-            result.string = tokenString;
-        } break;
         case TokenType_NumberLit: {
             result.type = YulTokenType_NumberLit;
             result.string = tokenString;

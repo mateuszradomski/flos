@@ -2323,8 +2323,6 @@ parseStatement(Parser *parser, ASTNode *node) {
         statement->body = structPush(parser->arena, ASTNode);
         parseYulBlock(parser, statement->body);
         node->endToken = parser->current - 1;
-    } else if(acceptToken(parser, TokenType_Comment)) {
-        return false;
     } else {
         u32 startToken = parser->current;
         if(tryParseVariableDeclaration(parser, node)) {
@@ -2727,8 +2725,6 @@ parseContractBody(Parser *parser, ASTNodeList *elements) {
             }
         } else if(acceptToken(parser, TokenType_EOF)) {
             break;
-        } else if(acceptToken(parser, TokenType_Comment)) {
-            continue;
         } else {
             assertError(tryParseStateVariableDeclaration(parser, &element->node),
                         parser, "Expected state variable declaration");
@@ -2951,8 +2947,6 @@ parseSourceUnit(Parser *parser) {
         } else if(acceptToken(parser, TokenType_EOF)) {
             node.endToken = MIN(parser->current - 2, parser->tokenCount - 1);
             break;
-        } else if(acceptToken(parser, TokenType_Comment)) {
-            continue;
         } else {
             u32 startToken = parser->current;
             ASTNode *type = structPush(parser->arena, ASTNode);
