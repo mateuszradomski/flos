@@ -292,6 +292,13 @@ clearCountdownLine(void) {
     fflush(stdout);
 }
 
+typedef enum EnabledTests {
+    EnabledTests_Tokenize = (1 << 0),
+    EnabledTests_Parse    = (1 << 1),
+    EnabledTests_Build    = (1 << 2),
+    EnabledTests_Render   = (1 << 3),
+} EnabledTests;
+
 static void
 repetitionTesterMain(Arena *arena, String content) {
     u64 startedAt = readTimer();
@@ -301,29 +308,32 @@ repetitionTesterMain(Arena *arena, String content) {
     u64 timingCount = 0;
     u64 testDuration = 10 * NS_IN_SECOND;
     u64 lastWhole = (u64)-1;
+    EnabledTests enabledTests = EnabledTests_Tokenize;
 
     TokenizeResult tokens;
 
-    while(startedAt + testDuration > readTimer()) {
-        u64 start = arenaPos(arena);
+    if(enabledTests & EnabledTests_Tokenize) {
+        while(startedAt + testDuration > readTimer()) {
+            u64 start = arenaPos(arena);
 
-        u64 timing = -readTimer();
-        tokens = tokenize(content, arena);
-        timing += readTimer();
+            u64 timing = -readTimer();
+            tokens = tokenize(content, arena);
+            timing += readTimer();
 
-        arenaPopTo(arena, start);
+            arenaPopTo(arena, start);
 
-        timingSum += timing;
-        timingCount += 1;
-        maxTiming = maxTiming > timing ? maxTiming : timing;
-        if(timing < minTiming) {
-            minTiming = timing;
-            startedAt = readTimer();
+            timingSum += timing;
+            timingCount += 1;
+            maxTiming = maxTiming > timing ? maxTiming : timing;
+            if(timing < minTiming) {
+                minTiming = timing;
+                startedAt = readTimer();
+            }
+
+            printCountdown(startedAt, testDuration, &lastWhole, "Tokenize");
         }
-
-        printCountdown(startedAt, testDuration, &lastWhole, "Tokenize");
+        clearCountdownLine();
     }
-    clearCountdownLine();
 
     TestEntry lex = {
         .minCycles = minTiming,
@@ -343,26 +353,28 @@ repetitionTesterMain(Arena *arena, String content) {
     timingCount = 0;
     lastWhole = (u64)-1;
 
-    while(startedAt + testDuration > readTimer()) {
-        u64 start = arenaPos(arena);
+    if(enabledTests & EnabledTests_Parse) {
+        while(startedAt + testDuration > readTimer()) {
+            u64 start = arenaPos(arena);
 
-        u64 timing = -readTimer();
-        parser = createParser(tokens, arena);
-        node = parseSourceUnit(&parser);
-        timing += readTimer();
+            u64 timing = -readTimer();
+            parser = createParser(tokens, arena);
+            node = parseSourceUnit(&parser);
+            timing += readTimer();
 
-        arenaPopToZero(arena, start);
+            arenaPopToZero(arena, start);
 
-        timingSum += timing;
-        timingCount += 1;
-        maxTiming = maxTiming > timing ? maxTiming : timing;
-        if(timing < minTiming) {
-            minTiming = timing;
-            startedAt = readTimer();
+            timingSum += timing;
+            timingCount += 1;
+            maxTiming = maxTiming > timing ? maxTiming : timing;
+            if(timing < minTiming) {
+                minTiming = timing;
+                startedAt = readTimer();
+            }
+            printCountdown(startedAt, testDuration, &lastWhole, "Parse");
         }
-        printCountdown(startedAt, testDuration, &lastWhole, "Parse");
+        clearCountdownLine();
     }
-    clearCountdownLine();
 
     TestEntry parse = {
         .minCycles = minTiming,
@@ -385,22 +397,24 @@ repetitionTesterMain(Arena *arena, String content) {
     timingCount = 0;
     lastWhole = (u64)-1;
 
-    while(startedAt + testDuration > readTimer()) {
-        u64 timing = -readTimer();
-        buildDocument(&render, &node, content, tokens);
-        timing += readTimer();
-        render = cleanRender;
+    if(enabledTests & EnabledTests_Build) {
+        while(startedAt + testDuration > readTimer()) {
+            u64 timing = -readTimer();
+            buildDocument(&render, &node, content, tokens);
+            timing += readTimer();
+            render = cleanRender;
 
-        timingSum += timing;
-        timingCount += 1;
-        maxTiming = maxTiming > timing ? maxTiming : timing;
-        if(timing < minTiming) {
-            minTiming = timing;
-            startedAt = readTimer();
+            timingSum += timing;
+            timingCount += 1;
+            maxTiming = maxTiming > timing ? maxTiming : timing;
+            if(timing < minTiming) {
+                minTiming = timing;
+                startedAt = readTimer();
+            }
+            printCountdown(startedAt, testDuration, &lastWhole, "Document build");
         }
-        printCountdown(startedAt, testDuration, &lastWhole, "Document build");
+        clearCountdownLine();
     }
-    clearCountdownLine();
 
     TestEntry docBuild = {
         .minCycles = minTiming,
@@ -418,23 +432,25 @@ repetitionTesterMain(Arena *arena, String content) {
     timingCount = 0;
     lastWhole = (u64)-1;
 
-    while(startedAt + testDuration > readTimer()) {
-        u64 timing = -readTimer();
-        renderDocument(&render);
-        timing += readTimer();
-        render.writer = cleanRender.writer;
+    if(enabledTests & EnabledTests_Render) {
+        while(startedAt + testDuration > readTimer()) {
+            u64 timing = -readTimer();
+            renderDocument(&render);
+            timing += readTimer();
+            render.writer = cleanRender.writer;
 
-        timingSum += timing;
-        timingCount += 1;
-        maxTiming = maxTiming > timing ? maxTiming : timing;
-        if(timing < minTiming) {
-            minTiming = timing;
-            startedAt = readTimer();
+            timingSum += timing;
+            timingCount += 1;
+            maxTiming = maxTiming > timing ? maxTiming : timing;
+            if(timing < minTiming) {
+                minTiming = timing;
+                startedAt = readTimer();
+            }
+
+            printCountdown(startedAt, testDuration, &lastWhole, "Document render");
         }
-
-        printCountdown(startedAt, testDuration, &lastWhole, "Document render");
+        clearCountdownLine();
     }
-    clearCountdownLine();
 
     TestEntry docRender = {
         .minCycles = minTiming,
