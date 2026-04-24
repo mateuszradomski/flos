@@ -1,4 +1,4 @@
-typedef enum YulTokenType {
+typedef enum YulTokenType_Enum {
     YulTokenType_None,
     YulTokenType_Let,
     YulTokenType_If,
@@ -27,7 +27,89 @@ typedef enum YulTokenType {
     YulTokenType_RightArrow,
     YulTokenType_EOF,
     YulTokenType_Count,
-} YulTokenType;
+} YulTokenType_Enum;
+
+typedef u8 YulTokenType;
+
+static YulTokenType
+tokenToYulTokenLUT[TokenType_Count] = {
+    [TokenType_As] = YulTokenType_Identifier,
+    [TokenType_Do] = YulTokenType_Identifier,
+    [TokenType_Is] = YulTokenType_Identifier,
+    [TokenType_New] = YulTokenType_Identifier,
+    [TokenType_Try] = YulTokenType_Identifier,
+    [TokenType_Wei] = YulTokenType_Identifier,
+    [TokenType_Days] = YulTokenType_Identifier,
+    [TokenType_Else] = YulTokenType_Identifier,
+    [TokenType_Emit] = YulTokenType_Identifier,
+    [TokenType_Enum] = YulTokenType_Identifier,
+    [TokenType_Gwei] = YulTokenType_Identifier,
+    [TokenType_Pure] = YulTokenType_Identifier,
+    [TokenType_Type] = YulTokenType_Identifier,
+    [TokenType_View] = YulTokenType_Identifier,
+    [TokenType_Catch] = YulTokenType_Identifier,
+    [TokenType_Ether] = YulTokenType_Identifier,
+    [TokenType_Event] = YulTokenType_Identifier,
+    [TokenType_Hours] = YulTokenType_Identifier,
+    [TokenType_Using] = YulTokenType_Identifier,
+    [TokenType_Weeks] = YulTokenType_Identifier,
+    [TokenType_While] = YulTokenType_Identifier,
+    [TokenType_Years] = YulTokenType_Identifier,
+    [TokenType_Delete] = YulTokenType_Identifier,
+    [TokenType_Import] = YulTokenType_Identifier,
+    [TokenType_Memory] = YulTokenType_Identifier,
+    [TokenType_Pragma] = YulTokenType_Identifier,
+    [TokenType_Public] = YulTokenType_Identifier,
+    [TokenType_Return] = YulTokenType_Identifier,
+    [TokenType_Struct] = YulTokenType_Identifier,
+    [TokenType_Indexed] = YulTokenType_Identifier,
+    [TokenType_Library] = YulTokenType_Identifier,
+    [TokenType_Mapping] = YulTokenType_Identifier,
+    [TokenType_Minutes] = YulTokenType_Identifier,
+    [TokenType_Private] = YulTokenType_Identifier,
+    [TokenType_Returns] = YulTokenType_Identifier,
+    [TokenType_Seconds] = YulTokenType_Identifier,
+    [TokenType_Storage] = YulTokenType_Identifier,
+    [TokenType_Virtual] = YulTokenType_Identifier,
+    [TokenType_Abstract] = YulTokenType_Identifier,
+    [TokenType_Assembly] = YulTokenType_Identifier,
+    [TokenType_Calldata] = YulTokenType_Identifier,
+    [TokenType_Constant] = YulTokenType_Identifier,
+    [TokenType_Contract] = YulTokenType_Identifier,
+    [TokenType_External] = YulTokenType_Identifier,
+    [TokenType_Fallback] = YulTokenType_Identifier,
+    [TokenType_Internal] = YulTokenType_Identifier,
+    [TokenType_Modifier] = YulTokenType_Identifier,
+    [TokenType_Override] = YulTokenType_Identifier,
+    [TokenType_Anonymous] = YulTokenType_Identifier,
+    [TokenType_Immutable] = YulTokenType_Identifier,
+    [TokenType_Interface] = YulTokenType_Identifier,
+    [TokenType_Unchecked] = YulTokenType_Identifier,
+    [TokenType_Constructor] = YulTokenType_Identifier,
+    [TokenType_From] = YulTokenType_Identifier,
+    [TokenType_Receive] = YulTokenType_Identifier,
+    [TokenType_Revert] = YulTokenType_Identifier,
+    [TokenType_Error] = YulTokenType_Identifier,
+    [TokenType_Global] = YulTokenType_Identifier,
+    [TokenType_Payable] = YulTokenType_Identifier,
+    [TokenType_If] = YulTokenType_If,
+    [TokenType_For] = YulTokenType_For,
+    [TokenType_Function] = YulTokenType_Function,
+    [TokenType_Break] = YulTokenType_Break,
+    [TokenType_Continue] = YulTokenType_Continue,
+    [TokenType_LBrace] = YulTokenType_LBrace,
+    [TokenType_RBrace] = YulTokenType_RBrace,
+    [TokenType_LParen] = YulTokenType_LParen,
+    [TokenType_RParen] = YulTokenType_RParen,
+    [TokenType_NumberLit] = YulTokenType_NumberLit,
+    [TokenType_StringLit] = YulTokenType_StringLit,
+    [TokenType_HexNumberLit] = YulTokenType_HexNumberLit,
+    [TokenType_False] = YulTokenType_BoolLit,
+    [TokenType_True] = YulTokenType_BoolLit,
+    [TokenType_HexStringLit] = YulTokenType_HexStringLit,
+    [TokenType_Dot] = YulTokenType_Dot,
+    [TokenType_Comma] = YulTokenType_Comma,
+};
 
 typedef struct YulToken {
     YulTokenType type;
@@ -67,101 +149,26 @@ advanceYulToken(YulLexer *lexer) {
     TokenType tokenType = getTokenType(lexer->tokens, lexer->currentPosition);
     String tokenString = getTokenString(lexer->tokens, lexer->currentPosition);
     lexer->currentPosition += 1;
+    if(tokenToYulTokenLUT[tokenType] != YulTokenType_None) {
+        result.type = tokenToYulTokenLUT[tokenType];
+        result.string = tokenString;
+    } else {
     switch(tokenType) {
-        case TokenType_As:
-        case TokenType_Do:
-        case TokenType_Is:
-        case TokenType_New:
-        case TokenType_Try:
-        case TokenType_Wei:
-        case TokenType_Days:
-        case TokenType_Else:
-        case TokenType_Emit:
-        case TokenType_Enum:
-        case TokenType_Gwei:
-        case TokenType_Pure:
-        case TokenType_Type:
-        case TokenType_View:
-        case TokenType_Catch:
-        case TokenType_Ether:
-        case TokenType_Event:
-        case TokenType_Hours:
-        case TokenType_Using:
-        case TokenType_Weeks:
-        case TokenType_While:
-        case TokenType_Years:
-        case TokenType_Delete:
-        case TokenType_Import:
-        case TokenType_Memory:
-        case TokenType_Pragma:
-        case TokenType_Public:
-        case TokenType_Return:
-        case TokenType_Struct:
-        case TokenType_Indexed:
-        case TokenType_Library:
-        case TokenType_Mapping:
-        case TokenType_Minutes:
-        case TokenType_Private:
-        case TokenType_Returns:
-        case TokenType_Seconds:
-        case TokenType_Storage:
-        case TokenType_Virtual:
-        case TokenType_Abstract:
-        case TokenType_Assembly:
-        case TokenType_Calldata:
-        case TokenType_Constant:
-        case TokenType_Contract:
-        case TokenType_External:
-        case TokenType_Fallback:
-        case TokenType_Internal:
-        case TokenType_Modifier:
-        case TokenType_Override:
-        case TokenType_Anonymous:
-        case TokenType_Immutable:
-        case TokenType_Interface:
-        case TokenType_Unchecked:
-        case TokenType_Constructor:
-        case TokenType_From:
-        case TokenType_Receive:
-        case TokenType_Revert:
-        case TokenType_Error:
-        case TokenType_Global:
-        case TokenType_Payable:
         case TokenType_Symbol: {
             if(stringMatch(tokenString, LIT_TO_STR("let"))) {
                 result.type = YulTokenType_Let;
+            } else if(stringMatch(tokenString, LIT_TO_STR("case"))) {
+                result.type = YulTokenType_Case;
             } else if(stringMatch(tokenString, LIT_TO_STR("leave"))) {
                 result.type = YulTokenType_Leave;
             } else if(stringMatch(tokenString, LIT_TO_STR("switch"))) {
                 result.type = YulTokenType_Switch;
-            } else if(stringMatch(tokenString, LIT_TO_STR("case"))) {
-                result.type = YulTokenType_Case;
             } else if(stringMatch(tokenString, LIT_TO_STR("default"))) {
                 result.type = YulTokenType_Default;
             } else {
                 result.type = YulTokenType_Identifier;
             }
 
-            result.string = tokenString;
-        } break;
-        case TokenType_If: {
-            result.type = YulTokenType_If;
-            result.string = tokenString;
-        } break;
-        case TokenType_For: {
-            result.type = YulTokenType_For;
-            result.string = tokenString;
-        } break;
-        case TokenType_Function: {
-            result.type = YulTokenType_Function;
-            result.string = tokenString;
-        } break;
-        case TokenType_Break: {
-            result.type = YulTokenType_Break;
-            result.string = tokenString;
-        } break;
-        case TokenType_Continue: {
-            result.type = YulTokenType_Continue;
             result.string = tokenString;
         } break;
         case TokenType_Colon: {
@@ -174,56 +181,12 @@ advanceYulToken(YulLexer *lexer) {
             result.string = tokenString;
             result.type = YulTokenType_RightArrow;
         } break;
-        case TokenType_LBrace: {
-            result.type = YulTokenType_LBrace;
-            result.string = tokenString;
-        } break;
-        case TokenType_RBrace: {
-            result.type = YulTokenType_RBrace;
-            result.string = tokenString;
-        } break;
-        case TokenType_LParen: {
-            result.type = YulTokenType_LParen;
-            result.string = tokenString;
-        } break;
-        case TokenType_RParen: {
-            result.type = YulTokenType_RParen;
-            result.string = tokenString;
-        } break;
-        case TokenType_NumberLit: {
-            result.type = YulTokenType_NumberLit;
-            result.string = tokenString;
-        } break;
-        case TokenType_StringLit: {
-            result.type = YulTokenType_StringLit;
-            result.string = tokenString;
-        } break;
-        case TokenType_HexNumberLit: {
-            result.type = YulTokenType_HexNumberLit;
-            result.string = tokenString;
-        } break;
-        case TokenType_False:
-        case TokenType_True: {
-            result.type = YulTokenType_BoolLit;
-            result.string = tokenString;
-        } break;
-        case TokenType_HexStringLit: {
-            result.type = YulTokenType_HexStringLit;
-            result.string = tokenString;
-        } break;
-        case TokenType_Dot: {
-            result.type = YulTokenType_Dot;
-            result.string = tokenString;
-        } break;
-        case TokenType_Comma: {
-            result.type = YulTokenType_Comma;
-            result.string = tokenString;
-        } break;
         default: {
             javascriptPrintString("Unknown token type in Yul lexer\n");
             javascriptPrintNumber(tokenType);
             assert(0);
         }
+    }
     }
 
     return result;
