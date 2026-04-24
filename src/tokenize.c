@@ -370,81 +370,50 @@ static const u8 isIdentifierChar[256] = {
     ['a' ... 'z'] = 1,
 };
 
+static const u8 charClass[256] = {
+    ['0'] = 0x3, ['1'] = 0x3, ['2'] = 0x3, ['3'] = 0x3, ['4'] = 0x3,
+    ['5'] = 0x3, ['6'] = 0x3, ['7'] = 0x3, ['8'] = 0x3, ['9'] = 0x3,
+
+    ['a'] = 0x2, ['b'] = 0x2, ['c'] = 0x2, ['d'] = 0x2, ['e'] = 0x2, ['f'] = 0x2,
+    ['A'] = 0x2, ['B'] = 0x2, ['C'] = 0x2, ['D'] = 0x2, ['E'] = 0x2, ['F'] = 0x2,
+
+    ['_'] = 0x3,
+};
+
+#define IS_DEC(b) (charClass[(b)] & 1)
+#define IS_HEX(b) (charClass[(b)] & 2)
+
 static Token
 tokenizeNumberLiteral(ByteConsumer *c, u8 byte) {
-    u8 nextByte = peekByte(c);
+    u8 *start = c->head - 1;
+    TokenType type = TokenType_NumberLit;
+    u8 next = peekByte(c);
 
-    if(byte == '0' && (nextByte == 'x' || nextByte == 'X')) {
-        String symbol = { .data = c->head - 1, .size = 2 };
+    if (byte == '0' && (next == 'x' || next == 'X')) {
         consumeByte(c);
-
-        while(peekByte(c)) {
-            u8 nextByte = peekByte(c);
-            if(!(isHexDigit(nextByte) || nextByte == '_')) {
-                break;
-            }
-
-            symbol.size += 1;
-            consumeByte(c);
-        }
-
-        return (Token) {
-            .type = TokenType_HexNumberLit,
-            .string = symbol,
-        };
+        while (IS_HEX(peekByte(c))) consumeByte(c);
+        type = TokenType_HexNumberLit;
     } else {
-        String symbol = { .data = c->head - 1, .size = 1 };
-
-        while(peekByte(c)) {
-            u8 nextByte = peekByte(c);
-            if(!(isDigit(nextByte) || nextByte == '_')) {
-                break;
-            }
-
-            symbol.size += 1;
-            consumeByte(c);
-        }
+        while (IS_DEC(peekByte(c))) consumeByte(c);
 
         if(peekByte(c) == '.' && isDigit(peekString(c, 2).data[1])) {
-            symbol.size += 1;
             consumeByte(c);
+            while (IS_DEC(peekByte(c))) consumeByte(c);
         }
 
-        while(peekByte(c)) {
-            u8 nextByte = peekByte(c);
-            if(!(isDigit(nextByte) || nextByte == '_')) {
-                break;
-            }
-
-            symbol.size += 1;
+        u8 e = peekByte(c);
+        if (e == 'e' || e == 'E') {
             consumeByte(c);
+            u8 s = peekByte(c);
+            if (s == '-' || s == '+') consumeByte(c);
+            while (IS_DEC(peekByte(c))) consumeByte(c);
         }
-
-        if(peekByte(c) == 'e' || peekByte(c) == 'E') {
-            symbol.size += 1;
-            consumeByte(c);
-
-            if(peekByte(c) == '-') {
-                symbol.size += 1;
-                consumeByte(c);
-            }
-
-            while(peekByte(c)) {
-                u8 nextByte = peekByte(c);
-                if(isDigit(nextByte) || nextByte == '_') {
-                    symbol.size += 1;
-                    consumeByte(c);
-                } else {
-                    break;
-                }
-            }
-        }
-
-        return (Token) {
-            .type = TokenType_NumberLit,
-            .string = symbol,
-        };
     }
+
+    return (Token){
+        .type = type,
+        .string = { .data = start, .size = (size_t)(c->head - start) },
+    };
 }
 
 static TokenType
@@ -589,9 +558,9 @@ categorizeSymbol(String symbol) {
 }
 
 static u32
-consumeUntilNewline(ByteConsumer *c) {
+consumeUntilDelimiter(ByteConsumer *c, u8 delimiter) {
     u32 remaining = c->length - (u32)(c->head - c->data);
-    u8 *found = memchr(c->head, '\n', remaining);
+    u8 *found = memchr(c->head, delimiter, remaining);
     u32 read = found ? (u32)(found - c->head) : remaining;
     c->head += read;
     return read;
@@ -650,7 +619,10 @@ tokenize(String source, Arena *arena) {
             }
 
             u8 nextByte = peekByte(&c);
-            if(stringMatch(symbol, LIT_TO_STR("hex")) && (nextByte == '"' || nextByte == '\'')) {
+            TokenType tokenType = categorizeSymbol(symbol);
+            if(tokenType != TokenType_HexStringLit && tokenType != TokenType_UnicodeStringLit) {
+                pushToken(&result, tokenType, symbol);
+            } else if(tokenType == TokenType_HexStringLit) {
                 u8 delimiter = nextByte;
                 consumeByte(&c);
                 String symbol = { .data = c.head, .size = 0 };
@@ -674,23 +646,15 @@ tokenize(String source, Arena *arena) {
                 }
 
                 pushToken(&result, TokenType_HexStringLit, symbol);
-            } else if(stringMatch(symbol, LIT_TO_STR("unicode")) && (nextByte == '"' || nextByte == '\'')) {
+            } else {
                 u8 delimiter = nextByte;
+
                 consumeByte(&c);
                 String symbol = { .data = c.head, .size = 0 };
-
-                while(peekByte(&c)) {
-                    u8 nextByte = consumeByte(&c);
-                    if(nextByte == delimiter) {
-                        break;
-                    }
-                    symbol.size += 1;
-                }
+                symbol.size += consumeUntilDelimiter(&c, delimiter);
+                consumeByte(&c);
 
                 pushToken(&result, TokenType_UnicodeStringLit, symbol);
-            } else {
-                TokenType tokenType = categorizeSymbol(symbol);
-                pushToken(&result, tokenType, symbol);
             }
         } else if(byte == '/') {
             u8 nextByte = peekByte(&c);
@@ -702,7 +666,7 @@ tokenize(String source, Arena *arena) {
             } else if(nextByte == '/') {
                 String symbol = { .data = c.head - 1, .size = 2 };
                 consumeByte(&c);
-                symbol.size += consumeUntilNewline(&c);
+                symbol.size += consumeUntilDelimiter(&c, '\n');
             } else if(nextByte == '=') {
                 consumeByte(&c);
                 String symbol = { .data = c.head - 2, .size = 2 };
