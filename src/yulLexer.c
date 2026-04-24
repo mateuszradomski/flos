@@ -207,73 +207,75 @@ peekYulLastToken(YulLexer *lexer) {
     return lexer->lastPosition;
 }
 
+static bool
+yulIdentifierLUT[TokenType_Count] = {
+    [TokenType_As] = true,
+    [TokenType_Do] = true,
+    [TokenType_Is] = true,
+    [TokenType_New] = true,
+    [TokenType_Try] = true,
+    [TokenType_Wei] = true,
+    [TokenType_Days] = true,
+    [TokenType_Else] = true,
+    [TokenType_From] = true,
+    [TokenType_Emit] = true,
+    [TokenType_Enum] = true,
+    [TokenType_Gwei] = true,
+    [TokenType_Pure] = true,
+    [TokenType_Type] = true,
+    [TokenType_View] = true,
+    [TokenType_Error] = true,
+    [TokenType_Catch] = true,
+    [TokenType_Ether] = true,
+    [TokenType_Event] = true,
+    [TokenType_Hours] = true,
+    [TokenType_Using] = true,
+    [TokenType_Weeks] = true,
+    [TokenType_While] = true,
+    [TokenType_Years] = true,
+    [TokenType_Delete] = true,
+    [TokenType_Import] = true,
+    [TokenType_Memory] = true,
+    [TokenType_Symbol] = true,
+    [TokenType_Revert] = true,
+    [TokenType_Global] = true,
+    [TokenType_Pragma] = true,
+    [TokenType_Public] = true,
+    [TokenType_Return] = true,
+    [TokenType_Struct] = true,
+    [TokenType_Indexed] = true,
+    [TokenType_Library] = true,
+    [TokenType_Mapping] = true,
+    [TokenType_Minutes] = true,
+    [TokenType_Private] = true,
+    [TokenType_Returns] = true,
+    [TokenType_Seconds] = true,
+    [TokenType_Receive] = true,
+    [TokenType_Storage] = true,
+    [TokenType_Virtual] = true,
+    [TokenType_Abstract] = true,
+    [TokenType_Assembly] = true,
+    [TokenType_Calldata] = true,
+    [TokenType_Constant] = true,
+    [TokenType_Contract] = true,
+    [TokenType_External] = true,
+    [TokenType_Fallback] = true,
+    [TokenType_Internal] = true,
+    [TokenType_Modifier] = true,
+    [TokenType_Override] = true,
+    [TokenType_Anonymous] = true,
+    [TokenType_Immutable] = true,
+    [TokenType_Interface] = true,
+    [TokenType_Unchecked] = true,
+    [TokenType_Constructor] = true,
+    [TokenType_Payable] = true,
+};
+
 static TokenId
 parseYulIdentifier(YulLexer *lexer) {
     TokenType tokenType = getTokenType(lexer->tokens, lexer->currentPosition);
 
-    u32 isIdent =
-        tokenType == TokenType_As |
-        tokenType == TokenType_Do |
-        tokenType == TokenType_Is |
-        tokenType == TokenType_New |
-        tokenType == TokenType_Try |
-        tokenType == TokenType_Wei |
-        tokenType == TokenType_Days |
-        tokenType == TokenType_Else |
-        tokenType == TokenType_From |
-        tokenType == TokenType_Emit |
-        tokenType == TokenType_Enum |
-        tokenType == TokenType_Gwei |
-        tokenType == TokenType_Pure |
-        tokenType == TokenType_Type |
-        tokenType == TokenType_View |
-        tokenType == TokenType_Error |
-        tokenType == TokenType_Catch |
-        tokenType == TokenType_Ether |
-        tokenType == TokenType_Event |
-        tokenType == TokenType_Hours |
-        tokenType == TokenType_Using |
-        tokenType == TokenType_Weeks |
-        tokenType == TokenType_While |
-        tokenType == TokenType_Years |
-        tokenType == TokenType_Delete |
-        tokenType == TokenType_Import |
-        tokenType == TokenType_Memory |
-        tokenType == TokenType_Symbol |
-        tokenType == TokenType_Revert |
-        tokenType == TokenType_Global |
-        tokenType == TokenType_Pragma |
-        tokenType == TokenType_Public |
-        tokenType == TokenType_Return |
-        tokenType == TokenType_Struct |
-        tokenType == TokenType_Indexed |
-        tokenType == TokenType_Library |
-        tokenType == TokenType_Mapping |
-        tokenType == TokenType_Minutes |
-        tokenType == TokenType_Private |
-        tokenType == TokenType_Returns |
-        tokenType == TokenType_Seconds |
-        tokenType == TokenType_Receive |
-        tokenType == TokenType_Storage |
-        tokenType == TokenType_Virtual |
-        tokenType == TokenType_Abstract |
-        tokenType == TokenType_Assembly |
-        tokenType == TokenType_Calldata |
-        tokenType == TokenType_Constant |
-        tokenType == TokenType_Contract |
-        tokenType == TokenType_External |
-        tokenType == TokenType_Fallback |
-        tokenType == TokenType_Internal |
-        tokenType == TokenType_Modifier |
-        tokenType == TokenType_Override |
-        tokenType == TokenType_Anonymous |
-        tokenType == TokenType_Immutable |
-        tokenType == TokenType_Interface |
-        tokenType == TokenType_Unchecked |
-        tokenType == TokenType_Constructor |
-        tokenType == TokenType_Payable;
-
-    if(isIdent) {
+    if(yulIdentifierLUT[tokenType]) {
         lexer->currentPosition++;
         return lexer->currentPosition - 1;
     } else {
