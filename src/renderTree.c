@@ -79,8 +79,11 @@ writeString(Writer *w, u8 *str, u32 size, u32 nest) {
     if (size <= 16) {
         u64 *output = (u64 *)(w->data + w->size);
         u64 *input = (u64 *)(str);
-        output[0] = input[0];
-        output[1] = input[1];
+        // NOTE(radomski): needs to be like this to subdue compiler's aliasing rules
+        u64 v0 = input[0];
+        u64 v1 = input[1];
+        output[0] = v0;
+        output[1] = v1;
     } else {
         memcpy(w->data + w->size, str, size);
     }
