@@ -370,6 +370,20 @@ static const u8 isIdentifierChar[256] = {
     ['a' ... 'z'] = 1,
 };
 
+static const TokenType singleCharTokenLUT[256] = {
+    ['['] = TokenType_LBracket,
+    [']'] = TokenType_RBracket,
+    ['{'] = TokenType_LBrace,
+    ['}'] = TokenType_RBrace,
+    ['('] = TokenType_LParen,
+    [')'] = TokenType_RParen,
+    [':'] = TokenType_Colon,
+    [';'] = TokenType_Semicolon,
+    [','] = TokenType_Comma,
+    ['~'] = TokenType_Tylde,
+    ['?'] = TokenType_QuestionMark,
+};
+
 static const u8 charClass[256] = {
     ['0'] = 0x3, ['1'] = 0x3, ['2'] = 0x3, ['3'] = 0x3, ['4'] = 0x3,
     ['5'] = 0x3, ['6'] = 0x3, ['7'] = 0x3, ['8'] = 0x3, ['9'] = 0x3,
@@ -609,7 +623,10 @@ tokenize(String source, Arena *arena) {
     while(true) {
         skipWhitespace(&c);
         u8 byte = consumeByte(&c);
-        if(isAlphabet(byte) || byte == '_' || byte == '$') {
+        TokenType singleCharToken = singleCharTokenLUT[byte];
+        if(singleCharToken != TokenType_None) {
+            pushToken(&result, singleCharToken, (String){ .data = c.head - 1, .size = 1 });
+        } else if(isAlphabet(byte) || byte == '_' || byte == '$') {
             String symbol = { .data = c.head - 1, .size = 1 };
 
             u8 *end = c.data + c.length;
@@ -706,18 +723,6 @@ tokenize(String source, Arena *arena) {
         } else if(isDigit(byte)) {
             Token token = tokenizeNumberLiteral(&c, byte);
             pushToken(&result, token.type, token.string);
-        } else if(byte == '[') {
-            pushToken(&result, TokenType_LBracket, (String){ .data = c.head - 1, .size = 1 });
-        } else if(byte == ']') {
-            pushToken(&result, TokenType_RBracket, (String){ .data = c.head - 1, .size = 1 });
-        } else if(byte == '{') {
-            pushToken(&result, TokenType_LBrace, (String){ .data = c.head - 1, .size = 1 });
-        } else if(byte == '}') {
-            pushToken(&result, TokenType_RBrace, (String){ .data = c.head - 1, .size = 1 });
-        } else if(byte == '(') {
-            pushToken(&result, TokenType_LParen, (String){ .data = c.head - 1, .size = 1 });
-        } else if(byte == ')') {
-            pushToken(&result, TokenType_RParen, (String){ .data = c.head - 1, .size = 1 });
         } else if(byte == '<') {
             u8 nextByte = peekByte(&c);
             if(nextByte == '<') {
@@ -755,12 +760,6 @@ tokenize(String source, Arena *arena) {
             } else {
                 pushToken(&result, TokenType_RTick, (String){ .data = c.head - 1, .size = 1 });
             }
-        } else if(byte == ':') {
-            pushToken(&result, TokenType_Colon, (String){ .data = c.head - 1, .size = 1 });
-        } else if(byte == ';') {
-            pushToken(&result, TokenType_Semicolon, (String){ .data = c.head - 1, .size = 1 });
-        } else if(byte == ',') {
-            pushToken(&result, TokenType_Comma, (String){ .data = c.head - 1, .size = 1 });
         } else if(byte == '.') {
             u8 nextByte = peekByte(&c);
             if(isDigit(nextByte)) {
@@ -848,8 +847,6 @@ tokenize(String source, Arena *arena) {
             } else {
                 pushToken(&result, TokenType_Carrot, (String){ .data = c.head - 1, .size = 1 });
             }
-        } else if(byte == '~') {
-            pushToken(&result, TokenType_Tylde, (String){ .data = c.head - 1, .size = 1 });
         } else if(byte == '=') {
             u8 nextByte = peekByte(&c);
             if(nextByte == '=') {
@@ -858,8 +855,6 @@ tokenize(String source, Arena *arena) {
             } else {
                 pushToken(&result, TokenType_Equal, (String){ .data = c.head - 1, .size = 1 });
             }
-        } else if(byte == '?') {
-            pushToken(&result, TokenType_QuestionMark, (String){ .data = c.head - 1, .size = 1 });
         } else if(byte == '\0') {
             pushToken(&result, TokenType_EOF, (String){0});
             goto end;
