@@ -274,13 +274,16 @@ printBenchEntry(const char *name, TestEntry t, double cpuFreq, u64 contentSize) 
 }
 
 static void
-printCountdown(u64 startedAt, u64 testDuration, u64 *lastWholeSecond, const char *label) {
+printCountdown(u64 startedAt, u64 testDuration, u64 minTiming, u64 contentSize, u64 runCount, u64 *lastWholeSecond, const char *label) {
     u64 now = readTimer();
     u64 endAt = startedAt + testDuration;
     u64 remaining = (endAt > now) ? (endAt - now) : 0;
     u64 wholeSecond = remaining / NS_IN_SECOND;
     if(wholeSecond != *lastWholeSecond) {
-        printf("\r  %s: %llu seconds left... ", label, (unsigned long long)wholeSecond);
+        double minMs = (double)minTiming * 1000.0 / (double)NS_IN_SECOND;
+        double minCpb = (double)minTiming / (double)contentSize;
+        printf("\r  %s: %llus, %.3fms min, %.2f c/b min, %llu runs    ",
+               label, (unsigned long long)wholeSecond, minMs, minCpb, (unsigned long long)runCount);
         fflush(stdout);
         *lastWholeSecond = wholeSecond;
     }
@@ -297,6 +300,7 @@ typedef enum EnabledTests {
     EnabledTests_Parse    = (1 << 1),
     EnabledTests_Build    = (1 << 2),
     EnabledTests_Render   = (1 << 3),
+    EnabledTests_All      = EnabledTests_Tokenize | EnabledTests_Parse | EnabledTests_Build | EnabledTests_Render,
 } EnabledTests;
 
 static void
@@ -308,7 +312,7 @@ repetitionTesterMain(Arena *arena, String content) {
     u64 timingCount = 0;
     u64 testDuration = 10 * NS_IN_SECOND;
     u64 lastWhole = (u64)-1;
-    EnabledTests enabledTests = EnabledTests_Tokenize;
+    EnabledTests enabledTests = EnabledTests_All;
 
     TokenizeResult tokens;
 
@@ -330,7 +334,7 @@ repetitionTesterMain(Arena *arena, String content) {
                 startedAt = readTimer();
             }
 
-            printCountdown(startedAt, testDuration, &lastWhole, "Tokenize");
+            printCountdown(startedAt, testDuration, minTiming, content.size, timingCount, &lastWhole, "Tokenize");
         }
         clearCountdownLine();
     }
@@ -371,7 +375,7 @@ repetitionTesterMain(Arena *arena, String content) {
                 minTiming = timing;
                 startedAt = readTimer();
             }
-            printCountdown(startedAt, testDuration, &lastWhole, "Parse");
+            printCountdown(startedAt, testDuration, minTiming, content.size, timingCount, &lastWhole, "Parse");
         }
         clearCountdownLine();
     }
@@ -411,7 +415,7 @@ repetitionTesterMain(Arena *arena, String content) {
                 minTiming = timing;
                 startedAt = readTimer();
             }
-            printCountdown(startedAt, testDuration, &lastWhole, "Document build");
+            printCountdown(startedAt, testDuration, minTiming, content.size, timingCount, &lastWhole, "Document build");
         }
         clearCountdownLine();
     }
@@ -447,7 +451,7 @@ repetitionTesterMain(Arena *arena, String content) {
                 startedAt = readTimer();
             }
 
-            printCountdown(startedAt, testDuration, &lastWhole, "Document render");
+            printCountdown(startedAt, testDuration, minTiming, content.size, timingCount, &lastWhole, "Document render");
         }
         clearCountdownLine();
     }
