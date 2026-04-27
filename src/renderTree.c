@@ -2235,15 +2235,16 @@ pushMemberDocument(Render *r, ASTNode *member) {
             pushTokenWord(r, member->startToken);
             pushWord(r, wordSpace());
 
-            if(member->symbols.count > 0) {
+            ASTNodeImport *import = &member->importNode;
+            if(import->symbols.count > 0) {
                 assert(stringMatch(LIT_TO_STR("{"), r->tokens.tokenStrings[member->startToken + 1]));
                 pushTokenWord(r, member->startToken + 1);
                 pushWord(r, wordLine());
 
                 pushNest(r);
-                for(u32 i = 0; i < member->symbols.count; i++) {
-                    TokenId symbol = listGetTokenId(&member->symbols, i);
-                    TokenId alias = listGetTokenId(&member->symbolAliases, i);
+                for(u32 i = 0; i < import->symbols.count; i++) {
+                    TokenId symbol = listGetTokenId(&import->symbols, i);
+                    TokenId alias = listGetTokenId(&import->symbolAliases, i);
 
                     pushTokenWord(r, symbol);
                     TokenId lastToken = symbol + 1;
@@ -2256,7 +2257,7 @@ pushMemberDocument(Render *r, ASTNode *member) {
                         lastToken = alias + 1;
                     }
 
-                    bool isLastElement = i == member->symbols.count - 1;
+                    bool isLastElement = i == import->symbols.count - 1;
                     if(!isLastElement) {
                         pushTokenWord(r, lastToken);
                     }
@@ -2264,22 +2265,22 @@ pushMemberDocument(Render *r, ASTNode *member) {
                 }
                 popNest(r);
 
-                assert(stringMatch(LIT_TO_STR("}"), r->tokens.tokenStrings[member->pathTokenId - 2]));
-                assert(stringMatch(LIT_TO_STR("from"), r->tokens.tokenStrings[member->pathTokenId - 1]));
-                pushTokenWord(r, member->pathTokenId - 2);
+                assert(stringMatch(LIT_TO_STR("}"), r->tokens.tokenStrings[import->pathTokenId - 2]));
+                assert(stringMatch(LIT_TO_STR("from"), r->tokens.tokenStrings[import->pathTokenId - 1]));
+                pushTokenWord(r, import->pathTokenId - 2);
                 pushWord(r, wordSpace());
-                pushTokenWord(r, member->pathTokenId - 1);
+                pushTokenWord(r, import->pathTokenId - 1);
                 pushWord(r, wordSpace());
             }
 
-            pushTokenAsStringWord(r, member->pathTokenId);
-            if(member->unitAliasTokenId != INVALID_TOKEN_ID) {
-                assert(stringMatch(LIT_TO_STR("as"), r->tokens.tokenStrings[member->unitAliasTokenId - 1]));
+            pushTokenAsStringWord(r, import->pathTokenId);
+            if(import->unitAliasTokenId != INVALID_TOKEN_ID) {
+                assert(stringMatch(LIT_TO_STR("as"), r->tokens.tokenStrings[import->unitAliasTokenId - 1]));
 
                 pushWord(r, wordSpace());
-                pushTokenWord(r, member->unitAliasTokenId - 1);
+                pushTokenWord(r, import->unitAliasTokenId - 1);
                 pushWord(r, wordSpace());
-                pushTokenWord(r, member->unitAliasTokenId);
+                pushTokenWord(r, import->unitAliasTokenId);
             }
 
             pushTokenWord(r, member->endToken);
@@ -2349,19 +2350,21 @@ pushMemberDocument(Render *r, ASTNode *member) {
             pushWord(r, wordHardBreak());
         } break;
         case ASTNodeType_EnumDefinition: {
+            ASTNodeEnum *enumNode = &member->enumNode;
+
             pushGroup(r);
             pushTokenWord(r, member->startToken);
             pushWord(r, wordSpace());
-            pushTokenWord(r, member->nameTokenId);
+            pushTokenWord(r, enumNode->nameTokenId);
             pushWord(r, wordSpace());
-            pushTokenWord(r, member->nameTokenId + 1);
+            pushTokenWord(r, enumNode->nameTokenId + 1);
 
             pushNest(r);
             pushWord(r, wordLine());
-            for(u32 i = 0; i < member->values.count; i++) {
-                TokenId value = listGetTokenId(&member->values, i);
+            for(u32 i = 0; i < enumNode->values.count; i++) {
+                TokenId value = listGetTokenId(&enumNode->values, i);
                 pushTokenWord(r, value);
-                if(i != member->values.count - 1) {
+                if(i != enumNode->values.count - 1) {
                     pushTokenWord(r, value + 1);
                 }
 
@@ -2936,8 +2939,9 @@ buildDocument(Render *r, ASTNode *tree, String originalSource, TokenizeResult to
     pushGroup(r);
     pushCommentsInRange(r, 0, startOfTokens);
 
-    ASTNodeLink *child = tree->children.head;
-    for(u32 i = 0; i < tree->children.count; i++, child = child->next) {
+    ASTNodeSourceUnit *sourceUnit = &tree->sourceUnitNode;
+    ASTNodeLink *child = sourceUnit->children.head;
+    for(u32 i = 0; child != 0x0; i++, child = child->next) {
         if(i != 0) preserveHardBreaksIntoDocument(r, &child->node);
         pushMemberDocument(r, &child->node);
     }

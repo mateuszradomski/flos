@@ -421,6 +421,22 @@ typedef struct ASTNodeYulSwitchStatement {
     ASTNode *defaultBlock;
 } ASTNodeYulSwitchStatement;
 
+typedef struct ASTNodeSourceUnit {
+    ASTNodeList children;
+} ASTNodeSourceUnit;
+
+typedef struct ASTNodeImport {
+    TokenId pathTokenId;
+    TokenId unitAliasTokenId;
+    TokenIdList symbols;
+    TokenIdList symbolAliases;
+} ASTNodeImport;
+
+typedef struct ASTNodeEnum {
+    TokenId nameTokenId;
+    TokenIdList values;
+} ASTNodeEnum;
+
 typedef struct ASTNode {
     ASTNodeType type;
 
@@ -428,20 +444,10 @@ typedef struct ASTNode {
     u32 endToken;
 
     union {
-        struct { // ASTNodeType_SourceUnit
-            ASTNodeList children;
-        };
-        struct { // ASTNodeType_Import
-            TokenId pathTokenId;
-            TokenId unitAliasTokenId;
-            TokenIdList symbols;
-            TokenIdList symbolAliases;
-        };
+        ASTNodeSourceUnit sourceUnitNode;
+        ASTNodeImport importNode;
         ASTNodePragma pragmaNode;
-        struct { // ASTNodeType_EnumDefinition
-            TokenId nameTokenId;
-            TokenIdList values;
-        };
+        ASTNodeEnum enumNode;
         ASTNodeStruct structNode;
         ASTNodeBaseType baseTypeNode;
         ASTNodeIdentifierPath identifierPathNode;
@@ -1047,54 +1053,56 @@ parsePragma(Parser *parser, ASTNode *node) {
 
 static bool
 parseImport(Parser *parser, ASTNode *node) {
+    node->type = ASTNodeType_Import;
     node->startToken = parser->current - 1;
-    if(acceptToken(parser, TokenType_StringLit)) {
-        node->pathTokenId = peekLastTokenId(parser);
+    ASTNodeImport *import = &node->importNode;
 
-        node->unitAliasTokenId = INVALID_TOKEN_ID;
+    if(acceptToken(parser, TokenType_StringLit)) {
+        import->pathTokenId = peekLastTokenId(parser);
+
+        import->unitAliasTokenId = INVALID_TOKEN_ID;
         if(acceptToken(parser, TokenType_As)) {
             TokenId unitAliasTokenId = parseIdentifier(parser);
             assertError(unitAliasTokenId != INVALID_TOKEN_ID, parser,
                         "Expected identifier in import alias, received (%S)", tokenTypeToString(peekTokenType(parser)));
-            node->unitAliasTokenId = unitAliasTokenId;
+            import->unitAliasTokenId = unitAliasTokenId;
         }
     } else if(acceptToken(parser, TokenType_Star)) {
         expectToken(parser, TokenType_As);
         TokenId unitAliasTokenId = parseIdentifier(parser);
         assertError(unitAliasTokenId != INVALID_TOKEN_ID, parser,
                     "Expected identifier in import alias, received (%S)", tokenTypeToString(peekTokenType(parser)));
-        node->unitAliasTokenId = unitAliasTokenId;
+        import->unitAliasTokenId = unitAliasTokenId;
         expectToken(parser, TokenType_From);
         expectToken(parser, TokenType_StringLit);
-        node->pathTokenId = peekLastTokenId(parser);
+        import->pathTokenId = peekLastTokenId(parser);
     } else if(acceptToken(parser, TokenType_LBrace)) {
         do {
             TokenId symbolName = parseIdentifier(parser);
             assertError(symbolName != INVALID_TOKEN_ID, parser,
                         "Expected identifier in import symbol list, received (%S)", tokenTypeToString(peekTokenType(parser)));
-            listPushTokenId(&node->symbols, symbolName, parser->arena);
+            listPushTokenId(&import->symbols, symbolName, parser->arena);
 
             if(acceptToken(parser, TokenType_As)) {
                 TokenId symbolAliasName = parseIdentifier(parser);
                 assertError(symbolAliasName != INVALID_TOKEN_ID, parser,
                             "Expected identifier in import symbol alias, received (%S)", tokenTypeToString(peekTokenType(parser)));
-                listPushTokenId(&node->symbolAliases, symbolAliasName, parser->arena);
+                listPushTokenId(&import->symbolAliases, symbolAliasName, parser->arena);
             } else {
-                listPushTokenId(&node->symbolAliases, INVALID_TOKEN_ID, parser->arena);
+                listPushTokenId(&import->symbolAliases, INVALID_TOKEN_ID, parser->arena);
             }
         } while(acceptToken(parser, TokenType_Comma));
 
         expectToken(parser, TokenType_RBrace);
         expectToken(parser, TokenType_From);
         expectToken(parser, TokenType_StringLit);
-        node->pathTokenId = peekLastTokenId(parser);
-        node->unitAliasTokenId = INVALID_TOKEN_ID;
+        import->pathTokenId = peekLastTokenId(parser);
+        import->unitAliasTokenId = INVALID_TOKEN_ID;
     } else {
         reportError(parser, "Unexpected token while parsing import - %S",
                     tokenTypeToString(peekTokenType(parser)));
     }
 
-    node->type = ASTNodeType_Import;
 
     expectToken(parser, TokenType_Semicolon);
     node->endToken = parser->current - 1;
@@ -1190,10 +1198,11 @@ parseEnum(Parser *parser, ASTNode *node) {
     node->startToken = parser->current - 1;
     node->type = ASTNodeType_EnumDefinition;
 
+    ASTNodeEnum *enumNode = &node->enumNode;
     TokenId nameTokenId = parseIdentifier(parser);
     assertError(nameTokenId != INVALID_TOKEN_ID, parser,
                 "Name of enum must be an identifier, received (%S)", tokenTypeToString(peekTokenType(parser)));
-    node->nameTokenId = nameTokenId;
+    enumNode->nameTokenId = nameTokenId;
     expectToken(parser, TokenType_LBrace);
 
     if(!acceptToken(parser, TokenType_RBrace)) {
@@ -1201,7 +1210,7 @@ parseEnum(Parser *parser, ASTNode *node) {
             TokenId valueName = parseIdentifier(parser);
             assertError(valueName != INVALID_TOKEN_ID, parser,
                         "Enum value must be an identifier, received (%S)", tokenTypeToString(peekTokenType(parser)));
-            listPushTokenId(&node->values, valueName, parser->arena);
+            listPushTokenId(&enumNode->values, valueName, parser->arena);
         } while(acceptToken(parser, TokenType_Comma));
 
         expectToken(parser, TokenType_RBrace);
@@ -2868,11 +2877,12 @@ printASTNodeSizes(Arena *arena) {
 static ASTNode
 parseSourceUnit(Parser *parser) {
     ASTNode node = { .type = ASTNodeType_SourceUnit };
+    ASTNodeSourceUnit *sourceUnit = &node.sourceUnitNode;
 
     // printASTNodeSizes(parser->arena);
 
     while(true) {
-        ASTNodeLink *child = arrayPush(parser->arena, ASTNodeLink, 1);
+        ASTNodeLink *child = structPush(parser->arena, ASTNodeLink);
 
         if(acceptToken(parser, TokenType_Pragma)) {
             parsePragma(parser, &child->node);
@@ -2915,8 +2925,7 @@ parseSourceUnit(Parser *parser) {
             child->node.startToken = startToken;
         }
 
-        SLL_QUEUE_PUSH(node.children.head, node.children.last, child);
-        node.children.count += 1;
+        SLL_QUEUE_PUSH(sourceUnit->children.head, sourceUnit->children.last, child);
     }
 
     return node;
