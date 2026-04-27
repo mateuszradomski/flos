@@ -96,17 +96,9 @@ typedef struct ASTNodeList {
     u32 count;
 } ASTNodeList;
 
-typedef struct ASTNodeListRanged {
-    TokenId startToken;
-    TokenId endToken;
-    ASTNodeLink *head;
-    ASTNodeLink *last;
-    u32 count;
-} ASTNodeListRanged;
-
 typedef struct ASTNodeStruct {
     TokenId nameTokenId;
-    ASTNodeListRanged members;
+    ASTNodeList members;
 } ASTNodeStruct;
 
 typedef struct ASTNodeBaseType {
@@ -126,10 +118,10 @@ typedef struct ASTNodeMapping {
 } ASTNodeMapping;
 
 typedef struct ASTNodeFunctionType {
-    ASTNodeListRanged parameters;
+    ASTNodeList parameters;
     TokenId visibility;
     TokenId stateMutability;
-    ASTNodeListRanged returnParameters;
+    ASTNodeList returnParameters;
 } ASTNodeFunctionType;
 
 typedef struct ASTNodeArrayType {
@@ -139,12 +131,12 @@ typedef struct ASTNodeArrayType {
 
 typedef struct ASTNodeError {
     TokenId identifier;
-    ASTNodeListRanged parameters;
+    ASTNodeList parameters;
 } ASTNodeError;
 
 typedef struct ASTNodeEvent {
     TokenId identifier;
-    ASTNodeListRanged parameters;
+    ASTNodeList parameters;
     u32 anonymous;
 } ASTNodeEvent;
 
@@ -160,7 +152,7 @@ typedef struct ASTNodeConstVariable {
     TokenId visibility;
     TokenId mutability;
     TokenId override;
-    ASTNodeListRanged overrides;
+    ASTNodeList overrides;
 } ASTNodeConstVariable;
 
 typedef struct ASTNodeNumberLitExpression {
@@ -197,7 +189,7 @@ typedef struct ASTNodeNewExpression {
 
 typedef struct ASTNodeFunctionCallExpression {
     ASTNode *expression;
-    ASTNodeListRanged argumentsExpression;
+    ASTNodeList argumentsExpression;
     TokenIdList argumentsName;
 } ASTNodeFunctionCallExpression;
 
@@ -225,14 +217,14 @@ typedef struct ASTNodeTerneryExpression {
 
 typedef struct ASTNodeFunctionDefinition {
     TokenId name;                        // 4 bytes
-    ASTNodeListRanged *parameters;       // 12 bytes
+    ASTNodeList *parameters;       // 12 bytes
     TokenId visibility;                  // 4 byte
     TokenId stateMutability;             // 4 byte
     TokenId virtual;                     // 4 byte
     TokenId override;                    // 1 byte
-    ASTNodeListRanged *overrides;        // 4 bytes
+    ASTNodeList *overrides;        // 4 bytes
     ASTNodeList *modifiers;              // 4 bytes
-    ASTNodeListRanged *returnParameters; // 4 bytes
+    ASTNodeList *returnParameters; // 4 bytes
     ASTNode *body;                       // 4 bytes
 } ASTNodeFunctionDefinition;
 
@@ -274,7 +266,7 @@ typedef struct ASTNodeWhileStatement {
 typedef struct ASTNodeInheritanceSpecifier {
     ASTNode *identifier;
     TokenIdList argumentsName;
-    ASTNodeListRanged argumentsExpression;
+    ASTNodeList argumentsExpression;
 } ASTNodeInheritanceSpecifier;
 
 typedef ASTNodeInheritanceSpecifier ASTNodeModifierInvocation;
@@ -313,7 +305,7 @@ typedef struct ASTNodeEmitStatement {
 } ASTNodeEmitStatement;
 
 typedef struct ASTNodeConstructorDefinition {
-    ASTNodeListRanged parameters;
+    ASTNodeList parameters;
     TokenId visibility;
     TokenId stateMutability;
     TokenId virtual;
@@ -341,7 +333,7 @@ typedef struct ASTNodePragma {
 } ASTNodePragma;
 
 typedef struct ASTNodeUsing {
-    ASTNodeListRanged identifiers;
+    ASTNodeList identifiers;
     U16List operators;
     ASTNode *forType;
     TokenId global;
@@ -354,7 +346,7 @@ typedef struct ASTNodeInlineArrayExpression {
 
 typedef struct ASTNodeTryStatement {
     ASTNode *expression;
-    ASTNodeListRanged returnParameters;
+    ASTNodeList returnParameters;
     ASTNode *body;
     ASTNode *firstCatch;
     ASTNode *lastCatch;
@@ -362,7 +354,7 @@ typedef struct ASTNodeTryStatement {
 
 typedef struct ASTNodeCatchStatement {
     TokenId identifier;
-    ASTNodeListRanged parameters;
+    ASTNodeList parameters;
     ASTNode *body;
 } ASTNodeCatchStatement;
 
@@ -798,7 +790,7 @@ isBaseTypeName(String string) {
 static bool parseType(Parser *parser, ASTNode *node);
 
 static bool
-parseVariableDeclarationIntoList(Parser *parser, ASTNodeListRanged *list) {
+parseVariableDeclarationIntoList(Parser *parser, ASTNodeList *list) {
     ASTNodeLink *parameter = structPush(parser->arena, ASTNodeLink);
     ASTNode *node = &parameter->node;
     node->type = ASTNodeType_VariableDeclaration;
@@ -832,14 +824,12 @@ parseVariableDeclarationIntoList(Parser *parser, ASTNodeListRanged *list) {
 }
 
 static void
-parseFunctionParameters(Parser *parser, ASTNodeListRanged *list) {
-    list->startToken = parser->current;
+parseFunctionParameters(Parser *parser, ASTNodeList *list) {
     parseVariableDeclarationIntoList(parser, list);
     while(acceptToken(parser, TokenType_Comma)) {
         assertError(parseVariableDeclarationIntoList(parser, list),
                     parser, "Expected variable declaration after comma");
     }
-    list->endToken = parser->current - 1;
 }
 
 static bool
@@ -1100,7 +1090,6 @@ parseUsing(Parser *parser, ASTNode *node) {
     ASTNodeUsing *using = &node->usingNode;
 
     if(acceptToken(parser, TokenType_LBrace)) {
-        using->identifiers.startToken = parser->current;
         using->onLibrary = 0;
         do {
             ASTNodeLink *identifierLink = structPush(parser->arena, ASTNodeLink);
@@ -1116,7 +1105,6 @@ parseUsing(Parser *parser, ASTNode *node) {
             listPushU16(&using->operators, operator, parser->arena);
         } while(acceptToken(parser, TokenType_Comma));
 
-        using->identifiers.endToken = parser->current - 1;
         expectToken(parser, TokenType_RBrace);
     } else {
         using->onLibrary = 1;
@@ -1387,8 +1375,7 @@ getUnaryOperatorPrecedence(Parser *parser, TokenType type) {
 static bool parseExpressionImpl(Parser *parser, ASTNode *node, u32 previousPrecedence);
 
 static void
-parseCallArgumentList(Parser *parser, ASTNodeListRanged *expressions, TokenIdList *names) {
-    expressions->startToken = parser->current;
+parseCallArgumentList(Parser *parser, ASTNodeList *expressions, TokenIdList *names) {
     if(!acceptToken(parser, TokenType_RParen)) {
         if(acceptToken(parser, TokenType_LBrace)) {
             do {
@@ -1417,7 +1404,6 @@ parseCallArgumentList(Parser *parser, ASTNodeListRanged *expressions, TokenIdLis
         }
 
         expectToken(parser, TokenType_RParen);
-        expressions->endToken = parser->current - 1;
     }
 }
 
@@ -2317,9 +2303,8 @@ parseConstVariable(Parser *parser, ASTNode *node, ASTNode *type) {
 }
 
 static void
-parseOverrideSpecifierArgs(Parser *parser, ASTNodeListRanged *list) {
+parseOverrideSpecifierArgs(Parser *parser, ASTNodeList *list) {
     if(acceptToken(parser, TokenType_LParen)) {
-        list->startToken = parser->current;
         do {
             ASTNodeLink *argument = structPush(parser->arena, ASTNodeLink);
             parseType(parser, &argument->node);
@@ -2330,7 +2315,6 @@ parseOverrideSpecifierArgs(Parser *parser, ASTNodeListRanged *list) {
             list->count += 1;
         } while(acceptToken(parser, TokenType_Comma));
 
-        list->endToken = parser->current - 1;
         expectToken(parser, TokenType_RParen);
     }
 }
@@ -2431,7 +2415,7 @@ parseFunction(Parser *parser, ASTNode *node) {
     ASTNodeFunctionDefinition *function = &node->functionDefinitionNode;
     function->name = name;
 
-    function->parameters = structPush(parser->arena, ASTNodeListRanged);
+    function->parameters = structPush(parser->arena, ASTNodeList);
     expectToken(parser, TokenType_LParen);
     if(!acceptToken(parser, TokenType_RParen)) {
         parseFunctionParameters(parser, function->parameters);
@@ -2473,7 +2457,7 @@ parseFunction(Parser *parser, ASTNode *node) {
         } else if (acceptToken(parser, TokenType_Override)) {
             assertError(function->override == INVALID_TOKEN_ID, parser, "Override modifier already set");
             function->override = peekLastTokenId(parser);
-            function->overrides = structPush(parser->arena, ASTNodeListRanged);
+            function->overrides = structPush(parser->arena, ASTNodeList);
             parseOverrideSpecifierArgs(parser, function->overrides);
         } else {
             ASTNode testExpression = { 0 };
@@ -2498,7 +2482,7 @@ parseFunction(Parser *parser, ASTNode *node) {
     }
 
     if(acceptToken(parser, TokenType_Returns)) {
-        function->returnParameters = structPush(parser->arena, ASTNodeListRanged);
+        function->returnParameters = structPush(parser->arena, ASTNodeList);
         function->returnParameters->count = 0;
         expectToken(parser, TokenType_LParen);
         parseFunctionParameters(parser, function->returnParameters);
@@ -2524,7 +2508,7 @@ parseModifier(Parser *parser, ASTNode *node) {
     ASTNodeFunctionDefinition *modifier = &node->functionDefinitionNode;
     modifier->name = name;
 
-    modifier->parameters = structPush(parser->arena, ASTNodeListRanged);
+    modifier->parameters = structPush(parser->arena, ASTNodeList);
     modifier->parameters->count = -1;
     if(acceptToken(parser, TokenType_LParen)) {
         modifier->parameters->count = 0;
@@ -2544,7 +2528,7 @@ parseModifier(Parser *parser, ASTNode *node) {
         } else if(acceptToken(parser, TokenType_Override)) {
             assertError(modifier->override == INVALID_TOKEN_ID, parser, "Override modifier already set");
             modifier->override = peekLastTokenId(parser);
-            modifier->overrides = structPush(parser->arena, ASTNodeListRanged);
+            modifier->overrides = structPush(parser->arena, ASTNodeList);
             parseOverrideSpecifierArgs(parser, modifier->overrides);
         } else {
             break;
