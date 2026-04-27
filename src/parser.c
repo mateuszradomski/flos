@@ -225,7 +225,7 @@ typedef struct ASTNodeTerneryExpression {
 
 typedef struct ASTNodeFunctionDefinition {
     TokenId name;                        // 4 bytes
-    ASTNodeListRanged parameters;        // 12 bytes
+    ASTNodeListRanged *parameters;       // 12 bytes
     TokenId visibility;                  // 4 byte
     TokenId stateMutability;             // 4 byte
     TokenId virtual;                     // 4 byte
@@ -282,7 +282,8 @@ typedef ASTNodeInheritanceSpecifier ASTNodeModifierInvocation;
 typedef struct ASTNodeContractDefinition {
     TokenId name;
     ASTNodeList elements;
-    ASTNodeList baseContracts;
+    ASTNode *firstBaseContract;
+    ASTNode *lastBaseContract;
 } ASTNodeContractDefinition;
 
 typedef struct ASTNodeLibraryDefinition {
@@ -316,7 +317,8 @@ typedef struct ASTNodeConstructorDefinition {
     TokenId visibility;
     TokenId stateMutability;
     TokenId virtual;
-    ASTNodeList modifiers;
+    ASTNode *firstModifier;
+    ASTNode *lastModifier;
     ASTNode *body;
 } ASTNodeConstructorDefinition;
 
@@ -354,7 +356,8 @@ typedef struct ASTNodeTryStatement {
     ASTNode *expression;
     ASTNodeListRanged returnParameters;
     ASTNode *body;
-    ASTNodeList catches;
+    ASTNode *firstCatch;
+    ASTNode *lastCatch;
 } ASTNodeTryStatement;
 
 typedef struct ASTNodeCatchStatement {
@@ -424,7 +427,8 @@ typedef struct ASTNodeYulSwitchStatement {
 } ASTNodeYulSwitchStatement;
 
 typedef struct ASTNodeSourceUnit {
-    ASTNodeList children;
+    ASTNode *firstChild;
+    ASTNode *lastChild;
 } ASTNodeSourceUnit;
 
 typedef struct ASTNodeImport {
@@ -444,6 +448,8 @@ typedef struct ASTNode {
 
     u32 startToken;
     u32 endToken;
+
+    ASTNode *next;
 
     union {
         ASTNodeSourceUnit sourceUnitNode;
@@ -2198,10 +2204,10 @@ parseStatement(Parser *parser, ASTNode *node) {
         parseStatement(parser, statement->body);
 
         while(acceptToken(parser, TokenType_Catch)) {
-            ASTNodeLink *catchLink = structPush(parser->arena, ASTNodeLink);
-            catchLink->node.type = ASTNodeType_CatchStatement;
-            catchLink->node.startToken = parser->current - 1;
-            ASTNodeCatchStatement *catchStatement = &catchLink->node.catchStatementNode;
+            ASTNode *catch = structPush(parser->arena, ASTNode);
+            catch->type = ASTNodeType_CatchStatement;
+            catch->startToken = parser->current - 1;
+            ASTNodeCatchStatement *catchStatement = &catch->catchStatementNode;
 
             catchStatement->identifier = INVALID_TOKEN_ID;
             catchStatement->parameters.count = -1;
@@ -2222,10 +2228,9 @@ parseStatement(Parser *parser, ASTNode *node) {
 
             catchStatement->body = structPush(parser->arena, ASTNode);
             parseStatement(parser, catchStatement->body);
-            catchLink->node.endToken = parser->current - 1;
+            catch->endToken = parser->current - 1;
 
-            SLL_QUEUE_PUSH(statement->catches.head, statement->catches.last, catchLink);
-            statement->catches.count += 1;
+            SLL_QUEUE_PUSH(statement->firstCatch, statement->lastCatch, catch);
         }
         node->endToken = parser->current - 1;
     } else if(acceptToken(parser, TokenType_Assembly)) {
@@ -2426,9 +2431,10 @@ parseFunction(Parser *parser, ASTNode *node) {
     ASTNodeFunctionDefinition *function = &node->functionDefinitionNode;
     function->name = name;
 
+    function->parameters = structPush(parser->arena, ASTNodeListRanged);
     expectToken(parser, TokenType_LParen);
     if(!acceptToken(parser, TokenType_RParen)) {
-        parseFunctionParameters(parser, &function->parameters);
+        parseFunctionParameters(parser, function->parameters);
         expectToken(parser, TokenType_RParen);
     }
 
@@ -2518,11 +2524,12 @@ parseModifier(Parser *parser, ASTNode *node) {
     ASTNodeFunctionDefinition *modifier = &node->functionDefinitionNode;
     modifier->name = name;
 
-    modifier->parameters.count = -1;
+    modifier->parameters = structPush(parser->arena, ASTNodeListRanged);
+    modifier->parameters->count = -1;
     if(acceptToken(parser, TokenType_LParen)) {
-        modifier->parameters.count = 0;
+        modifier->parameters->count = 0;
         if(!acceptToken(parser, TokenType_RParen)) {
-            parseFunctionParameters(parser, &modifier->parameters);
+            parseFunctionParameters(parser, modifier->parameters);
             expectToken(parser, TokenType_RParen);
         }
     }
@@ -2584,11 +2591,10 @@ parseConstructor(Parser *parser, ASTNode *node) {
             if(isSuccess) {
                 assertError(testExpression.type == ASTNodeType_IdentifierPath,
                             parser, "Expected identifier path in constructor modifier invocation");
-                ASTNodeLink *link = structPush(parser->arena, ASTNodeLink);
-                parseModifierInvocation(parser, &link->node, &testExpression);
+                ASTNode *modifier = structPush(parser->arena, ASTNode);
+                parseModifierInvocation(parser, modifier, &testExpression);
 
-                SLL_QUEUE_PUSH(constructor->modifiers.head, constructor->modifiers.last, link);
-                constructor->modifiers.count += 1;
+                SLL_QUEUE_PUSH(constructor->firstModifier, constructor->lastModifier, modifier);
                 continue;
             }
 
@@ -2666,11 +2672,11 @@ parseContract(Parser *parser, ASTNode *node) {
 
     if(acceptToken(parser, TokenType_Is)) {
         do {
-            ASTNodeLink *baseContractLink = structPush(parser->arena, ASTNodeLink);
+            ASTNode *baseContract = structPush(parser->arena, ASTNode);
 
-            baseContractLink->node.type = ASTNodeType_InheritanceSpecifier;
-            baseContractLink->node.startToken = parser->current;
-            ASTNodeInheritanceSpecifier *inheritance = &baseContractLink->node.inheritanceSpecifierNode;
+            baseContract->type = ASTNodeType_InheritanceSpecifier;
+            baseContract->startToken = parser->current;
+            ASTNodeInheritanceSpecifier *inheritance = &baseContract->inheritanceSpecifierNode;
 
             inheritance->identifier = structPush(parser->arena, ASTNode);
             parseType(parser, inheritance->identifier);
@@ -2681,10 +2687,9 @@ parseContract(Parser *parser, ASTNode *node) {
                 parseCallArgumentList(parser, &inheritance->argumentsExpression, &inheritance->argumentsName);
             }
 
-            baseContractLink->node.endToken = parser->current - 1;
+            baseContract->endToken = parser->current - 1;
 
-            SLL_QUEUE_PUSH(contract->baseContracts.head, contract->baseContracts.last, baseContractLink);
-            contract->baseContracts.count += 1;
+            SLL_QUEUE_PUSH(contract->firstBaseContract, contract->lastBaseContract, baseContract);
         } while(acceptToken(parser, TokenType_Comma));
     }
 
@@ -2747,10 +2752,8 @@ printASTNodeSizes(Arena *arena) {
         { LIT_TO_STR("ASTNodeEvent"), sizeof(ASTNodeEvent)},
         { LIT_TO_STR("ASTNodeTypedef"), sizeof(ASTNodeTypedef)},
         { LIT_TO_STR("ASTNodeConstVariable"), sizeof(ASTNodeConstVariable)},
-        { LIT_TO_STR("ASTNodeConstVariable"), sizeof(ASTNodeConstVariable)},
         { LIT_TO_STR("ASTNodeNumberLitExpression"), sizeof(ASTNodeNumberLitExpression)},
         { LIT_TO_STR("ASTNodeStringLitExpression"), sizeof(ASTNodeStringLitExpression)},
-        { LIT_TO_STR("ASTNodeTokenLitExpression"), sizeof(ASTNodeTokenLitExpression)},
         { LIT_TO_STR("ASTNodeTokenLitExpression"), sizeof(ASTNodeTokenLitExpression)},
         { LIT_TO_STR("ASTNodeBinaryExpression"), sizeof(ASTNodeBinaryExpression)},
         { LIT_TO_STR("ASTNodeTupleExpression"), sizeof(ASTNodeTupleExpression)},
@@ -2767,12 +2770,10 @@ printASTNodeSizes(Arena *arena) {
         { LIT_TO_STR("ASTNodeBlockStatement"), sizeof(ASTNodeBlockStatement)},
         { LIT_TO_STR("ASTNodeUncheckedBlockStatement"), sizeof(ASTNodeUncheckedBlockStatement)},
         { LIT_TO_STR("ASTNodeReturnStatement"), sizeof(ASTNodeReturnStatement)},
-        { LIT_TO_STR("ASTNodeReturnStatement"), sizeof(ASTNodeReturnStatement)},
         { LIT_TO_STR("ASTNodeIfStatement"), sizeof(ASTNodeIfStatement)},
         { LIT_TO_STR("ASTNodeVariableDeclarationStatement"), sizeof(ASTNodeVariableDeclarationStatement)},
         { LIT_TO_STR("ASTNodeVariableDeclaration"), sizeof(ASTNodeVariableDeclaration)},
         { LIT_TO_STR("ASTNodeVariableDeclarationTupleStatement"), sizeof(ASTNodeVariableDeclarationTupleStatement)},
-        { LIT_TO_STR("ASTNodeWhileStatement"), sizeof(ASTNodeWhileStatement)},
         { LIT_TO_STR("ASTNodeWhileStatement"), sizeof(ASTNodeWhileStatement)},
         { LIT_TO_STR("ASTNodeInheritanceSpecifier"), sizeof(ASTNodeInheritanceSpecifier)},
         { LIT_TO_STR("ASTNodeModifierInvocation"), sizeof(ASTNodeModifierInvocation)},
@@ -2789,10 +2790,6 @@ printASTNodeSizes(Arena *arena) {
         { LIT_TO_STR("ASTNodeUsing"), sizeof(ASTNodeUsing)},
         { LIT_TO_STR("ASTNodeBlockStatement"), sizeof(ASTNodeBlockStatement)},
         { LIT_TO_STR("ASTNodeYulVariableDeclaration"), sizeof(ASTNodeYulVariableDeclaration)},
-        { LIT_TO_STR("ASTNodeYulNumberLitExpression"), sizeof(ASTNodeYulNumberLitExpression)},
-        { LIT_TO_STR("ASTNodeYulNumberLitExpression"), sizeof(ASTNodeYulNumberLitExpression)},
-        { LIT_TO_STR("ASTNodeYulNumberLitExpression"), sizeof(ASTNodeYulNumberLitExpression)},
-        { LIT_TO_STR("ASTNodeYulNumberLitExpression"), sizeof(ASTNodeYulNumberLitExpression)},
         { LIT_TO_STR("ASTNodeYulNumberLitExpression"), sizeof(ASTNodeYulNumberLitExpression)},
         { LIT_TO_STR("ASTNodeYulIdentifierPathExpression"), sizeof(ASTNodeYulIdentifierPathExpression)},
         { LIT_TO_STR("ASTNodeYulFunctionCallExpression"), sizeof(ASTNodeYulFunctionCallExpression)},
@@ -2829,34 +2826,34 @@ parseSourceUnit(Parser *parser) {
     // printASTNodeSizes(parser->arena);
 
     while(true) {
-        ASTNodeLink *child = structPush(parser->arena, ASTNodeLink);
+        ASTNode *child = structPush(parser->arena, ASTNode);
 
         if(acceptToken(parser, TokenType_Pragma)) {
-            parsePragma(parser, &child->node);
+            parsePragma(parser, child);
         } else if(acceptToken(parser, TokenType_Import)) {
-            parseImport(parser, &child->node);
+            parseImport(parser, child);
         } else if(acceptToken(parser, TokenType_Using)) {
-            parseUsing(parser, &child->node);
+            parseUsing(parser, child);
         } else if(acceptToken(parser, TokenType_Enum)) {
-            parseEnum(parser, &child->node);
+            parseEnum(parser, child);
         } else if(acceptToken(parser, TokenType_Struct)) {
-            parseStruct(parser, &child->node);
+            parseStruct(parser, child);
         } else if(acceptToken(parser, TokenType_Error)) {
-            parseError(parser, &child->node);
+            parseError(parser, child);
         } else if(acceptToken(parser, TokenType_Event)) {
-            parseEvent(parser, &child->node);
+            parseEvent(parser, child);
         } else if(acceptToken(parser, TokenType_Type)) {
-            parseTypedef(parser, &child->node);
+            parseTypedef(parser, child);
         } else if(acceptToken(parser, TokenType_Function)) {
-            parseFunction(parser, &child->node);
+            parseFunction(parser, child);
         } else if(acceptToken(parser, TokenType_Contract)) {
-            parseContract(parser, &child->node);
+            parseContract(parser, child);
         } else if(acceptToken(parser, TokenType_Abstract)) {
-            parseAbstractContract(parser, &child->node);
+            parseAbstractContract(parser, child);
         } else if(acceptToken(parser, TokenType_Interface)) {
-            parseInterface(parser, &child->node);
+            parseInterface(parser, child);
         } else if(acceptToken(parser, TokenType_Library)) {
-            parseLibrary(parser, &child->node);
+            parseLibrary(parser, child);
         } else if(acceptToken(parser, TokenType_EOF)) {
             node.endToken = MIN(parser->current - 2, parser->tokenCount - 1);
             break;
@@ -2868,11 +2865,11 @@ parseSourceUnit(Parser *parser) {
                 reportError(parser, "Expected type, but got (\"%S\")", peekLastTokenString(parser));
             }
             expectToken(parser, TokenType_Constant);
-            parseConstVariable(parser, &child->node, type);
-            child->node.startToken = startToken;
+            parseConstVariable(parser, child, type);
+            child->startToken = startToken;
         }
 
-        SLL_QUEUE_PUSH(sourceUnit->children.head, sourceUnit->children.last, child);
+        SLL_QUEUE_PUSH(sourceUnit->firstChild, sourceUnit->lastChild, child);
     }
 
     return node;

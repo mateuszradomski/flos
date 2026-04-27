@@ -1751,16 +1751,15 @@ pushStatementDocument(Render *r, ASTNode *node) {
 
             pushStatementDocumentOpenedBlock(r, statement->body);
 
-            ASTNodeLink *catchLink = statement->catches.head;
-            for(u32 i = 0; i < statement->catches.count; i++, catchLink = catchLink->next) {
+            for(ASTNode *catchNode = statement->firstCatch; catchNode != 0x0; catchNode = catchNode->next) {
                 pushWord(r, wordSpace());
 
-                ASTNodeCatchStatement *catch = &catchLink->node.catchStatementNode;
-                assert(stringMatch(LIT_TO_STR("catch"), r->tokens.tokenStrings[catchLink->node.startToken]));
+                ASTNodeCatchStatement *catch = &catchNode->catchStatementNode;
+                assert(stringMatch(LIT_TO_STR("catch"), r->tokens.tokenStrings[catchNode->startToken]));
 
-                pushTokenWord(r, catchLink->node.startToken);
+                pushTokenWord(r, catchNode->startToken);
 
-                u32 openParenToken = catchLink->node.startToken + 1;
+                u32 openParenToken = catchNode->startToken + 1;
                 if(catch->identifier != INVALID_TOKEN_ID) {
                     pushWord(r, wordSpace());
                     pushTokenWord(r, catch->identifier);
@@ -2610,7 +2609,7 @@ pushMemberDocument(Render *r, ASTNode *member) {
                 }
             }
 
-            pushParametersDocument(r, openParenToken, &function->parameters);
+            pushParametersDocument(r, openParenToken, function->parameters);
 
             pushGroup(r);
             pushNest(r);
@@ -2677,9 +2676,29 @@ pushMemberDocument(Render *r, ASTNode *member) {
             pushNest(r);
             assert(stringMatch(LIT_TO_STR("("), r->tokens.tokenStrings[openParenToken]));
 
-            if(constructor->modifiers.count > 0) {
+            if(constructor->firstModifier != 0x0) {
                 pushWord(r, wordLine());
-                pushModifierInvocations(r, &constructor->modifiers);
+                // pushModifierInvocations(r, constructor->modifiers);
+                // TODO(radomski): Dupliacted from pushModifierInvocations
+                for(ASTNode *it = constructor->firstModifier; it != 0x0; it = it->next) {
+                    pushGroup(r);
+
+                    ASTNodeModifierInvocation *invocation = &it->modifierInvocationNode;
+                    pushTypeDocument(r, invocation->identifier);
+                    if(invocation->argumentsExpression.count != (u32)-1) {
+                        ASTNodeListRanged *expressions = &invocation->argumentsExpression;
+                        TokenIdList *names = &invocation->argumentsName;
+
+                        assert(expressions->count != (u32)-1);
+                        TokenId startingToken = invocation->identifier->endToken + 1;
+                        pushCallArgumentListDocument(r, startingToken, expressions, names);
+                    }
+                    popGroup(r);
+
+                    if(it->next) {
+                        pushWord(r, wordLine());
+                    }
+                }
             }
 
             if(constructor->visibility != INVALID_TOKEN_ID) {
@@ -2717,9 +2736,9 @@ pushMemberDocument(Render *r, ASTNode *member) {
             pushWord(r, wordSpace());
             pushTokenWord(r, modifier->name);
 
-            if(modifier->parameters.count != (u32)-1) {
+            if(modifier->parameters->count != (u32)-1) {
                 TokenId openParenToken = modifier->name + 1;
-                pushParametersDocument(r, openParenToken, &modifier->parameters);
+                pushParametersDocument(r, openParenToken, modifier->parameters);
             }
 
             if(modifier->virtual != INVALID_TOKEN_ID) {
@@ -2771,19 +2790,22 @@ pushMemberDocument(Render *r, ASTNode *member) {
             pushWord(r, wordSpace());
             popGroup(r);
 
-            if(contract->baseContracts.count > 0) {
+            if(contract->firstBaseContract != 0x0) {
                 pushGroup(r);
                 pushNest(r);
                 assert(stringMatch(LIT_TO_STR("is"), r->tokens.tokenStrings[contract->name + 1]));
                 pushTokenWord(r, contract->name + 1);
                 pushWord(r, wordLine());
 
-                ASTNodeLink *baseContract = contract->baseContracts.head;
-                for(u32 i = 0; i < contract->baseContracts.count; i++, baseContract = baseContract->next) {
-                    pushInheritanceSpecifierDocument(r, &baseContract->node);
-                    if(i != contract->baseContracts.count - 1) {
-                        assert(stringMatch(LIT_TO_STR(","), r->tokens.tokenStrings[baseContract->node.endToken + 1]));
-                        pushTokenWord(r, baseContract->node.endToken + 1);
+                for(
+                    ASTNode *baseContract = contract->firstBaseContract;
+                    baseContract != 0x0;
+                    baseContract = baseContract->next
+                ) {
+                    pushInheritanceSpecifierDocument(r, baseContract);
+                    if(baseContract->next != 0x0) {
+                        assert(stringMatch(LIT_TO_STR(","), r->tokens.tokenStrings[baseContract->endToken + 1]));
+                        pushTokenWord(r, baseContract->endToken + 1);
                     }
                     pushWord(r, wordLine());
                 }
@@ -2940,10 +2962,10 @@ buildDocument(Render *r, ASTNode *tree, String originalSource, TokenizeResult to
     pushCommentsInRange(r, 0, startOfTokens);
 
     ASTNodeSourceUnit *sourceUnit = &tree->sourceUnitNode;
-    ASTNodeLink *child = sourceUnit->children.head;
+    ASTNode *child = sourceUnit->firstChild;
     for(u32 i = 0; child != 0x0; i++, child = child->next) {
-        if(i != 0) preserveHardBreaksIntoDocument(r, &child->node);
-        pushMemberDocument(r, &child->node);
+        if(i != 0) preserveHardBreaksIntoDocument(r, child);
+        pushMemberDocument(r, child);
     }
     popGroup(r);
 }
