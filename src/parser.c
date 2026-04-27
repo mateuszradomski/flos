@@ -611,21 +611,14 @@ advanceToken(Parser *parser) {
 
 static bool
 acceptToken(Parser *parser, TokenType type) {
-    if(peekTokenType(parser) == type) {
-        advanceToken(parser);
-        return true;
-    }
-
-    return false;
+    bool result = peekTokenType(parser) == type;
+    parser->current += result ? 1 : 0;
+    return result;
 }
 
 static bool
 nextTokenIs(Parser *parser, TokenType type) {
-    if(peekTokenType(parser) == type) {
-        return true;
-    }
-
-    return false;
+    return peekTokenType(parser) == type;
 }
 
 static void
@@ -733,16 +726,10 @@ isSizedType(String string, String prefix, u32 min, u32 max, u32 order) {
         }
 
         u32 size = stringToInteger(suffix);
+        bool isMultipleOfOrder = size % order == 0;
+        bool inBounds = size >= min && size <= max;
 
-        if(size % order != 0) {
-            return false;
-        }
-
-        if(size < min || size > max) {
-            return false;
-        }
-
-        return true;
+        return isMultipleOfOrder && inBounds;
     }
 
     return false;
@@ -770,16 +757,10 @@ isFixedPointNumberType(String string, String fixedPointPrefix) {
 
         u32 M = stringToInteger(MString);
         u32 N = stringToInteger(NString);
+        bool isMValid = (M >= 8 && M <= 256 && (M % 8) == 0);
+        bool isNValid = (N <= 80);
 
-        if(M < 8 || M > 256 || (M % 8) != 0) {
-            return false;
-        }
-
-        if(N > 80) {
-            return false;
-        }
-
-        return true;
+        return isMValid && isNValid;
     }
 
     return false;
@@ -1846,7 +1827,7 @@ tryParseVariableDeclarationTuple(Parser *parser, ASTNode *node) {
     return true;
 }
 
-static bool
+static void
 parseYulExpression(Parser *parser, ASTNode *node, YulLexer *lexer) {
     node->startToken = lexer->currentPosition;
 
@@ -1895,10 +1876,9 @@ parseYulExpression(Parser *parser, ASTNode *node, YulLexer *lexer) {
     }
 
     node->endToken = lexer->currentPosition - 1;
-    return true;
 }
 
-static bool
+static void
 parseYulStatement(Parser *parser, ASTNode *node, YulLexer *lexer) {
     node->startToken = lexer->currentPosition;
 
@@ -1907,9 +1887,7 @@ parseYulStatement(Parser *parser, ASTNode *node, YulLexer *lexer) {
 
         while(!acceptYulToken(lexer, YulTokenType_RBrace)) {
             ASTNodeLink *statement = structPush(parser->arena, ASTNodeLink);
-            if(!parseYulStatement(parser, &statement->node, lexer)) {
-                continue;
-            }
+            parseYulStatement(parser, &statement->node, lexer);
 
             SLL_QUEUE_PUSH(node->blockStatementNode.statements.head, node->blockStatementNode.statements.last, statement);
             node->blockStatementNode.statements.count += 1;
@@ -2085,27 +2063,22 @@ parseYulStatement(Parser *parser, ASTNode *node, YulLexer *lexer) {
         node->type = ASTNodeType_YulBreakStatement;
     } else if(acceptYulToken(lexer, YulTokenType_Continue)) {
         node->type = ASTNodeType_YulContinueStatement;
-    } else if(acceptYulToken(lexer, YulTokenType_Comment)) {
-        return false;
     } else {
         reportError(parser, "Unhandeled Yul statement for token - %S", peekYulToken(lexer).string);
     }
 
     node->endToken = lexer->currentPosition - 1;
-
-    return true;
 }
 
-static bool
+static void
 parseYulBlock(Parser *parser, ASTNode *node) {
     YulLexer lexer = createYulLexer(parser->tokens, parser->tokenCount, parser->current);
-    bool result = parseYulStatement(parser, node, &lexer);
+    parseYulStatement(parser, node, &lexer);
 
     parser->current = lexer.currentPosition;
-    return result;
 }
 
-static bool
+static void
 parseStatement(Parser *parser, ASTNode *node) {
     if(acceptToken(parser, TokenType_Return)) {
         node->startToken = parser->current - 1;
@@ -2143,9 +2116,7 @@ parseStatement(Parser *parser, ASTNode *node) {
 
         while(!acceptToken(parser, TokenType_RBrace)) {
             ASTNodeLink *statement = structPush(parser->arena, ASTNodeLink);
-            if(!parseStatement(parser, &statement->node)) {
-                continue;
-            }
+            parseStatement(parser, &statement->node);
 
             SLL_QUEUE_PUSH(node->blockStatementNode.statements.head, node->blockStatementNode.statements.last, statement);
             node->blockStatementNode.statements.count += 1;
@@ -2357,16 +2328,14 @@ parseStatement(Parser *parser, ASTNode *node) {
             node->endToken = parser->current - 1;
         }
     }
-
-    return true;
 }
 
-static bool
+static void
 parseBlock(Parser *parser, ASTNode *node) {
     return parseStatement(parser, node);
 }
 
-static bool
+static void
 parseConstVariable(Parser *parser, ASTNode *node, ASTNode *type) {
     node->type = ASTNodeType_ConstVariable;
     node->startToken = parser->current - 1;
@@ -2384,7 +2353,6 @@ parseConstVariable(Parser *parser, ASTNode *node, ASTNode *type) {
 
     expectToken(parser, TokenType_Semicolon);
     node->endToken = parser->current - 1;
-    return true;
 }
 
 static void
@@ -2464,6 +2432,7 @@ tryParseStateVariableDeclaration(Parser *parser, ASTNode *node) {
     }
 
     node->endToken = parser->current - 1;
+
     return true;
 }
 
@@ -2484,7 +2453,7 @@ parseModifierInvocation(Parser *parser, ASTNode *node, ASTNode *identifierPath) 
     node->endToken = parser->current - 1;
 }
 
-static bool
+static void
 parseFunction(Parser *parser, ASTNode *node) {
     node->type = ASTNodeType_FunctionDefinition;
     node->startToken = parser->current - 1;
@@ -2582,11 +2551,9 @@ parseFunction(Parser *parser, ASTNode *node) {
     }
 
     node->endToken = parser->current - 1;
-
-    return true;
 }
 
-static bool
+static void
 parseModifier(Parser *parser, ASTNode *node) {
     node->type = ASTNodeType_ModifierDefinition;
     node->startToken = parser->current - 1;
@@ -2628,10 +2595,9 @@ parseModifier(Parser *parser, ASTNode *node) {
     }
 
     node->endToken = parser->current - 1;
-    return true;
 }
 
-static bool
+static void
 parseConstructor(Parser *parser, ASTNode *node) {
     node->type = ASTNodeType_ConstructorDefinition;
     node->startToken = parser->current - 1;
@@ -2678,10 +2644,9 @@ parseConstructor(Parser *parser, ASTNode *node) {
     parseBlock(parser, constructor->body);
 
     node->endToken = parser->current - 1;
-    return true;
 }
 
-static bool
+static void
 parseContractBody(Parser *parser, ASTNodeList *elements) {
     expectToken(parser, TokenType_LBrace);
     while(!acceptToken(parser, TokenType_RBrace)) {
@@ -2733,11 +2698,9 @@ parseContractBody(Parser *parser, ASTNodeList *elements) {
         SLL_QUEUE_PUSH(elements->head, elements->last, element);
         elements->count += 1;
     }
-
-    return true;
 }
 
-static bool
+static void
 parseContract(Parser *parser, ASTNode *node) {
     node->type = ASTNodeType_ContractDefinition;
     node->startToken = parser->current - 1;
@@ -2772,10 +2735,9 @@ parseContract(Parser *parser, ASTNode *node) {
     parseContractBody(parser, &contract->elements);
 
     node->endToken = parser->current - 1;
-    return true;
 }
 
-static bool
+static void
 parseInterface(Parser *parser, ASTNode *node) {
     u32 startPosition = parser->current - 1;
     parseContract(parser, node);
@@ -2784,11 +2746,9 @@ parseInterface(Parser *parser, ASTNode *node) {
 
     node->startToken = startPosition;
     node->endToken = endPosition;
-
-    return true;
 }
 
-static bool
+static void
 parseAbstractContract(Parser *parser, ASTNode *node) {
     u32 startPosition = parser->current - 1;
     expectToken(parser, TokenType_Contract);
@@ -2798,11 +2758,9 @@ parseAbstractContract(Parser *parser, ASTNode *node) {
     node->type = ASTNodeType_AbstractContractDefinition;
     node->startToken = startPosition;
     node->endToken = endPosition;
-
-    return true;
 }
 
-static bool
+static void
 parseLibrary(Parser *parser, ASTNode *node) {
     node->type = ASTNodeType_LibraryDefinition;
     node->startToken = parser->current - 1;
@@ -2812,8 +2770,6 @@ parseLibrary(Parser *parser, ASTNode *node) {
 
     parseContractBody(parser, &library->elements);
     node->endToken = parser->current - 1;
-
-    return true;
 }
 
 typedef struct ASTNodeSizeEntry {
