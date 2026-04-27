@@ -146,9 +146,9 @@ typedef struct ASTNodeTypedef {
 } ASTNodeTypedef;
 
 typedef struct ASTNodeConstVariable {
-    TokenId identifier;
     ASTNode *type;
     ASTNode *expression;
+    TokenId identifier;
     TokenId visibility;
     TokenId mutability;
     TokenId override;
@@ -216,16 +216,16 @@ typedef struct ASTNodeTerneryExpression {
 } ASTNodeTerneryExpression;
 
 typedef struct ASTNodeFunctionDefinition {
-    TokenId name;                        // 4 bytes
+    TokenId name;                  // 4 bytes
     ASTNodeList *parameters;       // 12 bytes
-    TokenId visibility;                  // 4 byte
-    TokenId stateMutability;             // 4 byte
-    TokenId virtual;                     // 4 byte
-    TokenId override;                    // 1 byte
+    TokenId visibility;            // 4 byte
+    TokenId stateMutability;       // 4 byte
+    TokenId virtual;               // 4 byte
+    TokenId override;              // 1 byte
     ASTNodeList *overrides;        // 4 bytes
-    ASTNodeList *modifiers;              // 4 bytes
+    ASTNodeList *modifiers;        // 4 bytes
     ASTNodeList *returnParameters; // 4 bytes
-    ASTNode *body;                       // 4 bytes
+    ASTNode *body;                 // 4 bytes
 } ASTNodeFunctionDefinition;
 
 typedef struct ASTNodeBlockStatement {
@@ -316,8 +316,8 @@ typedef struct ASTNodeConstructorDefinition {
 
 typedef struct ASTNodeNamedParametersExpression {
     ASTNode *expression;
-    u32 listStartToken;
-    u32 listEndToken;
+    u32 listStartToken; // NOTE(radomski): unused
+    u32 listEndToken; // NOTE(radomski): unused
     TokenIdList names;
     ASTNodeList expressions;
 } ASTNodeNamedParametersExpression;
