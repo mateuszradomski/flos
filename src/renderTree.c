@@ -535,9 +535,7 @@ pushTokenAsStringWord(Render *r, TokenId token) {
 static void pushExpressionDocument(Render *r, ASTNode *node);
 
 static void
-pushCallArgumentListDocument(Render *r, TokenId startingToken, ASTNodeList *expressions, TokenIdList *names) {
-    assert(expressions->count != (u32)-1);
-
+pushCallArgumentListDocument(Render *r, TokenId startingToken, ASTNode *firstExpression, ASTNode *lastExpression, TokenIdList *names) {
     pushGroup(r);
     pushTokenWord(r, startingToken);
     if(names->count > 0) {
@@ -547,44 +545,43 @@ pushCallArgumentListDocument(Render *r, TokenId startingToken, ASTNodeList *expr
 
     Word whitespace = names->count == 0 ? wordSoftline() : wordLine();
     if(names->count == 0) {
-        if(expressions->count > 0) {
+        if(firstExpression) {
             pushWord(r, whitespace);
         }
 
-        ASTNodeLink *argument = expressions->head;
-        for(u32 i = 0; i < expressions->count; i++, argument = argument->next) {
+        ASTNode *argument = firstExpression;
+        for(u32 i = 0; argument != 0x0; i++, argument = argument->next) {
             pushGroup(r);
-            pushExpressionDocument(r, &argument->node);
+            pushExpressionDocument(r, argument);
             popGroup(r);
-            if(i < expressions->count - 1) {
+            if(argument->next != 0x0) {
                 // Add comma and space after each argument except the last one
-                pushTokenWord(r, argument->node.endToken + 1);
+                pushTokenWord(r, argument->endToken + 1);
                 pushWord(r, wordLine());
             }
         }
     } else {
         pushWord(r, whitespace);
-        ASTNodeLink *argument = expressions->head;
-        assert(names->count == expressions->count);
-        for(u32 i = 0; i < expressions->count; i++, argument = argument->next) {
+        ASTNode *argument = firstExpression;
+        for(u32 i = 0; argument != 0x0; i++, argument = argument->next) {
             pushGroup(r);
             TokenId literal = listGetTokenId(names, i);
             pushTokenWord(r, literal);
             pushTokenWord(r, literal + 1);
             pushWord(r, wordSpace());
-            pushExpressionDocument(r, &argument->node);
+            pushExpressionDocument(r, argument);
             popGroup(r);
 
-            if(i < expressions->count - 1) {
-                pushTokenWord(r, argument->node.endToken + 1);
+            if(argument->next != 0x0) {
+                pushTokenWord(r, argument->endToken + 1);
                 pushWord(r, wordLine());
             }
         }
     }
 
     TokenId endToken = 0;
-    if(expressions->count > 0) {
-        TokenId token = expressions->last->node.endToken + 1;
+    if(firstExpression != 0x0) {
+        TokenId token = lastExpression->endToken + 1;
         token += names->count > 0;
         endToken = token;
         pushWord(r, whitespace);
@@ -596,7 +593,7 @@ pushCallArgumentListDocument(Render *r, TokenId startingToken, ASTNodeList *expr
 
     if(names->count > 0) {
         popNest(r);
-        pushTokenWord(r, expressions->last->node.endToken + 1);
+        pushTokenWord(r, lastExpression->endToken + 1);
     } else {
         popNest(r);
     }
@@ -608,7 +605,7 @@ pushCallArgumentListDocument(Render *r, TokenId startingToken, ASTNodeList *expr
     assert(stringMatch(LIT_TO_STR(")"), r->tokens.tokenStrings[endToken]));
 }
 
-static void pushParametersDocument(Render *r, TokenId openParenToken, ASTNodeList *parameters);
+static void pushParametersDocument(Render *r, TokenId openParenToken, ASTNode *first, ASTNode *last);
 
 static void
 pushTypeDocument(Render *r, ASTNode *node) {
@@ -678,7 +675,7 @@ pushTypeDocument(Render *r, ASTNode *node) {
             pushTokenWord(r, node->startToken);
 
             pushGroup(r);
-            pushParametersDocument(r, node->startToken + 1, &node->functionTypeNode.parameters);
+            pushParametersDocument(r, node->startToken + 1, node->functionTypeNode.firstParameter, node->functionTypeNode.lastParameter);
 
             if(node->functionTypeNode.visibility != INVALID_TOKEN_ID) {
                 pushWord(r, wordSpace());
@@ -689,16 +686,16 @@ pushTypeDocument(Render *r, ASTNode *node) {
                 pushTokenWord(r, node->functionTypeNode.stateMutability);
             }
 
-            if(node->functionTypeNode.returnParameters.count > 0) {
+            if(node->functionTypeNode.firstReturnParameter) {
                 pushWord(r, wordSpace());
-                assert(stringMatch(LIT_TO_STR("returns"), r->tokens.tokenStrings[node->functionTypeNode.returnParameters.head->node.startToken - 2]));
-                assert(stringMatch(LIT_TO_STR("("), r->tokens.tokenStrings[node->functionTypeNode.returnParameters.head->node.startToken - 1]));
-                assert(stringMatch(LIT_TO_STR(")"), r->tokens.tokenStrings[node->functionTypeNode.returnParameters.last->node.endToken + 1]));
+                assert(stringMatch(LIT_TO_STR("returns"), r->tokens.tokenStrings[node->functionTypeNode.firstReturnParameter->startToken - 2]));
+                assert(stringMatch(LIT_TO_STR("("), r->tokens.tokenStrings[node->functionTypeNode.firstReturnParameter->startToken - 1]));
+                assert(stringMatch(LIT_TO_STR(")"), r->tokens.tokenStrings[node->functionTypeNode.lastReturnParameter->endToken + 1]));
 
                 pushGroup(r);
-                pushTokenWord(r, node->functionTypeNode.returnParameters.head->node.startToken - 2);
+                pushTokenWord(r, node->functionTypeNode.firstReturnParameter->startToken - 2);
                 pushWord(r, wordSpace());
-                pushParametersDocument(r, node->functionTypeNode.returnParameters.head->node.startToken - 1, &node->functionTypeNode.returnParameters);
+                pushParametersDocument(r, node->functionTypeNode.firstReturnParameter->startToken - 1, node->functionTypeNode.firstReturnParameter, node->functionTypeNode.lastReturnParameter);
                 popGroup(r);
             }
             popGroup(r);
@@ -907,29 +904,29 @@ pushExpressionDocument(Render *r, ASTNode *node) {
             pushGroup(r);
             pushTokenWord(r, node->startToken);
             pushNest(r);
-            ASTNodeLink *element = tuple->elements.head;
+            ASTNode *element = tuple->firstElement;
 
-            if(tuple->elements.count == 1 && element->node.type != ASTNodeType_None) {
+            if(tuple->firstElement != 0x0 && tuple->firstElement->next == 0x0 && element->type != ASTNodeType_None) {
                 pushWord(r, wordSoftline());
-                pushExpressionDocumentNoIndent(r, &element->node);
+                pushExpressionDocumentNoIndent(r, element);
                 pushWord(r, wordSoftline());
             } else {
                 TokenId commaToken = node->startToken;
-                for(u32 i = 0; i < tuple->elements.count; i++, element = element->next) {
+                for(u32 i = 0; element != 0x0; i++, element = element->next) {
                     if(i == 0) { pushWord(r, wordSoftline()); }
-                    bool isNamed = element->node.type != ASTNodeType_None;
+                    bool isNamed = element->type != ASTNodeType_None;
                     if(isNamed) {
                         if(i > 0) { pushWord(r, wordLine()); }
-                        pushExpressionDocument(r, &element->node);
+                        pushExpressionDocument(r, element);
                     }
 
-                    if(i < tuple->elements.count - 1) {
-                        commaToken = isNamed ? element->node.endToken + 1 : commaToken + 1;
+                    if(element->next != 0x0) {
+                        commaToken = isNamed ? element->endToken + 1 : commaToken + 1;
                         assert(stringMatch(LIT_TO_STR(","), r->tokens.tokenStrings[commaToken]));
                         pushTokenWord(r, commaToken);
                     }
 
-                    if(i == tuple->elements.count - 1) { pushWord(r, wordSoftline()); }
+                    if(element->next == 0x0) { pushWord(r, wordSoftline()); }
                 }
             }
 
@@ -1036,12 +1033,12 @@ pushExpressionDocument(Render *r, ASTNode *node) {
             pushNest(r);
 
             pushGroup(r);
-            ASTNodeLink *expression = array->expressions.head;
-            for(u32 i = 0; i < array->expressions.count; i++, expression = expression->next) {
-                pushExpressionDocument(r, &expression->node);
-                if(i < array->expressions.count - 1) {
-                    assert(stringMatch(LIT_TO_STR(","), r->tokens.tokenStrings[expression->node.endToken + 1]));
-                    pushTokenWord(r, expression->node.endToken + 1);
+            ASTNode *expression = array->firstExpression;
+            for(u32 i = 0; expression != 0x0; i++, expression = expression->next) {
+                pushExpressionDocument(r, expression);
+                if(expression->next != 0x0) {
+                    assert(stringMatch(LIT_TO_STR(","), r->tokens.tokenStrings[expression->endToken + 1]));
+                    pushTokenWord(r, expression->endToken + 1);
 
                     pushWord(r, wordLine());
                 }
@@ -1092,17 +1089,17 @@ pushExpressionDocument(Render *r, ASTNode *node) {
             pushNest(r);
             pushTokenWord(r, named->expression->endToken + 1);
             pushWord(r, wordLine());
-            ASTNodeLink *expression = named->expressions.head;
-            for(u32 i = 0; i < named->expressions.count; i++, expression = expression->next) {
+            ASTNode *expression = named->firstExpression;
+            for(u32 i = 0; expression != 0x0; i++, expression = expression->next) {
                 assert(stringMatch(LIT_TO_STR(":"), r->tokens.tokenStrings[listGetTokenId(&named->names, i) + 1]));
                 pushTokenWord(r, listGetTokenId(&named->names, i));
                 pushTokenWord(r, listGetTokenId(&named->names, i) + 1);
                 pushWord(r, wordSpace());
-                pushExpressionDocument(r, &expression->node);
+                pushExpressionDocument(r, expression);
 
-                if(i < named->expressions.count - 1) {
-                    assert(stringMatch(LIT_TO_STR(","), r->tokens.tokenStrings[expression->node.endToken + 1]));
-                    pushTokenWord(r, expression->node.endToken + 1);
+                if(expression->next != 0x0) {
+                    assert(stringMatch(LIT_TO_STR(","), r->tokens.tokenStrings[expression->endToken + 1]));
+                    pushTokenWord(r, expression->endToken + 1);
                     pushWord(r, wordLine());
                 }
             }
@@ -1120,8 +1117,11 @@ pushExpressionDocument(Render *r, ASTNode *node) {
 
 static ASTNodeType_Enum
 getNodeTypeStrippingParens(ASTNode *node) {
-    if(node->type == ASTNodeType_TupleExpression && node->tupleExpressionNode.elements.count == 1) {
-        return getNodeTypeStrippingParens(&node->tupleExpressionNode.elements.head->node);
+    if (node->type == ASTNodeType_TupleExpression) {
+        ASTNode *first = node->tupleExpressionNode.firstElement;
+        if (first != NULL && first->next == 0x0) {
+            return getNodeTypeStrippingParens(first);
+        }
     }
 
     return node->type;
@@ -1148,7 +1148,7 @@ pushExpressionDocumentNoChainingUntil(Render *r, ASTNode *node, ASTNode *stopAt)
 
             pushExpressionDocumentNoChainingUntil(r, function->expression, stopAt);
             pushGroup(r);
-            pushCallArgumentListDocument(r, function->expression->endToken + 1, &function->argumentsExpression, &function->argumentsName);
+            pushCallArgumentListDocument(r, function->expression->endToken + 1, function->firstArgumentExpression, function->lastArgumentExpression, &function->argumentsName);
             popGroup(r);
         } break;
         case ASTNodeType_ArrayAccessExpression: {
@@ -1338,16 +1338,16 @@ pushYulFunctionCallDocument(Render *r, ASTNode *node) {
     assert(stringMatch(LIT_TO_STR("("), r->tokens.tokenStrings[function->identifier + 1]));
     pushTokenWord(r, function->identifier + 1);
 
-    if (function->arguments.count > 0) {
+    if (function->firstArgument != 0x0) {
         pushGroup(r);
         pushNest(r);
         pushWord(r, wordSoftline());
 
-        ASTNodeLink *argument = function->arguments.head;
-        for(u32 i = 0; i < function->arguments.count; i++, argument = argument->next) {
-            pushYulExpressionDocument(r, &argument->node);
-            if(i < function->arguments.count - 1) {
-                pushTokenWord(r, argument->node.endToken + 1); // comma
+        ASTNode *argument = function->firstArgument;
+        for(u32 i = 0; argument != 0x0; i++, argument = argument->next) {
+            pushYulExpressionDocument(r, argument);
+            if(argument->next != 0x0) {
+                pushTokenWord(r, argument->endToken + 1); // comma
                 pushWord(r, wordLine());
             }
         }
@@ -1413,16 +1413,16 @@ pushStatementDocument(Render *r, ASTNode *node) {
             pushTokenWord(r, node->startToken);
             pushNest(r);
 
-            if(block->statements.count == 0) {
+            if(block->firstStatement == 0) {
                 pushWord(r, wordSpace());
             }
 
-            ASTNodeLink *statement = block->statements.head;
-            for(u32 i = 0; i < block->statements.count; i++, statement = statement->next) {
-                if(i != 0) { preserveHardBreaksIntoDocument(r, &statement->node); }
+            u32 i = 0;
+            for(ASTNode *statement = block->firstStatement; statement != 0x0; i++, statement = statement->next) {
+                if(i != 0) { preserveHardBreaksIntoDocument(r, statement); }
                 else { pushWord(r, wordLine()); }
 
-                pushStatementDocument(r, &statement->node);
+                pushStatementDocument(r, statement);
                 pushWord(r, wordHardBreak());
             }
 
@@ -1530,10 +1530,10 @@ pushStatementDocument(Render *r, ASTNode *node) {
             pushTokenWord(r, node->startToken);
             pushNest(r);
             pushWord(r, wordSoftline());
-            ASTNodeLink *it = statement->declarations.head;
-            for(u32 i = 0; i < statement->declarations.count; i++, it = it->next) {
-                if(it->node.type != ASTNodeType_None) {
-                    ASTNodeVariableDeclaration *decl = &it->node.variableDeclarationNode;
+            ASTNode *it = statement->firstDeclaration;
+            for(u32 i = 0; it != 0x0; i++, it = it->next) {
+                if(it->type != ASTNodeType_None) {
+                    ASTNodeVariableDeclaration *decl = &it->variableDeclarationNode;
 
                     pushTypeDocument(r, decl->type);
                     pushWord(r, wordSpace());
@@ -1544,15 +1544,15 @@ pushStatementDocument(Render *r, ASTNode *node) {
                     }
 
                     pushTokenWord(r, decl->name);
-                    if(i < statement->declarations.count - 1) {
+                    if(it->next != 0x0) {
                         assert(stringMatch(LIT_TO_STR(","), r->tokens.tokenStrings[decl->name + 1]));
                         pushTokenWord(r, decl->name + 1);
                         pushWord(r, wordLine());
                     }
                 } else {
-                    if(i < statement->declarations.count - 1) {
-                        assert(stringMatch(LIT_TO_STR(","), r->tokens.tokenStrings[it->node.endToken + 1]));
-                        pushTokenWord(r, it->node.endToken + 1);
+                    if(it->next != 0x0) {
+                        assert(stringMatch(LIT_TO_STR(","), r->tokens.tokenStrings[it->endToken + 1]));
+                        pushTokenWord(r, it->endToken + 1);
                         pushWord(r, wordLine());
                     }
                 }
@@ -1734,7 +1734,7 @@ pushStatementDocument(Render *r, ASTNode *node) {
             pushWord(r, wordSpace());
             pushExpressionDocument(r, statement->expression);
 
-            if(statement->returnParameters.count != (u32)-1) {
+            if(statement->firstReturnParameter != MISSING_ELEMENT) {
                 assert(stringMatch(LIT_TO_STR("returns"), r->tokens.tokenStrings[statement->expression->endToken + 1]));
                 assert(stringMatch(LIT_TO_STR("("), r->tokens.tokenStrings[statement->expression->endToken + 2]));
                 assert(stringMatch(LIT_TO_STR(")"), r->tokens.tokenStrings[statement->body->startToken - 1]));
@@ -1743,7 +1743,7 @@ pushStatementDocument(Render *r, ASTNode *node) {
                 pushTokenWord(r, statement->expression->endToken + 1);
                 pushWord(r, wordSpace());
 
-                pushParametersDocument(r, statement->expression->endToken + 2, &statement->returnParameters);
+                pushParametersDocument(r, statement->expression->endToken + 2, statement->firstReturnParameter, statement->lastReturnParameter);
             }
 
             pushWord(r, wordSpace());
@@ -1766,8 +1766,8 @@ pushStatementDocument(Render *r, ASTNode *node) {
                     openParenToken = catch->identifier + 1;
                 }
 
-                if(catch->parameters.count != (u32)-1) {
-                    pushParametersDocument(r, openParenToken, &catch->parameters);
+                if(catch->firstParameter != MISSING_ELEMENT) {
+                    pushParametersDocument(r, openParenToken, catch->firstParameter, catch->lastParameter);
                 }
 
                 pushWord(r, wordSpace());
@@ -1825,11 +1825,11 @@ pushStatementDocument(Render *r, ASTNode *node) {
 
             pushWord(r, wordLine());
 
-            ASTNodeLink *statement = block->statements.head;
-            for(u32 i = 0; i < block->statements.count; i++, statement = statement->next) {
-                if(i != 0) { preserveHardBreaksIntoDocument(r, &statement->node); }
+            ASTNode *statement = block->firstStatement;
+            for(u32 i = 0; statement != 0x0; i++, statement = statement->next) {
+                if(i != 0) { preserveHardBreaksIntoDocument(r, statement); }
 
-                pushStatementDocument(r, &statement->node);
+                pushStatementDocument(r, statement);
                 pushWord(r, i == 0 ? wordLine() : wordHardBreak());
             }
 
@@ -1870,11 +1870,11 @@ pushStatementDocument(Render *r, ASTNode *node) {
             ASTNodeYulVariableAssignment *statement = &node->yulVariableAssignmentNode;
             pushGroup(r);
 
-            ASTNodeLink *it = statement->paths.head;
-            for(u32 i = 0; i < statement->paths.count; i++, it = it->next) {
-                pushYulExpressionDocument(r, &it->node);
-                if (i < statement->paths.count - 1) {
-                    pushTokenWord(r, it->node.endToken + 1); // ,
+            ASTNode *it = statement->firstPath;
+            for(u32 i = 0; it != 0x0; i++, it = it->next) {
+                pushYulExpressionDocument(r, it);
+                if (it->next != 0x0) {
+                    pushTokenWord(r, it->endToken + 1); // ,
                     pushWord(r, wordSpace());
                 }
             }
@@ -2002,20 +2002,20 @@ pushStatementDocument(Render *r, ASTNode *node) {
             pushWord(r, wordSpace());
             pushYulExpressionDocument(r, statement->expression);
 
-            ASTNodeLink *it = statement->cases.head;
-            for(u32 i = 0; i < statement->cases.count; i++, it = it->next) {
+            ASTNode *it = statement->firstCase;
+            for(u32 i = 0; it != 0x0; i++, it = it->next) {
                 if(i == 0) {
                     pushWord(r, wordHardBreak());
                 } else {
                     pushWord(r, wordSpace());
                 }
 
-                pushTokenWord(r, it->node.yulCaseNode.literal->startToken - 1); // case
+                pushTokenWord(r, it->yulCaseNode.literal->startToken - 1); // case
                 pushWord(r, wordSpace());
-                pushYulExpressionDocument(r, it->node.yulCaseNode.literal);
+                pushYulExpressionDocument(r, it->yulCaseNode.literal);
                 pushWord(r, wordSpace());
 
-                pushStatementDocumentOpenedBlock(r, it->node.yulCaseNode.block);
+                pushStatementDocumentOpenedBlock(r, it->yulCaseNode.block);
             }
 
             if(statement->defaultBlock != 0x0) {
@@ -2052,16 +2052,16 @@ pushStatementDocumentOpenedBlock(Render *r, ASTNode *node) {
             pushTokenWord(r, node->startToken);
             pushNest(r);
 
-            if(block->statements.count == 0) {
+            if(block->firstStatement == 0) {
                 pushWord(r, wordHardBreak());
             }
 
-            ASTNodeLink *statement = block->statements.head;
-            for(u32 i = 0; i < block->statements.count; i++, statement = statement->next) {
-                if(i != 0) { preserveHardBreaksIntoDocument(r, &statement->node); }
+            ASTNode *statement = block->firstStatement;
+            for(u32 i = 0; statement != 0x0; i++, statement = statement->next) {
+                if(i != 0) { preserveHardBreaksIntoDocument(r, statement); }
                 else { pushWord(r, wordHardBreak()); }
 
-                pushStatementDocument(r, &statement->node);
+                pushStatementDocument(r, statement);
                 pushWord(r, wordHardBreak());
             }
 
@@ -2074,12 +2074,12 @@ pushStatementDocumentOpenedBlock(Render *r, ASTNode *node) {
             pushTokenWord(r, node->startToken); // {
             pushNest(r);
 
-            ASTNodeLink *statement = block->statements.head;
-            for(u32 i = 0; i < block->statements.count; i++, statement = statement->next) {
-                if(i != 0) { preserveHardBreaksIntoDocument(r, &statement->node); }
+            ASTNode *statement = block->firstStatement;
+            for(u32 i = 0; statement != 0x0; i++, statement = statement->next) {
+                if(i != 0) { preserveHardBreaksIntoDocument(r, statement); }
                 else { pushWord(r, wordHardBreak()); }
 
-                pushStatementDocument(r, &statement->node);
+                pushStatementDocument(r, statement);
                 pushWord(r, i == 0 ? wordLine() : wordHardBreak());
             }
 
@@ -2097,48 +2097,49 @@ static void
 pushInheritanceSpecifierDocument(Render *r, ASTNode *node) {
     ASTNodeInheritanceSpecifier *inheritance = &node->inheritanceSpecifierNode;
     pushTypeDocument(r, inheritance->identifier);
-    if(inheritance->argumentsExpression.count > 0) {
+    if(inheritance->firstArgumentExpression != MISSING_ELEMENT) {
         pushCallArgumentListDocument(r, inheritance->identifier->endToken + 1,
-                                     &inheritance->argumentsExpression, &inheritance->argumentsName);
+                                     inheritance->firstArgumentExpression,
+                                     inheritance->lastArgumentExpression,
+                                     &inheritance->argumentsName);
     }
 }
 
 static void
-pushOverridesDocument(Render *r, TokenId overrideToken, ASTNodeList *overrides, Word whitespace) {
+pushOverridesDocument(Render *r, TokenId overrideToken, ASTNode *firstOverride, ASTNode *lastOverride, Word whitespace) {
     if(overrideToken != INVALID_TOKEN_ID) {
         pushWord(r, whitespace);
         assert(stringMatch(LIT_TO_STR("override"), r->tokens.tokenStrings[overrideToken]));
         pushTokenWord(r, overrideToken);
-        if(overrides->count > 0) {
-            assert(stringMatch(LIT_TO_STR("("), r->tokens.tokenStrings[overrides->head->node.startToken - 1]));
-            assert(stringMatch(LIT_TO_STR(")"), r->tokens.tokenStrings[overrides->last->node.endToken + 1]));
+        if(firstOverride) {
+            assert(stringMatch(LIT_TO_STR("("), r->tokens.tokenStrings[firstOverride->startToken - 1]));
+            assert(stringMatch(LIT_TO_STR(")"), r->tokens.tokenStrings[lastOverride->endToken + 1]));
 
             pushGroup(r);
             pushNest(r);
-            pushTokenWord(r, overrides->head->node.startToken - 1);
+            pushTokenWord(r, firstOverride->startToken - 1);
             pushWord(r, wordSoftline());
 
-            ASTNodeLink *override = overrides->head;
-            for(u32 i = 0; i < overrides->count; i++, override = override->next) {
-                pushTypeDocument(r, &override->node);
-                if(i != overrides->count - 1) {
-                    pushTokenWord(r, override->node.endToken + 1);
+            for(ASTNode *override = firstOverride; override != 0x0; override = override->next) {
+                pushTypeDocument(r, override);
+                if(override->next != 0x0) {
+                    pushTokenWord(r, override->endToken + 1);
                     pushWord(r, wordLine());
                 }
             }
 
             popNest(r);
             pushWord(r, wordSoftline());
-            pushTokenWord(r, overrides->last->node.endToken + 1);
+            pushTokenWord(r, lastOverride->endToken + 1);
             popGroup(r);
         }
     }
 }
 
 static void
-pushParametersDocument(Render *r, TokenId openParenToken, ASTNodeList *list) {
-    TokenId closeParenToken = list->count > 0
-        ? list->last->node.endToken + 1
+pushParametersDocument(Render *r, TokenId openParenToken, ASTNode *first, ASTNode *last) {
+    TokenId closeParenToken = first
+        ? last->endToken + 1
         : openParenToken + 1;
 
     assert(stringMatch(LIT_TO_STR("("), r->tokens.tokenStrings[openParenToken]));
@@ -2148,10 +2149,10 @@ pushParametersDocument(Render *r, TokenId openParenToken, ASTNodeList *list) {
     pushTokenWord(r, openParenToken);
     pushNest(r);
 
-    ASTNodeLink *it = list->head;
-    for(u32 i = 0; i < list->count; i++, it = it->next) {
+    ASTNode *it = first;
+    for(u32 i = 0; it != 0x0; i++, it = it->next) {
         if(i == 0) { pushWord(r, wordSoftline()); }
-        ASTNodeVariableDeclaration *decl = &it->node.variableDeclarationNode;
+        ASTNodeVariableDeclaration *decl = &it->variableDeclarationNode;
         pushTypeDocument(r, decl->type);
 
         if(decl->dataLocation != INVALID_TOKEN_ID) {
@@ -2164,11 +2165,12 @@ pushParametersDocument(Render *r, TokenId openParenToken, ASTNodeList *list) {
             pushTokenWord(r, decl->name);
         }
 
-        if(i != list->count - 1) {
-            pushTokenWord(r, it->next->node.variableDeclarationNode.type->startToken - 1);
+        if(it-> next != 0x0) {
+            pushTokenWord(r, it->next->variableDeclarationNode.type->startToken - 1);
             pushWord(r, wordLine());
+        } else {
+            pushWord(r, wordSoftline()); 
         }
-        if(i == list->count - 1) { pushWord(r, wordSoftline()); }
     }
 
     popNest(r);
@@ -2177,25 +2179,21 @@ pushParametersDocument(Render *r, TokenId openParenToken, ASTNodeList *list) {
 }
 
 static void
-pushModifierInvocations(Render *r, ASTNodeList *modifiers) {
-    assert(modifiers && modifiers->count > 0);
-    ASTNodeLink *it = modifiers->head;
-    for(u32 i = 0; i < modifiers->count; i++, it = it->next) {
+pushModifierInvocations(Render *r, ASTNode *first) {
+    for(ASTNode *it = first; it != 0x0; it = it->next) {
         pushGroup(r);
 
-        ASTNodeModifierInvocation *invocation = &it->node.modifierInvocationNode;
+        ASTNodeModifierInvocation *invocation = &it->modifierInvocationNode;
         pushTypeDocument(r, invocation->identifier);
-        if(invocation->argumentsExpression.count != (u32)-1) {
-            ASTNodeList *expressions = &invocation->argumentsExpression;
+        if(invocation->firstArgumentExpression != MISSING_ELEMENT) {
             TokenIdList *names = &invocation->argumentsName;
 
-            assert(expressions->count != (u32)-1);
             TokenId startingToken = invocation->identifier->endToken + 1;
-            pushCallArgumentListDocument(r, startingToken, expressions, names);
+            pushCallArgumentListDocument(r, startingToken, invocation->firstArgumentExpression, invocation->lastArgumentExpression, names);
         }
         popGroup(r);
 
-        if(i != modifiers->count - 1) {
+        if(it->next) {
             pushWord(r, wordLine());
         }
     }
@@ -2297,33 +2295,33 @@ pushMemberDocument(Render *r, ASTNode *member) {
 
             TokenId forToken = INVALID_TOKEN_ID;
             if(using->onLibrary) {
-                assert(using->identifiers.count == 1);
-                pushTypeDocument(r, &using->identifiers.head->node);
+                assert(using->firstIdentifier == using->lastIdentifier);
+                pushTypeDocument(r, using->firstIdentifier);
                 pushWord(r, wordSpace());
-                forToken = using->identifiers.head->node.endToken + 1;
+                forToken = using->firstIdentifier->endToken + 1;
             } else {
                 pushTokenWord(r, member->startToken + 1);
                 pushWord(r, wordSpace());
 
                 TokenId endToken = member->startToken + 1;
 
-                ASTNodeLink *it = using->identifiers.head;
-                for(u32 i = 0; i < using->identifiers.count; i++, it = it->next) {
-                    endToken = using->identifiers.last->node.endToken;
-                    pushTypeDocument(r, &it->node);
+                ASTNode *it = using->firstIdentifier;
+                for(u32 i = 0; it != 0x0; i++, it = it->next) {
+                    endToken = using->lastIdentifier->endToken;
+                    pushTypeDocument(r, it);
 
                     u16 operator = listGetU16(&using->operators, i);
                     if(operator) {
                         pushWord(r, wordSpace());
-                        pushTokenWord(r, it->node.endToken + 1);
+                        pushTokenWord(r, it->endToken + 1);
                         pushWord(r, wordSpace());
                         pushWord(r, wordText(tokenTypeToString(operator)));
 
-                        endToken = using->identifiers.last->node.endToken + 2;
+                        endToken = using->lastIdentifier->endToken + 2;
                     }
 
-                    if(i != using->identifiers.count - 1) {
-                        pushTokenWord(r, it->next->node.startToken - 1);
+                    if(it->next != 0x0) {
+                        pushTokenWord(r, it->next->startToken - 1);
                     }
 
                     pushWord(r, wordSpace());
@@ -2395,11 +2393,9 @@ pushMemberDocument(Render *r, ASTNode *member) {
             pushTokenWord(r, member->startToken + 2);
             pushWord(r, wordLine());
 
-            ASTNodeList *list = &member->structNode.members;
-            ASTNodeLink *it = list->head;
-            for(u32 i = 0; i < list->count; i++, it = it->next) {
-                ASTNodeVariableDeclaration *decl = &it->node.variableDeclarationNode;
-                preserveHardBreaksIntoDocument(r, &it->node);
+            for(ASTNode *it = member->structNode.firstMember; it != 0x0; it = it->next) {
+                ASTNodeVariableDeclaration *decl = &it->variableDeclarationNode;
+                preserveHardBreaksIntoDocument(r, it);
 
                 pushGroup(r);
                 pushTypeDocument(r, decl->type);
@@ -2433,9 +2429,9 @@ pushMemberDocument(Render *r, ASTNode *member) {
 
             pushNest(r);
             pushWord(r, wordSoftline());
-            ASTNodeLink *it = member->errorNode.parameters.head;
-            for(u32 i = 0; i < member->errorNode.parameters.count; i++, it = it->next) {
-                ASTNodeVariableDeclaration *decl = &it->node.variableDeclarationNode;
+            ASTNode *it = member->eventNode.firstParameter;
+            for(u32 i = 0; it != 0x0; i++, it = it->next) {
+                ASTNodeVariableDeclaration *decl = &it->variableDeclarationNode;
 
                 pushTypeDocument(r, decl->type);
 
@@ -2449,8 +2445,8 @@ pushMemberDocument(Render *r, ASTNode *member) {
                     pushTokenWord(r, decl->name);
                 }
 
-                if(i != member->errorNode.parameters.count - 1) {
-                    pushTokenWord(r, it->next->node.variableDeclarationNode.type->startToken - 1);
+                if(it->next != 0x0) {
+                    pushTokenWord(r, it->next->variableDeclarationNode.type->startToken - 1);
                     pushWord(r, wordLine());
                 }
             }
@@ -2477,9 +2473,9 @@ pushMemberDocument(Render *r, ASTNode *member) {
 
             pushNest(r);
             pushWord(r, wordSoftline());
-            ASTNodeLink *it = member->errorNode.parameters.head;
-            for(u32 i = 0; i < member->errorNode.parameters.count; i++, it = it->next) {
-                ASTNodeVariableDeclaration *decl = &it->node.variableDeclarationNode;
+            ASTNode *it = member->errorNode.firstParameter;
+            for(u32 i = 0; it != 0x0; i++, it = it->next) {
+                ASTNodeVariableDeclaration *decl = &it->variableDeclarationNode;
 
                 pushTypeDocument(r, decl->type);
 
@@ -2493,8 +2489,8 @@ pushMemberDocument(Render *r, ASTNode *member) {
                     pushTokenWord(r, decl->name);
                 }
 
-                if(i != member->errorNode.parameters.count - 1) {
-                    pushTokenWord(r, it->next->node.variableDeclarationNode.type->startToken - 1);
+                if(it->next != 0x0) {
+                    pushTokenWord(r, it->next->variableDeclarationNode.type->startToken - 1);
                     pushWord(r, wordLine());
                 }
             }
@@ -2571,7 +2567,7 @@ pushMemberDocument(Render *r, ASTNode *member) {
                 pushTokenWord(r, decl->mutability);
             }
 
-            pushOverridesDocument(r, decl->override, &decl->overrides, wordSpace());
+            pushOverridesDocument(r, decl->override, decl->firstOverride, decl->lastOverride, wordSpace());
 
             pushWord(r, wordSpace());
             pushTokenWord(r, decl->identifier);
@@ -2614,7 +2610,7 @@ pushMemberDocument(Render *r, ASTNode *member) {
                 }
             }
 
-            pushParametersDocument(r, openParenToken, function->parameters);
+            pushParametersDocument(r, openParenToken, function->firstParameter, function->lastParameter);
 
             pushGroup(r);
             pushNest(r);
@@ -2632,22 +2628,22 @@ pushMemberDocument(Render *r, ASTNode *member) {
                 pushTokenWord(r, function->virtual);
             }
 
-            pushOverridesDocument(r, function->override, function->overrides, wordLine());
+            pushOverridesDocument(r, function->override, function->firstOverride, function->lastOverride, wordLine());
 
-            if(function->modifiers && function->modifiers->count > 0) {
+            if(function->firstModifier) {
                 pushWord(r, wordLine());
-                pushModifierInvocations(r, function->modifiers);
+                pushModifierInvocations(r, function->firstModifier);
             }
 
-            if(function->returnParameters) {
-                assert(stringMatch(LIT_TO_STR("returns"), r->tokens.tokenStrings[function->returnParameters->head->node.startToken - 2]));
+            if(function->firstReturnParameter) {
+                assert(stringMatch(LIT_TO_STR("returns"), r->tokens.tokenStrings[function->firstReturnParameter->startToken - 2]));
 
                 pushWord(r, wordLine());
                 pushGroup(r);
-                pushTokenWord(r, function->returnParameters->head->node.startToken - 2);
+                pushTokenWord(r, function->firstReturnParameter->startToken - 2);
                 pushWord(r, wordSpace());
 
-                pushParametersDocument(r, function->returnParameters->head->node.startToken - 1, function->returnParameters);
+                pushParametersDocument(r, function->firstReturnParameter->startToken - 1, function->firstReturnParameter, function->lastReturnParameter);
                 popGroup(r);
             }
 
@@ -2675,7 +2671,7 @@ pushMemberDocument(Render *r, ASTNode *member) {
             pushTokenWord(r, member->startToken);
 
             TokenId openParenToken = member->startToken + 1;
-            pushParametersDocument(r, openParenToken, &constructor->parameters);
+            pushParametersDocument(r, openParenToken, constructor->firstParameter, constructor->lastParameter);
 
             pushGroup(r);
             pushNest(r);
@@ -2683,27 +2679,7 @@ pushMemberDocument(Render *r, ASTNode *member) {
 
             if(constructor->firstModifier != 0x0) {
                 pushWord(r, wordLine());
-                // pushModifierInvocations(r, constructor->modifiers);
-                // TODO(radomski): Dupliacted from pushModifierInvocations
-                for(ASTNode *it = constructor->firstModifier; it != 0x0; it = it->next) {
-                    pushGroup(r);
-
-                    ASTNodeModifierInvocation *invocation = &it->modifierInvocationNode;
-                    pushTypeDocument(r, invocation->identifier);
-                    if(invocation->argumentsExpression.count != (u32)-1) {
-                        ASTNodeList *expressions = &invocation->argumentsExpression;
-                        TokenIdList *names = &invocation->argumentsName;
-
-                        assert(expressions->count != (u32)-1);
-                        TokenId startingToken = invocation->identifier->endToken + 1;
-                        pushCallArgumentListDocument(r, startingToken, expressions, names);
-                    }
-                    popGroup(r);
-
-                    if(it->next) {
-                        pushWord(r, wordLine());
-                    }
-                }
+                pushModifierInvocations(r, constructor->firstModifier);
             }
 
             if(constructor->visibility != INVALID_TOKEN_ID) {
@@ -2741,9 +2717,9 @@ pushMemberDocument(Render *r, ASTNode *member) {
             pushWord(r, wordSpace());
             pushTokenWord(r, modifier->name);
 
-            if(modifier->parameters->count != (u32)-1) {
+            if(modifier->firstParameter != MISSING_ELEMENT) {
                 TokenId openParenToken = modifier->name + 1;
-                pushParametersDocument(r, openParenToken, modifier->parameters);
+                pushParametersDocument(r, openParenToken, modifier->firstParameter, modifier->lastParameter);
             }
 
             if(modifier->virtual != INVALID_TOKEN_ID) {
@@ -2751,7 +2727,7 @@ pushMemberDocument(Render *r, ASTNode *member) {
                 pushTokenWord(r, modifier->virtual);
             }
 
-            pushOverridesDocument(r, modifier->override, modifier->overrides, wordLine());
+            pushOverridesDocument(r, modifier->override, modifier->firstOverride, modifier->lastOverride, wordLine());
 
             popGroup(r);
             if(modifier->body != 0x0) {
@@ -2819,8 +2795,8 @@ pushMemberDocument(Render *r, ASTNode *member) {
             }
 
             pushGroup(r);
-            u32 openParenToken = contract->elements.count > 0
-                ? contract->elements.head->node.startToken - 1
+            u32 openParenToken = contract->firstElement != 0x0
+                ? contract->firstElement->startToken - 1
                 : member->endToken - 1;
 
             assert(stringMatch(LIT_TO_STR("{"), r->tokens.tokenStrings[openParenToken]));
@@ -2828,12 +2804,12 @@ pushMemberDocument(Render *r, ASTNode *member) {
             pushNest(r);
             pushWord(r, wordLine());
 
-            ASTNodeLink *element = contract->elements.head;
-            for(u32 i = 0; i < contract->elements.count; i++, element = element->next) {
+            ASTNode *element = contract->firstElement;
+            for(u32 i = 0; element != 0x0; i++, element = element->next) {
                 if(i > 0) {
-                    preserveHardBreaksIntoDocument(r, &element->node);
+                    preserveHardBreaksIntoDocument(r, element);
                 }
-                pushMemberDocument(r, &element->node);
+                pushMemberDocument(r, element);
             }
             popNest(r);
 
