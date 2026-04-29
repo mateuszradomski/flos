@@ -1101,7 +1101,6 @@ parseUsing(Parser *parser, ASTNode *node) {
             bool isSuccess = parseType(parser, identifier);
             assertError(isSuccess, parser, "Expected type in using statement, received (%S)", tokenTypeToString(peekTokenType(parser)));
             SLL_QUEUE_PUSH(using->firstIdentifier, last, identifier);
-            last = identifier;
 
             u16 operator = 0;
             if(acceptToken(parser, TokenType_As)) {
@@ -1116,7 +1115,6 @@ parseUsing(Parser *parser, ASTNode *node) {
         ASTNode *identifier = allocateNode(parser);
         parseType(parser, identifier);
         SLL_QUEUE_PUSH(using->firstIdentifier, last, identifier);
-        last = identifier;
     }
 
     expectToken(parser, TokenType_For);
@@ -1391,7 +1389,6 @@ parseCallArgumentList(Parser *parser, ASTNode **firstExpression, TokenIdList *na
                 parseExpressionImpl(parser, expression, 0);
 
                 SLL_QUEUE_PUSH(*firstExpression, lastExpression, expression);
-                lastExpression = expression;
             } while(acceptToken(parser, TokenType_Comma));
             expectToken(parser, TokenType_RBrace);
         } else {
@@ -1400,7 +1397,6 @@ parseCallArgumentList(Parser *parser, ASTNode **firstExpression, TokenIdList *na
                 parseExpressionImpl(parser, argument, 0);
 
                 SLL_QUEUE_PUSH(*firstExpression, lastExpression, argument);
-                lastExpression = argument;
             } while(acceptToken(parser, TokenType_Comma));
         }
 
@@ -1472,7 +1468,6 @@ parseExpressionImpl(Parser *parser, ASTNode *node, u32 previousPrecedence) {
                     parseExpressionImpl(parser, element, 0);
                 }
                 SLL_QUEUE_PUSH(node->tupleExpressionNode.firstElement, lastElement, element);
-                lastElement = element;
             } while (acceptToken(parser, TokenType_Comma));
 
             expectToken(parser, TokenType_RParen);
@@ -1486,7 +1481,6 @@ parseExpressionImpl(Parser *parser, ASTNode *node, u32 previousPrecedence) {
             ASTNode *element = allocateNode(parser);
             parseExpressionImpl(parser, element, 0);
             SLL_QUEUE_PUSH(array->firstExpression, lastExpression, element);
-            lastExpression = element;
         } while(acceptToken(parser, TokenType_Comma));
 
         expectToken(parser, TokenType_RBracket);
@@ -1630,7 +1624,6 @@ parseExpressionImpl(Parser *parser, ASTNode *node, u32 previousPrecedence) {
                 parseExpressionImpl(parser, expression, 0);
 
                 SLL_QUEUE_PUSH(node->namedParametersExpressionNode.firstExpression, lastExpression, expression);
-                lastExpression = expression;
             } while(acceptToken(parser, TokenType_Comma));
 
             node->namedParametersExpressionNode.listEndToken = parser->current - 1;
@@ -1761,7 +1754,6 @@ tryParseVariableDeclarationTuple(Parser *parser, ASTNode *node) {
 
             declaration->endToken = parser->current - 1;
             SLL_QUEUE_PUSH(tuple->firstDeclaration, lastDeclaration, declaration);
-            lastDeclaration = declaration;
         } while(acceptToken(parser, TokenType_Comma));
 
         expectToken(parser, TokenType_RParen);
@@ -1817,7 +1809,6 @@ parseYulExpression(Parser *parser, ASTNode *node, YulLexer *lexer) {
                     ASTNode *argument = allocateNode(parser);
                     parseYulExpression(parser, argument, lexer);
                     SLL_QUEUE_PUSH(functionCall->firstArgument, lastArgument, argument);
-                    lastArgument = argument;
                 } while(acceptYulToken(lexer, YulTokenType_Comma));
                 expectYulToken(parser, lexer, YulTokenType_RParen);
             }
@@ -1842,7 +1833,6 @@ parseYulStatement(Parser *parser, ASTNode *node, YulLexer *lexer) {
             parseYulStatement(parser, statement, lexer);
 
             SLL_QUEUE_PUSH(node->blockStatementNode.firstStatement, lastStatement, statement);
-            lastStatement = statement;
         }
     } else if(acceptYulToken(lexer, YulTokenType_Let)) {
         node->type = ASTNodeType_YulVariableDeclaration;
@@ -1871,7 +1861,6 @@ parseYulStatement(Parser *parser, ASTNode *node, YulLexer *lexer) {
                     ASTNode *argument = allocateNode(parser);
                     parseYulExpression(parser, argument, lexer);
                     SLL_QUEUE_PUSH(functionCall->firstArgument, lastArgument, argument);
-                    lastArgument = argument;
                 } while(acceptYulToken(lexer, YulTokenType_Comma));
                 expectYulToken(parser, lexer, YulTokenType_RParen);
             }
@@ -1892,7 +1881,6 @@ parseYulStatement(Parser *parser, ASTNode *node, YulLexer *lexer) {
 
             ASTNode *lastPath = 0x0;
             SLL_QUEUE_PUSH(assignment->firstPath, lastPath, path);
-            lastPath = path;
 
             while(acceptYulToken(lexer, YulTokenType_Comma)) {
                 ASTNode *path = allocateNode(parser);
@@ -1906,7 +1894,6 @@ parseYulStatement(Parser *parser, ASTNode *node, YulLexer *lexer) {
                 }
                 path->endToken = lexer->currentPosition - 1;
                 SLL_QUEUE_PUSH(assignment->firstPath, lastPath, path);
-                lastPath = path;
             }
             if(acceptYulToken(lexer, YulTokenType_ColonEqual)) {
                 assignment->value = allocateNode(parser);
@@ -1988,7 +1975,6 @@ parseYulStatement(Parser *parser, ASTNode *node, YulLexer *lexer) {
 
             c->endToken = lexer->currentPosition - 1;
             SLL_QUEUE_PUSH(switchStatement->firstCase, lastCase, c);
-            lastCase = c;
         }
 
         bool defaultRequired = switchStatement->firstCase == 0;
@@ -2073,7 +2059,6 @@ parseStatement(Parser *parser, ASTNode *node) {
             parseStatement(parser, statement);
 
             SLL_QUEUE_PUSH(node->blockStatementNode.firstStatement, lastStatement, statement);
-            lastStatement = statement;
         }
         node->endToken = parser->current - 1;
     } else if(acceptToken(parser, TokenType_Unchecked)) {
@@ -2224,7 +2209,6 @@ parseStatement(Parser *parser, ASTNode *node) {
             catch->endToken = parser->current - 1;
 
             SLL_QUEUE_PUSH(statement->firstCatch, lastCatch, catch);
-            lastCatch = catch;
         }
         node->endToken = parser->current - 1;
     } else if(acceptToken(parser, TokenType_Assembly)) {
@@ -2321,7 +2305,6 @@ parseOverrideSpecifierArgs(Parser *parser, ASTNode **first) {
                         parser, "Expected identifier path in override specifier arguments");
 
             SLL_QUEUE_PUSH(*first, last, argument);
-            last = argument;
         } while(acceptToken(parser, TokenType_Comma));
 
         expectToken(parser, TokenType_RParen);
@@ -2476,7 +2459,6 @@ parseFunction(Parser *parser, ASTNode *node) {
                 parseModifierInvocation(parser, modifier);
 
                 SLL_QUEUE_PUSH(function->firstModifier, lastModifier, modifier);
-                lastModifier = modifier;
                 continue;
             }
 
@@ -2578,7 +2560,6 @@ parseConstructor(Parser *parser, ASTNode *node) {
                 parseModifierInvocation(parser, modifier);
 
                 SLL_QUEUE_PUSH(constructor->firstModifier, lastModifier, modifier);
-                lastModifier = modifier;
                 continue;
             }
 
@@ -2643,7 +2624,6 @@ parseContractBody(Parser *parser, ASTNode **firstElement) {
         }
 
         SLL_QUEUE_PUSH(*firstElement, lastElement, element);
-        lastElement = element;
     }
 }
 
@@ -2678,7 +2658,6 @@ parseContract(Parser *parser, ASTNode *node) {
             baseContract->endToken = parser->current - 1;
 
             SLL_QUEUE_PUSH(contract->firstBaseContract, lastBaseContract, baseContract);
-            lastBaseContract = baseContract;
         } while(acceptToken(parser, TokenType_Comma));
     }
 
@@ -2860,7 +2839,6 @@ parseSourceUnit(Parser *parser) {
         }
 
         SLL_QUEUE_PUSH(sourceUnit->firstChild, lastChild, child);
-        lastChild = child;
     }
 
     return node;
