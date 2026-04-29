@@ -511,6 +511,9 @@ typedef struct Parser {
     TokenizeResult tokens;
     u32 tokenCount;
     u32 current;
+    ASTNode *nodes;
+    u32 nodeCount;
+    u32 nodeCapacity;
 
     Arena *arena;
 } Parser;
@@ -522,13 +525,19 @@ createParser(TokenizeResult tokens, Arena *arena) {
         .tokenCount = tokens.count,
         .current = 0,
         .arena = arena,
+        .nodeCount = 0,
+        .nodeCapacity = tokens.count, // NOTE(radomski): Should be tokens.count / 1.5 with growable container
     };
+
+    parser.nodes = arrayPush(arena, ASTNode, parser.nodeCapacity);
+
     return parser;
 }
 
 static ASTNode *
 allocateNode(Parser *parser) {
-    return structPush(parser->arena, ASTNode);
+    assert(parser->nodeCount < parser->nodeCapacity);
+    return &parser->nodes[parser->nodeCount++];
 }
 
 #define reportError(parser, userErrorFormat, ...) _reportError(parser, __FILE__, __LINE__, userErrorFormat, ##__VA_ARGS__)
