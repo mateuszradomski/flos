@@ -535,7 +535,7 @@ pushTokenAsStringWord(Render *r, TokenId token) {
 static void pushExpressionDocument(Render *r, ASTNode *node);
 
 static void
-pushCallArgumentListDocument(Render *r, TokenId startingToken, ASTNode *firstExpression, ASTNode *lastExpression, TokenIdList *names) {
+pushCallArgumentListDocument(Render *r, TokenId startingToken, ASTNode *firstExpression, TokenIdList *names) {
     pushGroup(r);
     pushTokenWord(r, startingToken);
     if(names->count > 0) {
@@ -543,6 +543,7 @@ pushCallArgumentListDocument(Render *r, TokenId startingToken, ASTNode *firstExp
     }
     pushNest(r);
 
+    ASTNode *lastExpression = 0x0;
     Word whitespace = names->count == 0 ? wordSoftline() : wordLine();
     if(names->count == 0) {
         if(firstExpression) {
@@ -551,6 +552,7 @@ pushCallArgumentListDocument(Render *r, TokenId startingToken, ASTNode *firstExp
 
         ASTNode *argument = firstExpression;
         for(u32 i = 0; argument != 0x0; i++, argument = argument->next) {
+            lastExpression = argument;
             pushGroup(r);
             pushExpressionDocument(r, argument);
             popGroup(r);
@@ -564,6 +566,7 @@ pushCallArgumentListDocument(Render *r, TokenId startingToken, ASTNode *firstExp
         pushWord(r, whitespace);
         ASTNode *argument = firstExpression;
         for(u32 i = 0; argument != 0x0; i++, argument = argument->next) {
+            lastExpression = argument;
             pushGroup(r);
             TokenId literal = listGetTokenId(names, i);
             pushTokenWord(r, literal);
@@ -605,7 +608,7 @@ pushCallArgumentListDocument(Render *r, TokenId startingToken, ASTNode *firstExp
     assert(stringMatch(LIT_TO_STR(")"), r->tokens.tokenStrings[endToken]));
 }
 
-static void pushParametersDocument(Render *r, TokenId openParenToken, ASTNode *first, ASTNode *last);
+static void pushParametersDocument(Render *r, TokenId openParenToken, ASTNode *first);
 
 static void
 pushTypeDocument(Render *r, ASTNode *node) {
@@ -675,7 +678,7 @@ pushTypeDocument(Render *r, ASTNode *node) {
             pushTokenWord(r, node->startToken);
 
             pushGroup(r);
-            pushParametersDocument(r, node->startToken + 1, node->functionTypeNode.firstParameter, node->functionTypeNode.lastParameter);
+            pushParametersDocument(r, node->startToken + 1, node->functionTypeNode.firstParameter);
 
             if(node->functionTypeNode.visibility != INVALID_TOKEN_ID) {
                 pushWord(r, wordSpace());
@@ -689,13 +692,11 @@ pushTypeDocument(Render *r, ASTNode *node) {
             if(node->functionTypeNode.firstReturnParameter) {
                 pushWord(r, wordSpace());
                 assert(stringMatch(LIT_TO_STR("returns"), r->tokens.tokenStrings[node->functionTypeNode.firstReturnParameter->startToken - 2]));
-                assert(stringMatch(LIT_TO_STR("("), r->tokens.tokenStrings[node->functionTypeNode.firstReturnParameter->startToken - 1]));
-                assert(stringMatch(LIT_TO_STR(")"), r->tokens.tokenStrings[node->functionTypeNode.lastReturnParameter->endToken + 1]));
 
                 pushGroup(r);
                 pushTokenWord(r, node->functionTypeNode.firstReturnParameter->startToken - 2);
                 pushWord(r, wordSpace());
-                pushParametersDocument(r, node->functionTypeNode.firstReturnParameter->startToken - 1, node->functionTypeNode.firstReturnParameter, node->functionTypeNode.lastReturnParameter);
+                pushParametersDocument(r, node->functionTypeNode.firstReturnParameter->startToken - 1, node->functionTypeNode.firstReturnParameter);
                 popGroup(r);
             }
             popGroup(r);
@@ -1148,7 +1149,7 @@ pushExpressionDocumentNoChainingUntil(Render *r, ASTNode *node, ASTNode *stopAt)
 
             pushExpressionDocumentNoChainingUntil(r, function->expression, stopAt);
             pushGroup(r);
-            pushCallArgumentListDocument(r, function->expression->endToken + 1, function->firstArgumentExpression, function->lastArgumentExpression, &function->argumentsName);
+            pushCallArgumentListDocument(r, function->expression->endToken + 1, function->firstArgumentExpression, &function->argumentsName);
             popGroup(r);
         } break;
         case ASTNodeType_ArrayAccessExpression: {
@@ -1743,7 +1744,7 @@ pushStatementDocument(Render *r, ASTNode *node) {
                 pushTokenWord(r, statement->expression->endToken + 1);
                 pushWord(r, wordSpace());
 
-                pushParametersDocument(r, statement->expression->endToken + 2, statement->firstReturnParameter, statement->lastReturnParameter);
+                pushParametersDocument(r, statement->expression->endToken + 2, statement->firstReturnParameter);
             }
 
             pushWord(r, wordSpace());
@@ -1767,7 +1768,7 @@ pushStatementDocument(Render *r, ASTNode *node) {
                 }
 
                 if(catch->firstParameter != MISSING_ELEMENT) {
-                    pushParametersDocument(r, openParenToken, catch->firstParameter, catch->lastParameter);
+                    pushParametersDocument(r, openParenToken, catch->firstParameter);
                 }
 
                 pushWord(r, wordSpace());
@@ -2100,50 +2101,46 @@ pushInheritanceSpecifierDocument(Render *r, ASTNode *node) {
     if(inheritance->firstArgumentExpression != MISSING_ELEMENT) {
         pushCallArgumentListDocument(r, inheritance->identifier->endToken + 1,
                                      inheritance->firstArgumentExpression,
-                                     inheritance->lastArgumentExpression,
                                      &inheritance->argumentsName);
     }
 }
 
 static void
-pushOverridesDocument(Render *r, TokenId overrideToken, ASTNode *firstOverride, ASTNode *lastOverride, Word whitespace) {
+pushOverridesDocument(Render *r, TokenId overrideToken, ASTNode *firstOverride, Word whitespace) {
     if(overrideToken != INVALID_TOKEN_ID) {
         pushWord(r, whitespace);
         assert(stringMatch(LIT_TO_STR("override"), r->tokens.tokenStrings[overrideToken]));
         pushTokenWord(r, overrideToken);
         if(firstOverride) {
-            assert(stringMatch(LIT_TO_STR("("), r->tokens.tokenStrings[firstOverride->startToken - 1]));
-            assert(stringMatch(LIT_TO_STR(")"), r->tokens.tokenStrings[lastOverride->endToken + 1]));
-
             pushGroup(r);
             pushNest(r);
             pushTokenWord(r, firstOverride->startToken - 1);
             pushWord(r, wordSoftline());
 
+            ASTNode *lastOverride = firstOverride;
             for(ASTNode *override = firstOverride; override != 0x0; override = override->next) {
                 pushTypeDocument(r, override);
                 if(override->next != 0x0) {
                     pushTokenWord(r, override->endToken + 1);
                     pushWord(r, wordLine());
                 }
+                lastOverride = override;
             }
 
             popNest(r);
             pushWord(r, wordSoftline());
             pushTokenWord(r, lastOverride->endToken + 1);
             popGroup(r);
+
+            assert(stringMatch(LIT_TO_STR("("), r->tokens.tokenStrings[firstOverride->startToken - 1]));
+            assert(stringMatch(LIT_TO_STR(")"), r->tokens.tokenStrings[lastOverride->endToken + 1]));
         }
     }
 }
 
 static void
-pushParametersDocument(Render *r, TokenId openParenToken, ASTNode *first, ASTNode *last) {
-    TokenId closeParenToken = first
-        ? last->endToken + 1
-        : openParenToken + 1;
-
-    assert(stringMatch(LIT_TO_STR("("), r->tokens.tokenStrings[openParenToken]));
-    assert(stringMatch(LIT_TO_STR(")"), r->tokens.tokenStrings[closeParenToken]));
+pushParametersDocument(Render *r, TokenId openParenToken, ASTNode *first) {
+    TokenId closeParenToken = openParenToken + 1;
 
     pushGroup(r);
     pushTokenWord(r, openParenToken);
@@ -2171,7 +2168,12 @@ pushParametersDocument(Render *r, TokenId openParenToken, ASTNode *first, ASTNod
         } else {
             pushWord(r, wordSoftline()); 
         }
+
+        closeParenToken = it->endToken + 1;
     }
+
+    assert(stringMatch(LIT_TO_STR("("), r->tokens.tokenStrings[openParenToken]));
+    assert(stringMatch(LIT_TO_STR(")"), r->tokens.tokenStrings[closeParenToken]));
 
     popNest(r);
     pushTokenWord(r, closeParenToken);
@@ -2189,7 +2191,7 @@ pushModifierInvocations(Render *r, ASTNode *first) {
             TokenIdList *names = &invocation->argumentsName;
 
             TokenId startingToken = invocation->identifier->endToken + 1;
-            pushCallArgumentListDocument(r, startingToken, invocation->firstArgumentExpression, invocation->lastArgumentExpression, names);
+            pushCallArgumentListDocument(r, startingToken, invocation->firstArgumentExpression, names);
         }
         popGroup(r);
 
@@ -2295,7 +2297,7 @@ pushMemberDocument(Render *r, ASTNode *member) {
 
             TokenId forToken = INVALID_TOKEN_ID;
             if(using->onLibrary) {
-                assert(using->firstIdentifier == using->lastIdentifier);
+                assert(using->firstIdentifier->next == 0x0);
                 pushTypeDocument(r, using->firstIdentifier);
                 pushWord(r, wordSpace());
                 forToken = using->firstIdentifier->endToken + 1;
@@ -2307,7 +2309,7 @@ pushMemberDocument(Render *r, ASTNode *member) {
 
                 ASTNode *it = using->firstIdentifier;
                 for(u32 i = 0; it != 0x0; i++, it = it->next) {
-                    endToken = using->lastIdentifier->endToken;
+                    endToken = it->endToken;
                     pushTypeDocument(r, it);
 
                     u16 operator = listGetU16(&using->operators, i);
@@ -2317,7 +2319,7 @@ pushMemberDocument(Render *r, ASTNode *member) {
                         pushWord(r, wordSpace());
                         pushWord(r, wordText(tokenTypeToString(operator)));
 
-                        endToken = using->lastIdentifier->endToken + 2;
+                        endToken = it->endToken + 2;
                     }
 
                     if(it->next != 0x0) {
@@ -2567,7 +2569,7 @@ pushMemberDocument(Render *r, ASTNode *member) {
                 pushTokenWord(r, decl->mutability);
             }
 
-            pushOverridesDocument(r, decl->override, decl->firstOverride, decl->lastOverride, wordSpace());
+            pushOverridesDocument(r, decl->override, decl->firstOverride, wordSpace());
 
             pushWord(r, wordSpace());
             pushTokenWord(r, decl->identifier);
@@ -2610,7 +2612,7 @@ pushMemberDocument(Render *r, ASTNode *member) {
                 }
             }
 
-            pushParametersDocument(r, openParenToken, function->firstParameter, function->lastParameter);
+            pushParametersDocument(r, openParenToken, function->firstParameter);
 
             pushGroup(r);
             pushNest(r);
@@ -2628,7 +2630,7 @@ pushMemberDocument(Render *r, ASTNode *member) {
                 pushTokenWord(r, function->virtual);
             }
 
-            pushOverridesDocument(r, function->override, function->firstOverride, function->lastOverride, wordLine());
+            pushOverridesDocument(r, function->override, function->firstOverride, wordLine());
 
             if(function->firstModifier) {
                 pushWord(r, wordLine());
@@ -2643,7 +2645,7 @@ pushMemberDocument(Render *r, ASTNode *member) {
                 pushTokenWord(r, function->firstReturnParameter->startToken - 2);
                 pushWord(r, wordSpace());
 
-                pushParametersDocument(r, function->firstReturnParameter->startToken - 1, function->firstReturnParameter, function->lastReturnParameter);
+                pushParametersDocument(r, function->firstReturnParameter->startToken - 1, function->firstReturnParameter);
                 popGroup(r);
             }
 
@@ -2671,7 +2673,7 @@ pushMemberDocument(Render *r, ASTNode *member) {
             pushTokenWord(r, member->startToken);
 
             TokenId openParenToken = member->startToken + 1;
-            pushParametersDocument(r, openParenToken, constructor->firstParameter, constructor->lastParameter);
+            pushParametersDocument(r, openParenToken, constructor->firstParameter);
 
             pushGroup(r);
             pushNest(r);
@@ -2719,7 +2721,7 @@ pushMemberDocument(Render *r, ASTNode *member) {
 
             if(modifier->firstParameter != MISSING_ELEMENT) {
                 TokenId openParenToken = modifier->name + 1;
-                pushParametersDocument(r, openParenToken, modifier->firstParameter, modifier->lastParameter);
+                pushParametersDocument(r, openParenToken, modifier->firstParameter);
             }
 
             if(modifier->virtual != INVALID_TOKEN_ID) {
@@ -2727,7 +2729,7 @@ pushMemberDocument(Render *r, ASTNode *member) {
                 pushTokenWord(r, modifier->virtual);
             }
 
-            pushOverridesDocument(r, modifier->override, modifier->firstOverride, modifier->lastOverride, wordLine());
+            pushOverridesDocument(r, modifier->override, modifier->firstOverride, wordLine());
 
             popGroup(r);
             if(modifier->body != 0x0) {
