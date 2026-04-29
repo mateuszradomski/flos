@@ -829,6 +829,19 @@ parseFunctionParameters(Parser *parser, ASTNode **first, ASTNode **last) {
     }
 }
 
+static void
+parseIdentifierPath(Parser *parser, ASTNode *node) {
+    node->startToken = parser->current;
+    node->type = ASTNodeType_IdentifierPath;
+    do {
+        TokenId nextIdentifier = parseIdentifier(parser);
+        assertError(nextIdentifier != INVALID_TOKEN_ID, parser,
+                    "Expected identifier after dot, received (%S)", tokenTypeToString(peekTokenType(parser)));
+        listPushTokenId(&node->identifierPathNode.identifiers, nextIdentifier, parser->arena);
+    } while(acceptToken(parser, TokenType_Dot));
+    node->endToken = parser->current - 1;
+}
+
 static bool
 parseType(Parser *parser, ASTNode *node) {
     TokenId identifier = INVALID_TOKEN_ID;
@@ -917,8 +930,8 @@ parseType(Parser *parser, ASTNode *node) {
             }
         }
     } else if((identifier = parseIdentifier(parser)) != INVALID_TOKEN_ID) {
-        node->startToken = startToken;
         if(isBaseTypeName(getTokenString(parser->tokens, identifier))) {
+            node->startToken = startToken;
             node->type = ASTNodeType_BaseType;
             node->baseTypeNode.typeName = identifier;
 
@@ -931,14 +944,8 @@ parseType(Parser *parser, ASTNode *node) {
                 node->baseTypeNode.payable = 1;
             }
         } else {
-            node->type = ASTNodeType_IdentifierPath;
-            listPushTokenId(&node->identifierPathNode.identifiers, identifier, parser->arena);
-            while(acceptToken(parser, TokenType_Dot)) {
-                TokenId nextIdentifier = parseIdentifier(parser);
-                assertError(nextIdentifier != INVALID_TOKEN_ID, parser,
-                            "Expected identifier after dot, received (%S)", tokenTypeToString(peekTokenType(parser)));
-                listPushTokenId(&node->identifierPathNode.identifiers, nextIdentifier, parser->arena);
-            }
+            parser->current -= 1;
+            parseIdentifierPath(parser, node);
         }
     } else {
         return false;
@@ -2384,13 +2391,13 @@ tryParseStateVariableDeclaration(Parser *parser, ASTNode *node) {
 }
 
 static void
-parseModifierInvocation(Parser *parser, ASTNode *node, ASTNode *identifierPath) {
+parseModifierInvocation(Parser *parser, ASTNode *node) {
     node->type = ASTNodeType_ModifierInvocation;
     node->startToken = parser->current - 1;
     ASTNodeModifierInvocation *invocation = &node->modifierInvocationNode;
 
     invocation->identifier = allocateNode(parser);
-    *invocation->identifier = *identifierPath;
+    parseIdentifierPath(parser, invocation->identifier);
 
     invocation->firstArgumentExpression = MISSING_ELEMENT;
     if(acceptToken(parser, TokenType_LParen)) {
@@ -2462,13 +2469,11 @@ parseFunction(Parser *parser, ASTNode *node) {
             function->override = peekLastTokenId(parser);
             parseOverrideSpecifierArgs(parser, &function->firstOverride);
         } else {
-            ASTNode testExpression = { 0 };
-            bool isSuccess = parseType(parser, &testExpression);
-            if(isSuccess) {
-                assertError(testExpression.type == ASTNodeType_IdentifierPath,
-                            parser, "Expected identifier path in function modifier invocation");
+            if(parseIdentifier(parser) != INVALID_TOKEN_ID) {
+                parser->current -= 1;
+
                 ASTNode *modifier = allocateNode(parser);
-                parseModifierInvocation(parser, modifier, &testExpression);
+                parseModifierInvocation(parser, modifier);
 
                 SLL_QUEUE_PUSH(function->firstModifier, lastModifier, modifier);
                 lastModifier = modifier;
@@ -2566,13 +2571,11 @@ parseConstructor(Parser *parser, ASTNode *node) {
             assertError(constructor->visibility == INVALID_TOKEN_ID, parser, "Visibility modifier already set");
             constructor->visibility = peekLastTokenId(parser);
         } else {
-            ASTNode testExpression = { 0 };
-            bool isSuccess = parseType(parser, &testExpression);
-            if(isSuccess) {
-                assertError(testExpression.type == ASTNodeType_IdentifierPath,
-                            parser, "Expected identifier path in constructor modifier invocation");
+            if(parseIdentifier(parser) != INVALID_TOKEN_ID) {
+                parser->current -= 1;
+
                 ASTNode *modifier = allocateNode(parser);
-                parseModifierInvocation(parser, modifier, &testExpression);
+                parseModifierInvocation(parser, modifier);
 
                 SLL_QUEUE_PUSH(constructor->firstModifier, lastModifier, modifier);
                 lastModifier = modifier;
