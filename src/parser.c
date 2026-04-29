@@ -834,8 +834,8 @@ parseType(Parser *parser, ASTNode *node) {
     TokenId identifier = INVALID_TOKEN_ID;
 
     u32 startToken = parser->current;
-    node->startToken = startToken;
     if(acceptToken(parser, TokenType_Mapping)) {
+        node->startToken = startToken;
         node->type = ASTNodeType_MappingType;
         ASTNodeMapping *mapping = &node->mappingNode;
 
@@ -855,11 +855,13 @@ parseType(Parser *parser, ASTNode *node) {
         mapping->valueIdentifier = parseIdentifier(parser);
         expectToken(parser, TokenType_RParen);
     } else if(acceptToken(parser, TokenType_Function)) {
-        node->type = ASTNodeType_FunctionType;
-        ASTNodeFunctionType *function = &node->functionTypeNode;
         if(!acceptToken(parser, TokenType_LParen)) {
             return false;
         }
+
+        node->startToken = startToken;
+        node->type = ASTNodeType_FunctionType;
+        ASTNodeFunctionType *function = &node->functionTypeNode;
 
         ASTNode *lastParameter = 0x0;
         if(!acceptToken(parser, TokenType_RParen)) {
@@ -915,6 +917,7 @@ parseType(Parser *parser, ASTNode *node) {
             }
         }
     } else if((identifier = parseIdentifier(parser)) != INVALID_TOKEN_ID) {
+        node->startToken = startToken;
         if(isBaseTypeName(getTokenString(parser->tokens, identifier))) {
             node->type = ASTNodeType_BaseType;
             node->baseTypeNode.typeName = identifier;
@@ -967,7 +970,7 @@ parseType(Parser *parser, ASTNode *node) {
     return true;
 }
 
-static bool
+static void
 parsePragma(Parser *parser, ASTNode *node) {
     node->startToken = parser->current - 1;
     node->type = ASTNodeType_Pragma;
@@ -988,11 +991,9 @@ parsePragma(Parser *parser, ASTNode *node) {
     assertError(pragma->following.count > 0, parser, "Expected pragma body");
 
     node->endToken = parser->current - 1;
-
-    return true;
 }
 
-static bool
+static void
 parseImport(Parser *parser, ASTNode *node) {
     node->type = ASTNodeType_Import;
     node->startToken = parser->current - 1;
@@ -1047,8 +1048,6 @@ parseImport(Parser *parser, ASTNode *node) {
 
     expectToken(parser, TokenType_Semicolon);
     node->endToken = parser->current - 1;
-
-    return true;
 }
 
 static u16
@@ -1077,7 +1076,7 @@ parseUserDefinableOperator(Parser *parser) {
     return 0;
 }
 
-static bool
+static void
 parseUsing(Parser *parser, ASTNode *node) {
     node->startToken = parser->current - 1;
     if(acceptToken(parser, TokenType_LParen)) {
@@ -1129,11 +1128,9 @@ parseUsing(Parser *parser, ASTNode *node) {
 
     expectToken(parser, TokenType_Semicolon);
     node->endToken = parser->current - 1;
-
-    return true;
 }
 
-static bool
+static void
 parseEnum(Parser *parser, ASTNode *node) {
     node->startToken = parser->current - 1;
     node->type = ASTNodeType_EnumDefinition;
@@ -1157,11 +1154,9 @@ parseEnum(Parser *parser, ASTNode *node) {
     }
 
     node->endToken = parser->current - 1;
-
-    return true;
 }
 
-static bool
+static void
 parseStruct(Parser *parser, ASTNode *baseNode) {
     baseNode->startToken = parser->current - 1;
     baseNode->type = ASTNodeType_Struct;
@@ -1180,10 +1175,9 @@ parseStruct(Parser *parser, ASTNode *baseNode) {
     }
 
     baseNode->endToken = parser->current - 1;
-    return true;
 }
 
-static bool
+static void
 parseError(Parser *parser, ASTNode *node) {
     node->startToken = parser->current - 1;
     node->type = ASTNodeType_Error;
@@ -1200,10 +1194,9 @@ parseError(Parser *parser, ASTNode *node) {
     }
     expectToken(parser, TokenType_Semicolon);
     node->endToken = parser->current - 1;
-    return true;
 }
 
-static bool
+static void
 parseEvent(Parser *parser, ASTNode *node) {
     node->startToken = parser->current - 1;
     node->type = ASTNodeType_Event;
@@ -1226,10 +1219,9 @@ parseEvent(Parser *parser, ASTNode *node) {
 
     expectToken(parser, TokenType_Semicolon);
     node->endToken = parser->current - 1;
-    return true;
 }
 
-static bool
+static void
 parseTypedef(Parser *parser, ASTNode *node) {
     node->startToken = parser->current - 1;
     node->type = ASTNodeType_Typedef;
@@ -1247,7 +1239,6 @@ parseTypedef(Parser *parser, ASTNode *node) {
                 "Typedef type must be a base type");
     expectToken(parser, TokenType_Semicolon);
     node->endToken = parser->current - 1;
-    return true;
 }
 
 static bool
@@ -1740,22 +1731,21 @@ tryParseVariableDeclaration(Parser *parser, ASTNode *node) {
 
 static bool
 tryParseVariableDeclarationTuple(Parser *parser, ASTNode *node) {
-    u32 startPosition = getCurrentParserPosition(parser);
-
-    if(!acceptToken(parser, TokenType_LParen)) {
-        setCurrentParserPosition(parser, startPosition);
+    if(!nextTokenIs(parser, TokenType_LParen)) {
         return false;
     }
+
+    u32 startPosition = getCurrentParserPosition(parser);
+    expectToken(parser, TokenType_LParen);
 
     ASTNodeVariableDeclarationTupleStatement *tuple = &node->variableDeclarationTupleStatementNode;
     if(!acceptToken(parser, TokenType_RParen)) {
         ASTNode *lastDeclaration = 0x0;
         do {
             ASTNode *declaration = allocateNode(parser);
-            declaration->type = ASTNodeType_None;
 
             declaration->startToken = parser->current;
-            if(peekTokenType(parser) != TokenType_Comma && peekTokenType(parser) != TokenType_RParen) {
+            if(!nextTokenIs(parser, TokenType_Comma) && !nextTokenIs(parser, TokenType_RParen)) {
                 if(!tryParseVariableDeclaration(parser, declaration)) {
                     setCurrentParserPosition(parser, startPosition);
                     return false;
