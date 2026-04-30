@@ -2786,6 +2786,140 @@ printASTNodeSizes(Arena *arena) {
     }
 }
 
+static const char *
+astNodeTypeName(ASTNodeType type) {
+    static const char *names[ASTNodeType_Count] = {
+        [ASTNodeType_None]                              = "None",
+        [ASTNodeType_SourceUnit]                        = "SourceUnit",
+        [ASTNodeType_Import]                            = "Import",
+        [ASTNodeType_EnumDefinition]                    = "EnumDefinition",
+        [ASTNodeType_Struct]                            = "Struct",
+        [ASTNodeType_BaseType]                          = "BaseType",
+        [ASTNodeType_FunctionType]                      = "FunctionType",
+        [ASTNodeType_MappingType]                       = "MappingType",
+        [ASTNodeType_IdentifierPath]                    = "IdentifierPath",
+        [ASTNodeType_ArrayType]                         = "ArrayType",
+        [ASTNodeType_Error]                             = "Error",
+        [ASTNodeType_Event]                             = "Event",
+        [ASTNodeType_Typedef]                           = "Typedef",
+        [ASTNodeType_ConstVariable]                     = "ConstVariable",
+        [ASTNodeType_NumberLitExpression]               = "NumberLitExpression",
+        [ASTNodeType_StringLitExpression]               = "StringLitExpression",
+        [ASTNodeType_BoolLitExpression]                 = "BoolLitExpression",
+        [ASTNodeType_IdentifierExpression]              = "IdentifierExpression",
+        [ASTNodeType_BinaryExpression]                  = "BinaryExpression",
+        [ASTNodeType_TupleExpression]                   = "TupleExpression",
+        [ASTNodeType_UnaryExpression]                   = "UnaryExpression",
+        [ASTNodeType_FunctionCallExpression]            = "FunctionCallExpression",
+        [ASTNodeType_MemberAccessExpression]            = "MemberAccessExpression",
+        [ASTNodeType_ArrayAccessExpression]             = "ArrayAccessExpression",
+        [ASTNodeType_FunctionDefinition]                = "FunctionDefinition",
+        [ASTNodeType_BlockStatement]                    = "BlockStatement",
+        [ASTNodeType_ReturnStatement]                   = "ReturnStatement",
+        [ASTNodeType_ExpressionStatement]               = "ExpressionStatement",
+        [ASTNodeType_IfStatement]                       = "IfStatement",
+        [ASTNodeType_VariableDeclarationStatement]      = "VariableDeclarationStatement",
+        [ASTNodeType_VariableDeclaration]               = "VariableDeclaration",
+        [ASTNodeType_NewExpression]                     = "NewExpression",
+        [ASTNodeType_VariableDeclarationTupleStatement] = "VariableDeclarationTupleStatement",
+        [ASTNodeType_WhileStatement]                    = "WhileStatement",
+        [ASTNodeType_ContractDefinition]                = "ContractDefinition",
+        [ASTNodeType_RevertStatement]                   = "RevertStatement",
+        [ASTNodeType_StateVariableDeclaration]          = "StateVariableDeclaration",
+        [ASTNodeType_LibraryDefinition]                 = "LibraryDefinition",
+        [ASTNodeType_TerneryExpression]                 = "TerneryExpression",
+        [ASTNodeType_ForStatement]                      = "ForStatement",
+        [ASTNodeType_BreakStatement]                    = "BreakStatement",
+        [ASTNodeType_ContinueStatement]                 = "ContinueStatement",
+        [ASTNodeType_UnaryExpressionPostfix]            = "UnaryExpressionPostfix",
+        [ASTNodeType_HexStringLitExpression]            = "HexStringLitExpression",
+        [ASTNodeType_ArraySliceExpression]              = "ArraySliceExpression",
+        [ASTNodeType_UncheckedBlockStatement]           = "UncheckedBlockStatement",
+        [ASTNodeType_ModifierDefinition]                = "ModifierDefinition",
+        [ASTNodeType_FallbackFunction]                  = "FallbackFunction",
+        [ASTNodeType_ReceiveFunction]                   = "ReceiveFunction",
+        [ASTNodeType_EmitStatement]                     = "EmitStatement",
+        [ASTNodeType_ConstructorDefinition]             = "ConstructorDefinition",
+        [ASTNodeType_NamedParameterExpression]          = "NamedParameterExpression",
+        [ASTNodeType_InterfaceDefinition]               = "InterfaceDefinition",
+        [ASTNodeType_AbstractContractDefinition]        = "AbstractContractDefinition",
+        [ASTNodeType_InheritanceSpecifier]              = "InheritanceSpecifier",
+        [ASTNodeType_Pragma]                            = "Pragma",
+        [ASTNodeType_ModifierInvocation]                = "ModifierInvocation",
+        [ASTNodeType_Using]                             = "Using",
+        [ASTNodeType_UnicodeStringLitExpression]        = "UnicodeStringLitExpression",
+        [ASTNodeType_InlineArrayExpression]             = "InlineArrayExpression",
+        [ASTNodeType_DoWhileStatement]                  = "DoWhileStatement",
+        [ASTNodeType_TryStatement]                      = "TryStatement",
+        [ASTNodeType_CatchStatement]                    = "CatchStatement",
+        [ASTNodeType_AssemblyStatement]                 = "AssemblyStatement",
+        [ASTNodeType_YulBlockStatement]                 = "YulBlockStatement",
+        [ASTNodeType_YulVariableDeclaration]            = "YulVariableDeclaration",
+        [ASTNodeType_YulNumberLitExpression]            = "YulNumberLitExpression",
+        [ASTNodeType_YulStringLitExpression]            = "YulStringLitExpression",
+        [ASTNodeType_YulHexNumberLitExpression]         = "YulHexNumberLitExpression",
+        [ASTNodeType_YulBoolLitExpression]              = "YulBoolLitExpression",
+        [ASTNodeType_YulHexStringLitExpression]         = "YulHexStringLitExpression",
+        [ASTNodeType_YulMemberAccessExpression]         = "YulMemberAccessExpression",
+        [ASTNodeType_YulFunctionCallExpression]         = "YulFunctionCallExpression",
+        [ASTNodeType_YulVariableAssignment]             = "YulVariableAssignment",
+        [ASTNodeType_YulIfStatement]                    = "YulIfStatement",
+        [ASTNodeType_YulForStatement]                   = "YulForStatement",
+        [ASTNodeType_YulLeaveStatement]                 = "YulLeaveStatement",
+        [ASTNodeType_YulBreakStatement]                 = "YulBreakStatement",
+        [ASTNodeType_YulContinueStatement]              = "YulContinueStatement",
+        [ASTNodeType_YulFunctionDefinition]             = "YulFunctionDefinition",
+        [ASTNodeType_YulSwitchStatement]                = "YulSwitchStatement",
+        [ASTNodeType_YulCaseStatement]                  = "YulCaseStatement",
+    };
+
+    assert(type < ASTNodeType_Count);
+    const char *name = names[type];
+    assert(name != 0x0);
+    return name;
+}
+
+static void
+printNodeHistogram(Parser *parser) {
+    assert(parser != 0x0);
+    assert(parser->nodeCount <= parser->nodeCapacity);
+
+    u32 counts[ASTNodeType_Count] = {0};
+    for(u32 i = 0; i < parser->nodeCount; i++) {
+        ASTNodeType type = parser->nodes[i].type;
+        assert(type < ASTNodeType_Count);
+        counts[type] += 1;
+    }
+
+    u32 order[ASTNodeType_Count];
+    for(u32 i = 0; i < ASTNodeType_Count; i++) {
+        order[i] = i;
+    }
+
+    // Selection sort by count descending. Bounded, predictable, no recursion.
+    for(u32 i = 0; i < ASTNodeType_Count; i++) {
+        u32 maxIndex = i;
+        for(u32 j = i + 1; j < ASTNodeType_Count; j++) {
+            if(counts[order[j]] > counts[order[maxIndex]]) {
+                maxIndex = j;
+            }
+        }
+        u32 tmp = order[i];
+        order[i] = order[maxIndex];
+        order[maxIndex] = tmp;
+    }
+
+    u32 total = parser->nodeCount;
+    printf("Node histogram (%u nodes total):\n", total);
+    for(u32 i = 0; i < ASTNodeType_Count; i++) {
+        u32 type = order[i];
+        u32 count = counts[type];
+        if(count == 0) { break; }
+        double percent = total > 0 ? (100.0 * (double)count / (double)total) : 0.0;
+        printf("  %-36s %8u  %6.2f%%\n", astNodeTypeName(type), count, percent);
+    }
+}
+
 static ASTNode
 parseSourceUnit(Parser *parser) {
     ASTNode node = { .type = ASTNodeType_SourceUnit };
@@ -2840,6 +2974,8 @@ parseSourceUnit(Parser *parser) {
 
         SLL_QUEUE_PUSH(sourceUnit->firstChild, lastChild, child);
     }
+
+    // printNodeHistogram(parser);
 
     return node;
 }
