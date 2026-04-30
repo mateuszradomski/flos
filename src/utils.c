@@ -188,14 +188,26 @@ typedef struct MemoryCursorNode {
 
 typedef struct Arena {
     MemoryCursorNode *cursorNode;
+    MemoryCursorNode *freeNode;
     size_t chunkSize;
     size_t alignment;
 } Arena;
 
 static MemoryCursorNode *
 arenaNewNode(Arena *arena, size_t size) {
-    MemoryCursorNode *result = 0x0;
     size = MAX(arena->chunkSize, size);
+
+    MemoryCursorNode **slot = &arena->freeNode;
+    while(*slot) {
+        MemoryCursorNode *candidate = *slot;
+        if(candidate->cursor.size >= size) {
+            *slot = candidate->next;
+            candidate->cursor.cursorPointer = candidate->cursor.basePointer;
+            SLL_STACK_PUSH(arena->cursorNode, candidate);
+            return candidate;
+        }
+        slot = &candidate->next;
+    }
 
 #ifdef WASM
     void *memory = (u8 *)malloc(size + sizeof(MemoryCursorNode));
@@ -204,8 +216,7 @@ arenaNewNode(Arena *arena, size_t size) {
 #endif
     assert(memory);
 
-    result = (MemoryCursorNode *)memory;
-
+    MemoryCursorNode *result = (MemoryCursorNode *)memory;
     result->cursor.basePointer = (u8 *)memory + sizeof(MemoryCursorNode);
     result->cursor.cursorPointer = result->cursor.basePointer;
     result->cursor.size = size;
@@ -268,24 +279,22 @@ arenaFreeBytes(Arena *arena) {
 
 static void
 arenaDestroy(Arena *arena) {
-    if(arena) {
-        MemoryCursorNode *toDestroy = 0x0;
-        for(MemoryCursorNode *cursorNode = arena->cursorNode;
-            cursorNode != 0x0;
-            cursorNode = cursorNode->next) {
-            if(toDestroy) {
-                cursorDestroy(&toDestroy->cursor);
-            }
-
-            toDestroy = cursorNode;
-        }
-
-        if(toDestroy) {
-            cursorDestroy(&toDestroy->cursor);
-        }
-
-        arena->cursorNode = 0x0;
+    if(!arena) {
+        return;
     }
+
+    MemoryCursorNode *lists[2] = { arena->cursorNode, arena->freeNode };
+    for(u32 i = 0; i < 2; i++) {
+        MemoryCursorNode *node = lists[i];
+        while(node) {
+            MemoryCursorNode *next = node->next;
+            cursorDestroy(&node->cursor);
+            node = next;
+        }
+    }
+
+    arena->cursorNode = 0x0;
+    arena->freeNode = 0x0;
 }
 
 static Arena
@@ -376,22 +385,22 @@ static void
 arenaPop(Arena *arena, size_t size) {
     assert(arena);
 
-    if(size) {
-        MemoryCursorNode *cursorNode = arena->cursorNode;
-        if(!cursorNode) {
-            return;
-        }
+    while(size > 0 && arena->cursorNode) {
+        MemoryCursorNode *node = arena->cursorNode;
+        MemoryCursor *cursor = &node->cursor;
+        u64 taken = cursorTakenBytes(cursor);
 
-        while(size > 0) {
-            MemoryCursor *cursor = &cursorNode->cursor;
-
-            u64 takenBytes = cursorTakenBytes(cursor);
-            u64 toSubtract = MIN(size, takenBytes);
-            u64 newOffset = takenBytes - toSubtract;
-
-            size -= toSubtract;
-            cursor->cursorPointer = cursor->basePointer + newOffset;
-            cursorNode = cursorNode->next;
+        if(size >= taken) {
+            size -= taken;
+            cursor->cursorPointer = cursor->basePointer;
+            if(node->next == 0x0) {
+                break;
+            }
+            arena->cursorNode = node->next;
+            SLL_STACK_PUSH(arena->freeNode, node);
+        } else {
+            cursor->cursorPointer -= size;
+            size = 0;
         }
     }
 }
@@ -400,24 +409,24 @@ static void
 arenaPopZero(Arena *arena, size_t size) {
     assert(arena);
 
-    if(size) {
-        MemoryCursorNode *cursorNode = arena->cursorNode;
-        if(!cursorNode) {
-            return;
-        }
+    while(size > 0 && arena->cursorNode) {
+        MemoryCursorNode *node = arena->cursorNode;
+        MemoryCursor *cursor = &node->cursor;
+        u64 taken = cursorTakenBytes(cursor);
 
-        while(size > 0) {
-            MemoryCursor *cursor = &cursorNode->cursor;
-
-            u64 takenBytes = cursorTakenBytes(cursor);
-            u64 toSubtract = MIN(size, takenBytes);
-            u64 newOffset = takenBytes - toSubtract;
-
-            memset(cursor->basePointer + newOffset, 0, toSubtract);
-
-            size -= toSubtract;
-            cursor->cursorPointer = cursor->basePointer + newOffset;
-            cursorNode = cursorNode->next;
+        if(size >= taken) {
+            memset(cursor->basePointer, 0, taken);
+            size -= taken;
+            cursor->cursorPointer = cursor->basePointer;
+            if(node->next == 0x0) {
+                break;
+            }
+            arena->cursorNode = node->next;
+            SLL_STACK_PUSH(arena->freeNode, node);
+        } else {
+            memset(cursor->cursorPointer - size, 0, size);
+            cursor->cursorPointer -= size;
+            size = 0;
         }
     }
 }
