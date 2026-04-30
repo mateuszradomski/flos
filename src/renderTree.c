@@ -550,8 +550,7 @@ pushCallArgumentListDocument(Render *r, TokenId startingToken, ASTNode *firstExp
             pushWord(r, whitespace);
         }
 
-        ASTNode *argument = firstExpression;
-        for(u32 i = 0; argument != 0x0; i++, argument = argument->next) {
+        for(ASTNode *argument = firstExpression; argument != 0x0; argument = argument->next) {
             lastExpression = argument;
             pushGroup(r);
             pushExpressionDocument(r, argument);
@@ -1034,8 +1033,7 @@ pushExpressionDocument(Render *r, ASTNode *node) {
             pushNest(r);
 
             pushGroup(r);
-            ASTNode *expression = array->firstExpression;
-            for(u32 i = 0; expression != 0x0; i++, expression = expression->next) {
+            for(ASTNode *expression = array->firstExpression; expression != 0x0; expression = expression->next) {
                 pushExpressionDocument(r, expression);
                 if(expression->next != 0x0) {
                     assert(stringMatch(LIT_TO_STR(","), r->tokens.tokenStrings[expression->endToken + 1]));
@@ -1344,8 +1342,7 @@ pushYulFunctionCallDocument(Render *r, ASTNode *node) {
         pushNest(r);
         pushWord(r, wordSoftline());
 
-        ASTNode *argument = function->firstArgument;
-        for(u32 i = 0; argument != 0x0; i++, argument = argument->next) {
+        for(ASTNode *argument = function->firstArgument; argument != 0x0; argument = argument->next) {
             pushYulExpressionDocument(r, argument);
             if(argument->next != 0x0) {
                 pushTokenWord(r, argument->endToken + 1); // comma
@@ -1531,8 +1528,7 @@ pushStatementDocument(Render *r, ASTNode *node) {
             pushTokenWord(r, node->startToken);
             pushNest(r);
             pushWord(r, wordSoftline());
-            ASTNode *it = statement->firstDeclaration;
-            for(u32 i = 0; it != 0x0; i++, it = it->next) {
+            for(ASTNode *it = statement->firstDeclaration; it != 0x0; it = it->next) {
                 if(it->type != ASTNodeType_None) {
                     ASTNodeVariableDeclaration *decl = &it->variableDeclarationNode;
 
@@ -1871,8 +1867,7 @@ pushStatementDocument(Render *r, ASTNode *node) {
             ASTNodeYulVariableAssignment *statement = &node->yulVariableAssignmentNode;
             pushGroup(r);
 
-            ASTNode *it = statement->firstPath;
-            for(u32 i = 0; it != 0x0; i++, it = it->next) {
+            for(ASTNode *it = statement->firstPath; it != 0x0; it = it->next) {
                 pushYulExpressionDocument(r, it);
                 if (it->next != 0x0) {
                     pushTokenWord(r, it->endToken + 1); // ,
@@ -2431,8 +2426,7 @@ pushMemberDocument(Render *r, ASTNode *member) {
 
             pushNest(r);
             pushWord(r, wordSoftline());
-            ASTNode *it = member->eventNode.firstParameter;
-            for(u32 i = 0; it != 0x0; i++, it = it->next) {
+            for(ASTNode *it = member->eventNode.firstParameter; it != 0x0; it = it->next) {
                 ASTNodeVariableDeclaration *decl = &it->variableDeclarationNode;
 
                 pushTypeDocument(r, decl->type);
@@ -2475,8 +2469,7 @@ pushMemberDocument(Render *r, ASTNode *member) {
 
             pushNest(r);
             pushWord(r, wordSoftline());
-            ASTNode *it = member->errorNode.firstParameter;
-            for(u32 i = 0; it != 0x0; i++, it = it->next) {
+            for(ASTNode *it = member->errorNode.firstParameter; it != 0x0; it = it->next) {
                 ASTNodeVariableDeclaration *decl = &it->variableDeclarationNode;
 
                 pushTypeDocument(r, decl->type);

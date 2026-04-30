@@ -1510,7 +1510,6 @@ parseExpressionImpl(Parser *parser, ASTNode *node, u32 previousPrecedence) {
             parser->current -= 1;
             if(!parseType(parser, node)) {
                 setCurrentParserPosition(parser, startPosition);
-                u32 startPosition = getCurrentParserPosition(parser);
                 node->type = ASTNodeType_BaseType;
                 node->baseTypeNode.typeName = peekLastTokenId(parser);
 
