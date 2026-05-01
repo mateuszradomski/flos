@@ -6,6 +6,7 @@ enum {
     TokenType_Interface,
     TokenType_Struct,
     TokenType_Private,
+    TokenType_Transient,
     TokenType_Immutable,
     TokenType_Constant,
     TokenType_Function,
@@ -165,6 +166,7 @@ tokenTypeToString(TokenType tokenType) {
         case TokenType_Interface: return LIT_TO_STR("Interface");
         case TokenType_Struct: return LIT_TO_STR("Struct");
         case TokenType_Private: return LIT_TO_STR("Private");
+        case TokenType_Transient: return LIT_TO_STR("Transient");
         case TokenType_Immutable: return LIT_TO_STR("Immutable");
         case TokenType_Constant: return LIT_TO_STR("Constant");
         case TokenType_Function: return LIT_TO_STR("Function");
@@ -542,7 +544,7 @@ categorizeSymbolPTable(String symbol) {
     u32 size = (u32)symbol.size;
 
     u32 preHash = (((u32)*(u16 *)actual) << 16) | ((u32)*(u16 *)(actual + size - 2));
-    u32 index = ((preHash * 0x064197c7u) >> 22) & 255;
+    u32 index = ((preHash * keywordHashC) >> keywordHashS) & 255;
 
     if(keywordPreHashes[index] != preHash) {
         return TokenType_Symbol;
