@@ -1373,266 +1373,281 @@ parseFunctionCallExpression(Parser *parser, ASTNode *node) {
 
 static bool
 parseExpressionImpl(Parser *parser, ASTNode *node, u32 previousPrecedence) {
-    u32 startPosition = getCurrentParserPosition(parser);
     node->startToken = parser->current;
 
-    if(acceptToken(parser, TokenType_HexNumberLit)) {
-        node->type = ASTNodeType_NumberLitExpression;
-        node->numberLitExpressionNode.value = peekLastTokenId(parser);
-        node->numberLitExpressionNode.subdenomination = INVALID_TOKEN_ID;
-    } else if(acceptToken(parser, TokenType_NumberLit)) {
-        node->type = ASTNodeType_NumberLitExpression;
-        node->numberLitExpressionNode.value = peekLastTokenId(parser);
-        node->numberLitExpressionNode.subdenomination = parseSubdenomination(parser);
-    } else if(acceptToken(parser, TokenType_StringLit)) {
-        node->type = ASTNodeType_StringLitExpression;
-        do {
-            TokenId literal = peekLastTokenId(parser);
-            listPushTokenId(&node->stringLitExpressionNode.values, literal, parser->arena);
-        } while(acceptToken(parser, TokenType_StringLit));
-    } else if(acceptToken(parser, TokenType_HexStringLit)) {
-        node->type = ASTNodeType_HexStringLitExpression;
-        do {
-            TokenId literal = peekLastTokenId(parser);
-            listPushTokenId(&node->stringLitExpressionNode.values, literal, parser->arena);
-        } while(acceptToken(parser, TokenType_HexStringLit));
-    } else if(acceptToken(parser, TokenType_UnicodeStringLit)) {
-        node->type = ASTNodeType_UnicodeStringLitExpression;
-        do {
-            TokenId literal = peekLastTokenId(parser);
-            listPushTokenId(&node->stringLitExpressionNode.values, literal, parser->arena);
-        } while(acceptToken(parser, TokenType_UnicodeStringLit));
-    } else if(acceptToken(parser, TokenType_True) || acceptToken(parser, TokenType_False)) {
-        node->type = ASTNodeType_BoolLitExpression;
-        node->boolLitExpressionNode.value = peekLastTokenId(parser);
-    } else if(acceptToken(parser, TokenType_LParen)) {
-        node->type = ASTNodeType_TupleExpression;
+    TokenType type = peekTokenType(parser);
+    switch(advanceToken(parser)) {
+        case TokenType_HexNumberLit: {
+            node->type = ASTNodeType_NumberLitExpression;
+            node->numberLitExpressionNode.value = peekLastTokenId(parser);
+            node->numberLitExpressionNode.subdenomination = INVALID_TOKEN_ID;
+        } break;
+        case TokenType_NumberLit: {
+            node->type = ASTNodeType_NumberLitExpression;
+            node->numberLitExpressionNode.value = peekLastTokenId(parser);
+            node->numberLitExpressionNode.subdenomination = parseSubdenomination(parser);
+        } break;
+        case TokenType_StringLit: {
+            node->type = ASTNodeType_StringLitExpression;
+            do {
+                TokenId literal = peekLastTokenId(parser);
+                listPushTokenId(&node->stringLitExpressionNode.values, literal, parser->arena);
+            } while(acceptToken(parser, TokenType_StringLit));
+        } break;
+        case TokenType_HexStringLit: {
+            node->type = ASTNodeType_HexStringLitExpression;
+            do {
+                TokenId literal = peekLastTokenId(parser);
+                listPushTokenId(&node->stringLitExpressionNode.values, literal, parser->arena);
+            } while(acceptToken(parser, TokenType_HexStringLit));
+        } break;
+        case TokenType_UnicodeStringLit: {
+            node->type = ASTNodeType_UnicodeStringLitExpression;
+            do {
+                TokenId literal = peekLastTokenId(parser);
+                listPushTokenId(&node->stringLitExpressionNode.values, literal, parser->arena);
+            } while(acceptToken(parser, TokenType_UnicodeStringLit));
+        } break;
+        case TokenType_False:
+        case TokenType_True: {
+            node->type = ASTNodeType_BoolLitExpression;
+            node->boolLitExpressionNode.value = peekLastTokenId(parser);
+        } break;
+        case TokenType_LParen: {
+            node->type = ASTNodeType_TupleExpression;
 
-        ASTNode *lastElement = 0x0;
-        if(!acceptToken(parser, TokenType_RParen)) {
+            ASTNode *lastElement = 0x0;
+            if(!acceptToken(parser, TokenType_RParen)) {
+                do {
+                    ASTNode *element = allocateNode(parser);
+                    element->type = ASTNodeType_None;
+
+                    if(!nextTokenIs(parser, TokenType_RParen) && !nextTokenIs(parser, TokenType_Comma)) {
+                        parseExpressionImpl(parser, element, 0);
+                    }
+                    SLL_QUEUE_PUSH(node->tupleExpressionNode.firstElement, lastElement, element);
+                } while (acceptToken(parser, TokenType_Comma));
+
+                expectToken(parser, TokenType_RParen);
+            }
+        } break;
+        case TokenType_LBracket: {
+            node->type = ASTNodeType_InlineArrayExpression;
+            ASTNodeInlineArrayExpression *array = &node->inlineArrayExpressionNode;
+
+            ASTNode *lastExpression = 0x0;
             do {
                 ASTNode *element = allocateNode(parser);
-                element->type = ASTNodeType_None;
+                parseExpressionImpl(parser, element, 0);
+                SLL_QUEUE_PUSH(array->firstExpression, lastExpression, element);
+            } while(acceptToken(parser, TokenType_Comma));
 
-                if(!nextTokenIs(parser, TokenType_RParen) && !nextTokenIs(parser, TokenType_Comma)) {
-                    parseExpressionImpl(parser, element, 0);
-                }
-                SLL_QUEUE_PUSH(node->tupleExpressionNode.firstElement, lastElement, element);
-            } while (acceptToken(parser, TokenType_Comma));
-
-            expectToken(parser, TokenType_RParen);
-        }
-    } else if(acceptToken(parser, TokenType_LBracket)) {
-        node->type = ASTNodeType_InlineArrayExpression;
-        ASTNodeInlineArrayExpression *array = &node->inlineArrayExpressionNode;
-
-        ASTNode *lastExpression = 0x0;
-        do {
-            ASTNode *element = allocateNode(parser);
-            parseExpressionImpl(parser, element, 0);
-            SLL_QUEUE_PUSH(array->firstExpression, lastExpression, element);
-        } while(acceptToken(parser, TokenType_Comma));
-
-        expectToken(parser, TokenType_RBracket);
-    } else if(isUnaryOperator(peekTokenType(parser))) {
-        u32 operator = peekTokenType(parser);
-
-        if(operator == TokenType_New) {
-            node->type = ASTNodeType_NewExpression;
-            node->newExpressionNode.typeName = allocateNode(parser);
-            advanceToken(parser);
-
-            parseType(parser, node->newExpressionNode.typeName);
-        } else {
-            node->type = ASTNodeType_UnaryExpression;
-            node->unaryExpressionNode.operator = operator;
-            node->unaryExpressionNode.subExpression = allocateNode(parser);
-            advanceToken(parser);
-
-            u32 precedence = getUnaryOperatorPrecedence(parser, node->unaryExpressionNode.operator);
-            parseExpressionImpl(parser, node->unaryExpressionNode.subExpression, precedence);
-        }
-    } else if(parseIdentifier(parser) != INVALID_TOKEN_ID) {
-        String identString = peekLastTokenString(parser);
-
-        if(isBaseTypeName(identString)) {
-            u32 startPosition = getCurrentParserPosition(parser);
-            parser->current -= 1;
-            if(!parseType(parser, node)) {
-                setCurrentParserPosition(parser, startPosition);
-                node->type = ASTNodeType_BaseType;
-                node->baseTypeNode.typeName = peekLastTokenId(parser);
-
-                node->baseTypeNode.payable = 0;
-                if(acceptToken(parser, TokenType_Payable)) {
-                    assertError(stringMatch(getTokenString(parser->tokens, node->baseTypeNode.typeName), LIT_TO_STR("address")),
-                                parser, "Only address types can be payable");
-                    node->baseTypeNode.payable = 1;
-                }
-            }
-        } else {
+            expectToken(parser, TokenType_RBracket);
+        } break;
+        case TokenType_Type: {
             node->type = ASTNodeType_IdentifierExpression;
             node->identifierExpressionNode.value = peekLastTokenId(parser);
-        }
-    } else if(acceptToken(parser, TokenType_Type)) {
-        node->type = ASTNodeType_IdentifierExpression;
-        node->identifierExpressionNode.value = peekLastTokenId(parser);
 
-        expectToken(parser, TokenType_LParen);
-        parseFunctionCallExpression(parser, node);
-    } else {
-        reportError(parser, "Unexpected token while parsing expression - %S",
-                    tokenTypeToString(peekTokenType(parser)));
+            expectToken(parser, TokenType_LParen);
+            parseFunctionCallExpression(parser, node);
+        } break;
+        default: {
+            parser->current -= 1;
+
+            if(isUnaryOperator(peekTokenType(parser))) {
+                u32 operator = peekTokenType(parser);
+                advanceToken(parser);
+
+                if(operator == TokenType_New) {
+                    node->type = ASTNodeType_NewExpression;
+                    node->newExpressionNode.typeName = allocateNode(parser);
+
+                    parseType(parser, node->newExpressionNode.typeName);
+                } else {
+                    node->type = ASTNodeType_UnaryExpression;
+                    node->unaryExpressionNode.operator = operator;
+                    node->unaryExpressionNode.subExpression = allocateNode(parser);
+
+                    u32 precedence = getUnaryOperatorPrecedence(parser, node->unaryExpressionNode.operator);
+                    parseExpressionImpl(parser, node->unaryExpressionNode.subExpression, precedence);
+                }
+            } else if(parseIdentifier(parser) != INVALID_TOKEN_ID) {
+                String identString = peekLastTokenString(parser);
+
+                if(isBaseTypeName(identString)) {
+                    u32 startPosition = getCurrentParserPosition(parser);
+                    parser->current -= 1;
+                    if(!parseType(parser, node)) {
+                        setCurrentParserPosition(parser, startPosition);
+                        node->type = ASTNodeType_BaseType;
+                        node->baseTypeNode.typeName = peekLastTokenId(parser);
+
+                        node->baseTypeNode.payable = 0;
+                        if(acceptToken(parser, TokenType_Payable)) {
+                            assertError(stringMatch(getTokenString(parser->tokens, node->baseTypeNode.typeName), LIT_TO_STR("address")),
+                                        parser, "Only address types can be payable");
+                            node->baseTypeNode.payable = 1;
+                        }
+                    }
+                } else {
+                    node->type = ASTNodeType_IdentifierExpression;
+                    node->identifierExpressionNode.value = peekLastTokenId(parser);
+                }
+            } else {
+                reportError(parser, "Unexpected token while parsing expression - %S",
+                            tokenTypeToString(peekTokenType(parser)));
+            }
+        }
     }
 
     while(true) {
-        startPosition = getCurrentParserPosition(parser);
         TokenType type = peekTokenType(parser);
-        if(!isOperator(type)) {
-            break;
-        }
-
         u32 precedence = getOperatorPrecedence(parser, type);
         if(precedence <= previousPrecedence) {
             break;
         }
-        advanceToken(parser);
 
-        if(type == TokenType_LParen) {
-            parseFunctionCallExpression(parser, node);
-            continue;
-        } else if(type == TokenType_LBracket) {
-            ASTNode *expression = allocateNode(parser);
-            *expression = *node;
-            expression->endToken = parser->current - 2;
+        switch(advanceToken(parser)) {
+            case TokenType_LParen: {
+                parseFunctionCallExpression(parser, node);
+            } break;
+            case TokenType_LBracket: {
+                ASTNode *expression = allocateNode(parser);
+                *expression = *node;
+                expression->endToken = parser->current - 2;
 
-            ASTNode *firstExpression = 0x0;
-            ASTNode *secondExpression = 0x0;
+                ASTNode *firstExpression = 0x0;
+                ASTNode *secondExpression = 0x0;
 
-            ASTNodeType type = ASTNodeType_ArrayAccessExpression;
-            if(!acceptToken(parser, TokenType_RBracket)) {
-                if(!nextTokenIs(parser, TokenType_Colon)) {
-                    firstExpression = allocateNode(parser);
-                    parseExpressionImpl(parser, firstExpression, 0);
-                }
+                ASTNodeType type = ASTNodeType_ArrayAccessExpression;
+                if(!acceptToken(parser, TokenType_RBracket)) {
+                    if(!nextTokenIs(parser, TokenType_Colon)) {
+                        firstExpression = allocateNode(parser);
+                        parseExpressionImpl(parser, firstExpression, 0);
+                    }
 
-                if(acceptToken(parser, TokenType_Colon)) {
-                    type = ASTNodeType_ArraySliceExpression;
-                    if(!acceptToken(parser, TokenType_RBracket)) {
-                        secondExpression = allocateNode(parser);
-                        parseExpressionImpl(parser, secondExpression, 0);
+                    if(acceptToken(parser, TokenType_Colon)) {
+                        type = ASTNodeType_ArraySliceExpression;
+                        if(!acceptToken(parser, TokenType_RBracket)) {
+                            secondExpression = allocateNode(parser);
+                            parseExpressionImpl(parser, secondExpression, 0);
+                            expectToken(parser, TokenType_RBracket);
+                        }
+                    } else {
                         expectToken(parser, TokenType_RBracket);
                     }
+                }
+
+                node->type = type;
+                if(type == ASTNodeType_ArrayAccessExpression) {
+                    node->arrayAccessExpressionNode.expression = expression;
+                    node->arrayAccessExpressionNode.indexExpression = firstExpression;
                 } else {
-                    expectToken(parser, TokenType_RBracket);
+                    node->arraySliceExpressionNode.expression = expression;
+                    node->arraySliceExpressionNode.leftFenceExpression = firstExpression;
+                    node->arraySliceExpressionNode.rightFenceExpression = secondExpression;
                 }
-            }
-
-            node->type = type;
-            if(type == ASTNodeType_ArrayAccessExpression) {
-                node->arrayAccessExpressionNode.expression = expression;
-                node->arrayAccessExpressionNode.indexExpression = firstExpression;
-            } else {
-                node->arraySliceExpressionNode.expression = expression;
-                node->arraySliceExpressionNode.leftFenceExpression = firstExpression;
-                node->arraySliceExpressionNode.rightFenceExpression = secondExpression;
-            }
-            continue;
-        } else if(type == TokenType_LBrace) {
-            ASTNode *expression = allocateNode(parser);
-            *expression = *node;
-            expression->endToken = parser->current - 2;
-
-            memset(node, 0, sizeof(ASTNode));
-            node->startToken = expression->startToken;
-            node->type = ASTNodeType_NamedParameterExpression;
-            node->namedParametersExpressionNode.expression = expression;
-
-            node->namedParametersExpressionNode.listStartToken = parser->current;
-            ASTNode *lastExpression = 0x0;
-            do {
-                TokenId identifier = parseIdentifier(parser);
-
-                if(identifier == INVALID_TOKEN_ID) {
-                    setCurrentParserPosition(parser, startPosition);
-                    *node = *expression;
-                    return false;
-                }
-
-                assertError(identifier != INVALID_TOKEN_ID, parser,
-                            "Expected identifier in named parameter list, received (%S)", tokenTypeToString(peekTokenType(parser)));
-                listPushTokenId(&node->namedParametersExpressionNode.names, identifier, parser->arena);
-
-                if(!acceptToken(parser, TokenType_Colon)) {
-                    setCurrentParserPosition(parser, startPosition);
-                    *node = *expression;
-                    return false;
-                }
-
+            } break;
+            case TokenType_LBrace: {
+                u32 startPosition = getCurrentParserPosition(parser) - 1;
                 ASTNode *expression = allocateNode(parser);
-                parseExpressionImpl(parser, expression, 0);
+                *expression = *node;
+                expression->endToken = parser->current - 2;
 
-                SLL_QUEUE_PUSH(node->namedParametersExpressionNode.firstExpression, lastExpression, expression);
-            } while(acceptToken(parser, TokenType_Comma));
+                memset(node, 0, sizeof(ASTNode));
+                node->startToken = expression->startToken;
+                node->type = ASTNodeType_NamedParameterExpression;
+                node->namedParametersExpressionNode.expression = expression;
 
-            node->namedParametersExpressionNode.listEndToken = parser->current - 1;
+                node->namedParametersExpressionNode.listStartToken = parser->current;
+                ASTNode *lastExpression = 0x0;
+                do {
+                    TokenId identifier = parseIdentifier(parser);
 
-            expectToken(parser, TokenType_RBrace);
-            continue;
-        } else if(type == TokenType_Dot) {
-            ASTNode *expression = allocateNode(parser);
-            *expression = *node;
-            expression->endToken = parser->current - 2;
+                    if(identifier == INVALID_TOKEN_ID) {
+                        setCurrentParserPosition(parser, startPosition);
+                        *node = *expression;
+                        return false;
+                    }
 
-            node->type = ASTNodeType_MemberAccessExpression;
-            node->memberAccessExpressionNode.expression = expression;
-            node->memberAccessExpressionNode.memberName = parseIdentifier(parser);
-            continue;
-        } else if(type == TokenType_QuestionMark) {
-            ASTNode *expression = allocateNode(parser);
-            *expression = *node;
-            expression->endToken = parser->current - 2;
+                    assertError(identifier != INVALID_TOKEN_ID, parser,
+                                "Expected identifier in named parameter list, received (%S)", tokenTypeToString(peekTokenType(parser)));
+                    listPushTokenId(&node->namedParametersExpressionNode.names, identifier, parser->arena);
 
-            node->type = ASTNodeType_TerneryExpression;
-            node->terneryExpressionNode.condition = expression;
-            node->terneryExpressionNode.trueExpression = allocateNode(parser);
-            node->terneryExpressionNode.falseExpression = allocateNode(parser);
+                    if(!acceptToken(parser, TokenType_Colon)) {
+                        setCurrentParserPosition(parser, startPosition);
+                        *node = *expression;
+                        return false;
+                    }
 
-            parseExpressionImpl(parser, node->terneryExpressionNode.trueExpression, 0);
-            expectToken(parser, TokenType_Colon);
-            parseExpressionImpl(parser, node->terneryExpressionNode.falseExpression, 0);
-            continue;
-        } else if(type == TokenType_PlusPlus | type == TokenType_MinusMinus) {
-            ASTNode *expression = allocateNode(parser);
-            *expression = *node;
-            expression->endToken = parser->current - 2;
+                    ASTNode *expression = allocateNode(parser);
+                    parseExpressionImpl(parser, expression, 0);
 
-            node->type = ASTNodeType_UnaryExpressionPostfix;
-            node->unaryExpressionNode.operator = type;
-            node->unaryExpressionNode.subExpression = expression;
-            continue;
+                    SLL_QUEUE_PUSH(node->namedParametersExpressionNode.firstExpression, lastExpression, expression);
+                } while(acceptToken(parser, TokenType_Comma));
+
+                node->namedParametersExpressionNode.listEndToken = parser->current - 1;
+
+                expectToken(parser, TokenType_RBrace);
+            } break;
+            case TokenType_Dot: {
+                ASTNode *expression = allocateNode(parser);
+                *expression = *node;
+                expression->endToken = parser->current - 2;
+
+                node->type = ASTNodeType_MemberAccessExpression;
+                node->memberAccessExpressionNode.expression = expression;
+                node->memberAccessExpressionNode.memberName = parseIdentifier(parser);
+            } break;
+            case TokenType_QuestionMark: {
+                ASTNode *expression = allocateNode(parser);
+                *expression = *node;
+                expression->endToken = parser->current - 2;
+
+                node->type = ASTNodeType_TerneryExpression;
+                node->terneryExpressionNode.condition = expression;
+                node->terneryExpressionNode.trueExpression = allocateNode(parser);
+                node->terneryExpressionNode.falseExpression = allocateNode(parser);
+
+                parseExpressionImpl(parser, node->terneryExpressionNode.trueExpression, 0);
+                expectToken(parser, TokenType_Colon);
+                parseExpressionImpl(parser, node->terneryExpressionNode.falseExpression, 0);
+            } break;
+            case TokenType_MinusMinus:
+            case TokenType_PlusPlus: {
+                ASTNode *expression = allocateNode(parser);
+                *expression = *node;
+                expression->endToken = parser->current - 2;
+
+                node->type = ASTNodeType_UnaryExpressionPostfix;
+                node->unaryExpressionNode.operator = type;
+                node->unaryExpressionNode.subExpression = expression;
+            } break;
+            default: {
+                ASTNode *left = allocateNode(parser);
+                *left = *node;
+                left->endToken = parser->current - 2;
+
+                node->type = ASTNodeType_BinaryExpression;
+                node->startToken = left->startToken;
+                node->binaryExpressionNode.left = left;
+                node->binaryExpressionNode.right = allocateNode(parser);
+                node->binaryExpressionNode.operator = type;
+                node->endToken = parser->current - 1;
+
+                // Exponentiation has right associativity
+                precedence -= type == TokenType_StarStar;
+
+                if(!parseExpressionImpl(parser, node->binaryExpressionNode.right, precedence)) {
+                    goto end;
+                }
+
+                node->endToken = parser->current - 1;
+            }
         }
-
-        ASTNode *left = allocateNode(parser);
-        *left = *node;
-        left->endToken = parser->current - 2;
-
-        node->type = ASTNodeType_BinaryExpression;
-        node->startToken = left->startToken;
-        node->binaryExpressionNode.left = left;
-        node->binaryExpressionNode.right = allocateNode(parser);
-        node->binaryExpressionNode.operator = type;
-        node->endToken = parser->current - 1;
-
-        // Exponentiation has right associativity
-        precedence -= type == TokenType_StarStar;
-
-        if(!parseExpressionImpl(parser, node->binaryExpressionNode.right, precedence)) {
-            break;
-        }
-
-        node->endToken = parser->current - 1;
     }
+
+end:;
 
     node->endToken = parser->current - 1;
     return true;
