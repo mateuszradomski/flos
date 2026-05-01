@@ -1246,128 +1246,78 @@ parseTypedef(Parser *parser, ASTNode *node) {
     node->endToken = parser->current - 1;
 }
 
+static const u32 operatorPrecedenceByToken[TokenType_Count] = {
+    [TokenType_PlusPlus]        = (u32)-1,
+    [TokenType_MinusMinus]     = (u32)-1,
+    [TokenType_Dot]            = (u32)-1,
+    [TokenType_LParen]         = (u32)-1,
+    [TokenType_LBrace]         = (u32)-1,
+    [TokenType_LBracket]       = (u32)-1,
+    [TokenType_StarStar]       = (u32)-3,
+    [TokenType_Star]           = (u32)-4,
+    [TokenType_Divide]         = (u32)-4,
+    [TokenType_Percent]        = (u32)-4,
+    [TokenType_Plus]           = (u32)-5,
+    [TokenType_Minus]          = (u32)-5,
+    [TokenType_LeftShift]      = (u32)-6,
+    [TokenType_RightShift]     = (u32)-6,
+    [TokenType_RightShiftZero] = (u32)-6,
+    [TokenType_Ampersand]      = (u32)-7,
+    [TokenType_Carrot]         = (u32)-8,
+    [TokenType_Pipe]           = (u32)-9,
+    [TokenType_LeftEqual]      = (u32)-10,
+    [TokenType_RightEqual]     = (u32)-10,
+    [TokenType_LTick]          = (u32)-10,
+    [TokenType_RTick]          = (u32)-10,
+    [TokenType_EqualEqual]     = (u32)-11,
+    [TokenType_NotEqual]       = (u32)-11,
+    [TokenType_LogicalAnd]     = (u32)-12,
+    [TokenType_LogicalOr]      = (u32)-13,
+    [TokenType_QuestionMark]   = (u32)-14,
+    [TokenType_Equal]          = (u32)-15,
+    [TokenType_OrEqual]        = (u32)-15,
+    [TokenType_XorEqual]       = (u32)-15,
+    [TokenType_AndEqual]       = (u32)-15,
+    [TokenType_LeftShiftEqual] = (u32)-15,
+    [TokenType_RightShiftEqual] = (u32)-15,
+    [TokenType_PlusEqual]      = (u32)-15,
+    [TokenType_MinusEqual]     = (u32)-15,
+    [TokenType_StarEqual]      = (u32)-15,
+    [TokenType_DivideEqual]    = (u32)-15,
+    [TokenType_PercentEqual]   = (u32)-15,
+};
+
 static bool
 isOperator(TokenType type) {
-    switch(type) {
-        case TokenType_PlusPlus:
-        case TokenType_MinusMinus:
-        case TokenType_Dot:
-        case TokenType_LParen:
-        case TokenType_LBrace:
-        case TokenType_LBracket:
-        case TokenType_StarStar:
-        case TokenType_Star:
-        case TokenType_Divide:
-        case TokenType_Percent:
-        case TokenType_Plus:
-        case TokenType_Minus:
-        case TokenType_Ampersand:
-        case TokenType_Carrot:
-        case TokenType_Pipe:
-        case TokenType_LeftShift:
-        case TokenType_RightShift:
-        case TokenType_RightShiftZero:
-        case TokenType_LeftEqual:
-        case TokenType_RightEqual:
-        case TokenType_LTick:
-        case TokenType_RTick:
-        case TokenType_EqualEqual:
-        case TokenType_NotEqual:
-        case TokenType_LogicalAnd:
-        case TokenType_LogicalOr:
-        case TokenType_Equal:
-        case TokenType_OrEqual:
-        case TokenType_XorEqual:
-        case TokenType_AndEqual:
-        case TokenType_LeftShiftEqual:
-        case TokenType_RightShiftEqual:
-        case TokenType_PlusEqual:
-        case TokenType_MinusEqual:
-        case TokenType_StarEqual:
-        case TokenType_DivideEqual:
-        case TokenType_PercentEqual:
-        case TokenType_QuestionMark: return true;
-        default: return false;
-    }
+    return operatorPrecedenceByToken[type] != 0;
 }
 
 static u32
 getOperatorPrecedence(Parser *parser, TokenType type) {
-    switch(type) {
-        case TokenType_PlusPlus:
-        case TokenType_MinusMinus:
-        case TokenType_Dot:
-        case TokenType_LParen:
-        case TokenType_LBrace:
-        case TokenType_LBracket: return -1;
-        case TokenType_StarStar: return -3;
-        case TokenType_Star:
-        case TokenType_Divide:
-        case TokenType_Percent: return -4;
-        case TokenType_Plus:
-        case TokenType_Minus: return -5;
-        case TokenType_LeftShift:
-        case TokenType_RightShift:
-        case TokenType_RightShiftZero: return -6;
-        case TokenType_Ampersand: return -7;
-        case TokenType_Carrot: return -8;
-        case TokenType_Pipe: return -9;
-        case TokenType_LeftEqual:
-        case TokenType_RightEqual:
-        case TokenType_LTick:
-        case TokenType_RTick: return -10;
-        case TokenType_EqualEqual:
-        case TokenType_NotEqual: return -11;
-        case TokenType_LogicalAnd: return -12;
-        case TokenType_LogicalOr: return -13;
-        case TokenType_QuestionMark: return -14;
-        case TokenType_Equal:
-        case TokenType_OrEqual:
-        case TokenType_XorEqual:
-        case TokenType_AndEqual:
-        case TokenType_LeftShiftEqual:
-        case TokenType_RightShiftEqual:
-        case TokenType_PlusEqual:
-        case TokenType_MinusEqual:
-        case TokenType_StarEqual:
-        case TokenType_DivideEqual:
-        case TokenType_PercentEqual: return -15;
-        default: reportError(parser, "Found token is not an operator - %S", tokenTypeToString(type));
-    }
-
-    return 0;
+    (void)parser;
+    return operatorPrecedenceByToken[type];
 }
+
+static const u32 unaryOperatorPrecedenceByToken[TokenType_Count] = {
+    [TokenType_New]         = (u32)-1,
+    [TokenType_Exclamation] = (u32)-2,
+    [TokenType_Minus]       = (u32)-2,
+    [TokenType_Plus]        = (u32)-2,
+    [TokenType_Tylde]       = (u32)-2,
+    [TokenType_PlusPlus]    = (u32)-2,
+    [TokenType_MinusMinus]  = (u32)-2,
+    [TokenType_Delete]      = (u32)-2,
+};
 
 static bool
 isUnaryOperator(TokenType type) {
-    switch(type) {
-        case TokenType_New:
-        case TokenType_Exclamation:
-        case TokenType_Minus:
-        case TokenType_Plus:
-        case TokenType_Tylde:
-        case TokenType_PlusPlus:
-        case TokenType_MinusMinus:
-        case TokenType_Delete: return true;
-        default: return false;
-    }
+    return unaryOperatorPrecedenceByToken[type] != 0;
 }
 
 static u32
 getUnaryOperatorPrecedence(Parser *parser, TokenType type) {
-    switch(type) {
-        case TokenType_New: return -1;
-        case TokenType_Exclamation:
-        case TokenType_Minus:
-        case TokenType_Plus:
-        case TokenType_Tylde:
-        case TokenType_PlusPlus:
-        case TokenType_MinusMinus:
-        case TokenType_Delete: return -2;
-        default: reportError(parser, "Found token is not an unary operator - %S", tokenTypeToString(type));
-    }
-
-    return 0;
+    (void)parser;
+    return unaryOperatorPrecedenceByToken[type];
 }
 
 static bool parseExpressionImpl(Parser *parser, ASTNode *node, u32 previousPrecedence);
