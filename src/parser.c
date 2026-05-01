@@ -271,6 +271,7 @@ typedef struct ASTNodeContractDefinition {
     TokenId name;
     ASTNode *firstElement;
     ASTNode *firstBaseContract;
+    ASTNode *layoutExpression;
 } ASTNodeContractDefinition;
 
 typedef struct ASTNodeLibraryDefinition {
@@ -680,6 +681,8 @@ parseIdentifier(Parser *parser) {
         tokenType == TokenType_Error |
         tokenType == TokenType_Global |
         tokenType == TokenType_Payable |
+        tokenType == TokenType_At |
+        tokenType == TokenType_Layout |
         tokenType == TokenType_Szabo |
         tokenType == TokenType_Finney;
 
@@ -2603,29 +2606,36 @@ parseContract(Parser *parser, ASTNode *node) {
     contract->name = parseIdentifier(parser);
 
     ASTNode *lastBaseContract = 0x0;
-    if(acceptToken(parser, TokenType_Is)) {
-        do {
-            ASTNode *baseContract = allocateNode(parser);
+    while(true) {
+        if(acceptToken(parser, TokenType_Is)) {
+            do {
+                ASTNode *baseContract = allocateNode(parser);
 
-            baseContract->type = ASTNodeType_InheritanceSpecifier;
-            baseContract->startToken = parser->current;
-            ASTNodeInheritanceSpecifier *inheritance = &baseContract->inheritanceSpecifierNode;
+                baseContract->type = ASTNodeType_InheritanceSpecifier;
+                baseContract->startToken = parser->current;
+                ASTNodeInheritanceSpecifier *inheritance = &baseContract->inheritanceSpecifierNode;
 
-            inheritance->identifier = allocateNode(parser);
-            parseType(parser, inheritance->identifier);
-            assertError(inheritance->identifier->type == ASTNodeType_IdentifierPath,
-                        parser, "Expected identifier path in inheritance specifier");
+                inheritance->identifier = allocateNode(parser);
+                parseType(parser, inheritance->identifier);
+                assertError(inheritance->identifier->type == ASTNodeType_IdentifierPath,
+                            parser, "Expected identifier path in inheritance specifier");
 
-            inheritance->firstArgumentExpression = MISSING_ELEMENT;
-            if(acceptToken(parser, TokenType_LParen)) {
-                inheritance->firstArgumentExpression = 0x0;
-                parseCallArgumentList(parser, &inheritance->firstArgumentExpression, &inheritance->argumentsName);
-            }
+                inheritance->firstArgumentExpression = MISSING_ELEMENT;
+                if(acceptToken(parser, TokenType_LParen)) {
+                    inheritance->firstArgumentExpression = 0x0;
+                    parseCallArgumentList(parser, &inheritance->firstArgumentExpression, &inheritance->argumentsName);
+                }
 
-            baseContract->endToken = parser->current - 1;
+                baseContract->endToken = parser->current - 1;
 
-            SLL_QUEUE_PUSH(contract->firstBaseContract, lastBaseContract, baseContract);
-        } while(acceptToken(parser, TokenType_Comma));
+                SLL_QUEUE_PUSH(contract->firstBaseContract, lastBaseContract, baseContract);
+            } while(acceptToken(parser, TokenType_Comma));
+        } else if(acceptToken(parser, TokenType_Layout)) {
+            ASTNode *layout = structPush(parser->arena, ASTNode);
+            expectToken(parser, TokenType_At);
+            parseExpression(parser, layout);
+            contract->layoutExpression = layout;
+        } else { break; }
     }
 
     parseContractBody(parser, &contract->firstElement);
