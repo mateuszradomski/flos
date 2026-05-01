@@ -12,6 +12,8 @@ enum {
     TokenType_Function,
     TokenType_Internal,
     TokenType_Pure,
+    TokenType_At,
+    TokenType_Layout,
     TokenType_Payable,
     TokenType_New,
     TokenType_Return,

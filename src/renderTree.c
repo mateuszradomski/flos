@@ -2763,7 +2763,9 @@ pushMemberDocument(Render *r, ASTNode *member) {
             pushWord(r, wordSpace());
 
             pushTokenWord(r, contract->name);
-            pushWord(r, wordSpace());
+            if(contract->firstBaseContract != 0x0 || contract->layoutExpression == 0x0) {
+                pushWord(r, wordSpace());
+            }
             popGroup(r);
 
             if(contract->firstBaseContract != 0x0) {
@@ -2782,12 +2784,31 @@ pushMemberDocument(Render *r, ASTNode *member) {
                     if(baseContract->next != 0x0) {
                         assert(stringMatch(LIT_TO_STR(","), r->tokens.tokenStrings[baseContract->endToken + 1]));
                         pushTokenWord(r, baseContract->endToken + 1);
+                        pushWord(r, wordLine());
+                    } else if(contract->layoutExpression == 0x0) {
+                        pushWord(r, wordLine());
                     }
-                    pushWord(r, wordLine());
                 }
                 popNest(r);
                 popGroup(r);
             }
+
+            if(contract->layoutExpression != 0x0) {
+                pushWord(r, wordLine());
+                r->words[r->wordCount - 1 - r->trailingCount].nestStep += 2;
+
+                pushGroup(r);
+                pushTokenWord(r, contract->layoutExpression->startToken - 2);
+                pushWord(r, wordSpace());
+                pushTokenWord(r, contract->layoutExpression->startToken - 1);
+                pushWord(r, wordSpace());
+                pushExpressionDocument(r, contract->layoutExpression);
+                popGroup(r);
+
+                pushWord(r, wordLine());
+                r->words[r->wordCount - 1 - r->trailingCount].nestStep -= 2;
+            }
+            popGroup(r);
 
             pushGroup(r);
             u32 openParenToken = contract->firstElement != 0x0
@@ -2810,7 +2831,6 @@ pushMemberDocument(Render *r, ASTNode *member) {
 
             assert(stringMatch(LIT_TO_STR("}"), r->tokens.tokenStrings[member->endToken]));
             pushTokenWord(r, member->endToken);
-            popGroup(r);
             popGroup(r);
             pushWord(r, wordHardBreak());
         } break;
