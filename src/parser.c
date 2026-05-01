@@ -1,3 +1,5 @@
+#include "baseTypeTable.h"
+
 typedef enum ASTNodeType_Enum {
     ASTNodeType_None,
     ASTNodeType_SourceUnit,
@@ -772,70 +774,37 @@ isFixedPointNumberType(String string, String fixedPointPrefix) {
     return false;
 }
 
-u32 firstCharBaseTypeLUT =
-    (1 << ('a' - 'a')) |
-    (1 << ('b' - 'a')) |
-    (1 << ('f' - 'a')) |
-    (1 << ('i' - 'a')) |
-    (1 << ('s' - 'a')) |
-    (1 << ('u' - 'a')) |
-    (1 << ('v' - 'a'));
+static u32
+baseTypePreHash(String s) {
+    u32 v = *(u32*)(s.data + s.size - 4);
+    return (v >> 8) | ((u32)(u8)s.data[0] << 24);
+}
 
 static bool
 isBaseTypeName(String string) {
-    if(
-        string.size <= 2 || string.size > 12 ||
-        !isLowerAlphabet(string.data[0]) ||
-        (firstCharBaseTypeLUT & (1 << (string.data[0] - 'a'))) == 0
-    ) {
-        return false;
-    }
+    const u8 *actual = string.data;
+    u32 size = (u32)string.size;
 
-    switch(string.size) {
-        case 3: {
-            if(stringMatch(string, LIT_TO_STR("int"))) return true;
-            if(stringMatch(string, LIT_TO_STR("var"))) return true;
-            return false;
-        } break;
-        case 4: {
-            if(stringMatch(string, LIT_TO_STR("bool"))) return true;
-            if(stringMatch(string, LIT_TO_STR("byte"))) return true;
-            if(stringMatch(string, LIT_TO_STR("uint"))) return true;
-        } break;
-        case 5: {
-            if(stringMatch(string, LIT_TO_STR("bytes"))) return true;
-            if(stringMatch(string, LIT_TO_STR("fixed"))) return true;
-        } break;
-        case 6: {
-            if(stringMatch(string, LIT_TO_STR("string"))) return true;
-            if(stringMatch(string, LIT_TO_STR("ufixed"))) return true;
-        } break;
-        case 7: {
-            if(stringMatch(string, LIT_TO_STR("address"))) return true;
-            if(stringMatch(string, LIT_TO_STR("uint256"))) return true;
-            if(stringMatch(string, LIT_TO_STR("bytes32"))) return true;
-        } break;
-    }
+    u32 preHash = baseTypePreHash(string);
+    u32 index = (preHash * baseTypeHashC) >> baseTypeHashS;
 
-    switch(string.data[0]) {
-        case 'i': {
-            if(string.size > 6) return false;
-            return isSizedType(string, LIT_TO_STR("int"), 8, 256, 8);
-        }
-        case 'u': {
-            if(string.size <= 7)
-                return isSizedType(string, LIT_TO_STR("uint"), 8, 256, 8);
-            if(string.size >= 9)
+    if(baseTypePreHashes[index] != preHash) { return false; }
+    if(baseTypeLens[index] != size)         { return false; }
+
+    const u8 *expected = (const u8 *)baseTypeTexts[index];
+    u64 diff = *(u64 *)actual ^ *(u64 *)expected;
+    diff <<= (8 - size) << 3;
+
+    if(diff == 0) { return true; }
+
+    if(string.size >= 7 && string.size <= 12) {
+        switch(string.data[0]) {
+            case 'u': {
                 return isFixedPointNumberType(string, LIT_TO_STR("ufixed"));
-            return false;
-        }
-        case 'b': {
-            if(string.size < 6) return false;
-            return isSizedType(string, LIT_TO_STR("bytes"), 1, 32, 1);
-        }
-        case 'f': {
-            if(string.size < 8 || string.size > 11) return false;
-            return isFixedPointNumberType(string, LIT_TO_STR("fixed"));
+            }
+            case 'f': {
+                return isFixedPointNumberType(string, LIT_TO_STR("fixed"));
+            }
         }
     }
 
