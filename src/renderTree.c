@@ -2771,8 +2771,8 @@ pushMemberDocument(Render *r, ASTNode *member) {
             if(contract->firstBaseContract != 0x0) {
                 pushGroup(r);
                 pushNest(r);
-                assert(stringMatch(LIT_TO_STR("is"), r->tokens.tokenStrings[contract->name + 1]));
-                pushTokenWord(r, contract->name + 1);
+                assert(stringMatch(LIT_TO_STR("is"), r->tokens.tokenStrings[contract->firstBaseContract->startToken - 1]));
+                pushTokenWord(r, contract->firstBaseContract->startToken - 1);
                 pushWord(r, wordLine());
 
                 for(
