@@ -67,6 +67,13 @@ contract DbgFmtTest is Test {
         return 0;
     }
 }
+
+contract AggchainECDSAMultisig {
+    ////////////////////////////////////////////////////////////
+    //                  Transient Storage                     //
+    ////////////////////////////////////////////////////////////
+    uint8 private transient _initializerVersion;
+}
 // Above input, below output
 // Repros of fmt issues
 
@@ -133,4 +140,11 @@ contract DbgFmtTest is Test {
     function internalNoArgs() internal pure returns (uint256) {
         return 0;
     }
+}
+
+contract AggchainECDSAMultisig {
+    ////////////////////////////////////////////////////////////
+    //                  Transient Storage                     //
+    ////////////////////////////////////////////////////////////
+    uint8 private transient _initializerVersion;
 }

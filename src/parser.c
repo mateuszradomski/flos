@@ -2307,6 +2307,9 @@ tryParseStateVariableDeclaration(Parser *parser, ASTNode *node) {
         } else if(acceptToken(parser, TokenType_Immutable)) {
             assertError(decl->mutability == INVALID_TOKEN_ID, parser, "Mutability modifier already set");
             decl->mutability = peekLastTokenId(parser);
+        } else if(acceptToken(parser, TokenType_Transient)) {
+            assertError(decl->mutability == INVALID_TOKEN_ID, parser, "Mutability modifier already set");
+            decl->mutability = peekLastTokenId(parser);
         } else if(acceptToken(parser, TokenType_Override)) {
             assertError(decl->override == INVALID_TOKEN_ID, parser, "Override modifier already set");
             decl->override = peekLastTokenId(parser);
