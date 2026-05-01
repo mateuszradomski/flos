@@ -86,6 +86,9 @@ tokenToYulTokenLUT[TokenType_Count] = {
     [TokenType_Interface] = YulTokenType_Identifier,
     [TokenType_Unchecked] = YulTokenType_Identifier,
     [TokenType_Constructor] = YulTokenType_Identifier,
+    [TokenType_Layout] = YulTokenType_Identifier,
+    [TokenType_At] = YulTokenType_Identifier,
+    [TokenType_Transient] = YulTokenType_Identifier,
     [TokenType_From] = YulTokenType_Identifier,
     [TokenType_Receive] = YulTokenType_Identifier,
     [TokenType_Revert] = YulTokenType_Identifier,
@@ -184,6 +187,8 @@ advanceYulToken(YulLexer *lexer) {
         default: {
             javascriptPrintString("Unknown token type in Yul lexer\n");
             javascriptPrintNumber(tokenType);
+                String type = tokenTypeToString(tokenType);
+                printf("Token type = %.*s [%u]\n", type.size, type.data, tokenType);
             assert(0);
         }
     }
@@ -269,6 +274,9 @@ yulIdentifierLUT[TokenType_Count] = {
     [TokenType_Unchecked] = true,
     [TokenType_Constructor] = true,
     [TokenType_Payable] = true,
+    [TokenType_At] = true,
+    [TokenType_Transient] = true,
+    [TokenType_Layout] = true,
 };
 
 static TokenId

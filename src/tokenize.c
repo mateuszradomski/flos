@@ -170,6 +170,8 @@ tokenTypeToString(TokenType tokenType) {
         case TokenType_Private: return LIT_TO_STR("Private");
         case TokenType_Transient: return LIT_TO_STR("Transient");
         case TokenType_Immutable: return LIT_TO_STR("Immutable");
+        case TokenType_At: return LIT_TO_STR("At");
+        case TokenType_Layout: return LIT_TO_STR("Layout");
         case TokenType_Constant: return LIT_TO_STR("Constant");
         case TokenType_Function: return LIT_TO_STR("Function");
         case TokenType_Internal: return LIT_TO_STR("Internal");

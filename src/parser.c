@@ -560,6 +560,15 @@ reportErrorVarArgs(Parser *parser, const char *file, u32 line, const char *userE
     javascriptThrowErrorStringPtr(&error);
     unreachable();
 #else
+    va_list copiedArgs;
+    va_copy(copiedArgs, args);
+    String userError = stringPushfv(parser->arena, userErrorFormat, copiedArgs);
+    va_end(copiedArgs);
+
+    u32 byteOffset = parser->tokens.tokenStrings[parser->current].data - parser->tokens.tokenStrings[0].data;
+    String error = stringPushf(parser->arena, "ERROR [%s:%d] - [%d]: %S", file, line, byteOffset, userError);
+
+    printf("%.*s\n", error.size, error.data);
     assert(false);
 #endif
 }
