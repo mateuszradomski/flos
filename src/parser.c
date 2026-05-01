@@ -722,28 +722,6 @@ parseSubdenomination(Parser *parser) {
 }
 
 static bool
-isSizedType(String string, String prefix, u32 min, u32 max, u32 order) {
-    if(stringStartsWith(string, prefix)) {
-        String suffix = {
-            .data = string.data + prefix.size,
-            .size = string.size - prefix.size
-        };
-
-        if(!stringIsInteger(suffix)) {
-            return false;
-        }
-
-        u32 size = stringToInteger(suffix);
-        bool isMultipleOfOrder = size % order == 0;
-        bool inBounds = size >= min && size <= max;
-
-        return isMultipleOfOrder && inBounds;
-    }
-
-    return false;
-}
-
-static bool
 isFixedPointNumberType(String string, String fixedPointPrefix) {
     if(stringStartsWith(string, fixedPointPrefix)) {
         String suffix = {
