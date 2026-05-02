@@ -53,7 +53,7 @@ typedef struct Render {
 
 static void
 commitIndent(Writer *w, u32 spaceCount) {
-    if(spaceCount <= 16) {
+    if(__builtin_expect(spaceCount <= 16, 1)) {
         u64 *output = (u64 *)(w->data + w->size);
         output[0] = 0x2020202020202020;
         output[1] = 0x2020202020202020;
@@ -76,7 +76,7 @@ writeString(Writer *w, u8 *str, u32 size, u32 nest) {
         commitIndent(w, nest);
     }
 
-    if (size <= 16) {
+    if (__builtin_expect(size <= 16, 1)) {
         u64 *output = (u64 *)(w->data + w->size);
         u64 *input = (u64 *)(str);
         // NOTE(radomski): needs to be like this to subdue compiler's aliasing rules
@@ -173,9 +173,9 @@ renderDocument(Render *r) {
     s64 count = r->wordCount;
 
     u32 nest = 0;
-    u8 flatModeStack[64];
-    u8 fullyFlatStack[64];
-    u8 stackIndex = 0;
+    u8 flatModeStack[64] = { 0 };
+    u8 fullyFlatStack[64] = { 0 };
+    u8 stackIndex = 1;
     bool flatMode = false;
     u32 nestActiveMask = 0;
 
@@ -183,9 +183,9 @@ renderDocument(Render *r) {
         Word *word = &words[i];
         WordType type = word->type;
 
-        if (type == WordType_GroupPush) {
+        if (__builtin_expect(type == WordType_GroupPush, 0)) {
             bool isFullyFlat = word->assumedFlatCount == -1;
-            bool parentIsFullyFlat = stackIndex > 0 && fullyFlatStack[stackIndex - 1];
+            bool parentIsFullyFlat = fullyFlatStack[stackIndex - 1];
 
             flatModeStack[stackIndex] = flatMode;
             fullyFlatStack[stackIndex] = isFullyFlat;
@@ -204,7 +204,7 @@ renderDocument(Render *r) {
             nestActiveMask = ((u32)flatMode) - 1;
         }
 
-        if(type == WordType_HardBreak || (!flatMode && type == WordType_Line)) {
+        if(__builtin_expect(type == WordType_HardBreak || (!flatMode && type == WordType_Line), 0)) {
             finishLine(w);
         } else {
             writeString(w, word->text, word->textSize, nest);
