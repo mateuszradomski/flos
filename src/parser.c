@@ -568,7 +568,7 @@ reportErrorVarArgs(Parser *parser, const char *file, u32 line, const char *userE
     u32 byteOffset = parser->tokens.tokenStrings[parser->current].data - parser->tokens.tokenStrings[0].data;
     String error = stringPushf(parser->arena, "ERROR [%s:%d] - [%d]: %S", file, line, byteOffset, userError);
 
-    printf("%.*s\n", error.size, error.data);
+    printf("%.*s\n", (u32)error.size, error.data);
     assert(false);
 #endif
 }
