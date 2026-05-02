@@ -187,8 +187,8 @@ advanceYulToken(YulLexer *lexer) {
         default: {
             javascriptPrintString("Unknown token type in Yul lexer\n");
             javascriptPrintNumber(tokenType);
-                String type = tokenTypeToString(tokenType);
-                printf("Token type = %.*s [%u]\n", type.size, type.data, tokenType);
+            String type = tokenTypeToString(tokenType);
+            printf("Token type = %.*s [%u]\n", (u32)type.size, type.data, tokenType);
             assert(0);
         }
     }
