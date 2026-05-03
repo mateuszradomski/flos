@@ -52,4 +52,4 @@ bash build.sh
 ```
 
 Currently it assumes 120 columns per line and 4 spaces per indentation level.
-Configurable soon.
+Configure with `--line-length=<N>` and `--indent-width=<N>`.

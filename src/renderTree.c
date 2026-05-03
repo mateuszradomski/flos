@@ -34,7 +34,8 @@ typedef struct Word {
 } Word;
 
 typedef struct Render {
-    u32 indentSize;
+    u32 indentWidth;
+    u32 maxLineWidth;
 
     Writer writer;
     TokenizeResult tokens;
@@ -178,6 +179,7 @@ renderDocument(Render *r) {
     u8 stackIndex = 1;
     bool flatMode = false;
     u32 nestActiveMask = 0;
+    u32 maxLineWidth = r->maxLineWidth;
 
     for(s64 i = 0; i < count; i++) {
         Word *word = &words[i];
@@ -194,7 +196,7 @@ renderDocument(Render *r) {
             // Optimization: if parent group fits and both are fully flat,
             // this group will also fit (skip fits() calculation)
             if (!(flatMode && isFullyFlat && parentIsFullyFlat)) {
-                s32 remainingWidth = 120 - MIN(120, MAX(w->lineSize, nest));
+                s32 remainingWidth = maxLineWidth - MIN(maxLineWidth, MAX(w->lineSize, nest));
                 flatMode = fits(words + (i + 1), count - (i + 1), word->assumedFlatCount, remainingWidth);
             }
             nestActiveMask = ((u32)flatMode) - 1;
@@ -249,7 +251,7 @@ popGroup(Render *r) {
 
 static void
 modifyNestAt(Render *r, s32 index, s32 delta) {
-    r->words[index].nestStep += delta * r->indentSize;
+    r->words[index].nestStep += delta * r->indentWidth;
 }
 
 static void
@@ -2922,11 +2924,12 @@ dumpDocument(Render *r) {
 }
 
 static Render
-createRender(Arena *arena, String originalSource, TokenizeResult tokens) {
+createRender(Arena *arena, String originalSource, TokenizeResult tokens, FormatConfig config) {
     u32 scratchBufferCapacity = MAX(64 * Kilobyte, (originalSource.size / 5));
     u32 wordCount = (originalSource.size / 4) * 3;
     Render render = {
-        .indentSize = 4,
+        .indentWidth = config.indentWidth,
+        .maxLineWidth = config.maxLineWidth,
         .writer = {
             .data = arrayPush(arena, u8, originalSource.size * 3),
             .size = 0,
