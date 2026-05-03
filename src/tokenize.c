@@ -591,8 +591,8 @@ consumeUntilMultilineCommentEnd(ByteConsumer *c) {
     u32 read = 0;
 
     while(peekByte(c)) {
-        u32 remaining = c->length - (u32)(c->head - c->data);
-        u8 *found = memchr(c->head, '*', remaining);
+        u32 remaining = c->length - (u32)(c->head - c->data) - 1;
+        u8 *found = memchr(c->head + 1, '/', remaining);
         if(!found) {
             read += remaining;
             c->head += remaining;
@@ -601,9 +601,9 @@ consumeUntilMultilineCommentEnd(ByteConsumer *c) {
         u32 skip = (u32)(found - c->head);
         read += skip;
         c->head = found;
-        if(consumerGoodN(c, 2) && c->head[1] == '/') {
-            read += 2;
-            c->head += 2;
+        if(found[-1] == '*') {
+            read += 1;
+            c->head += 1;
             break;
         }
         read += 1;
