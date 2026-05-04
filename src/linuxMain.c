@@ -197,8 +197,9 @@ typedef struct FormatMetrics {
 } FormatMetrics;
 
 typedef struct ThreadWork {
-    StringQueue   *queue;
-    FormatMetrics  metrics;
+    StringQueue *queue;
+    FormatMetrics metrics;
+    FormatConfig config;
 } ThreadWork;
 
 static void *
@@ -209,6 +210,7 @@ threadWorker(void *arg) {
     Arena arena = arenaCreate(11 * Megabyte, 11 * Megabyte, 64);
     Arena parseArena = arenaCreate(5 * Megabyte, 5 * Megabyte, 64);
     FormatMetrics m = {0};
+    FormatConfig config = tw->config;
 
     for (;;) {
         char *path = stringQueueDequeueBlocking(q);
@@ -221,7 +223,7 @@ threadWorker(void *arg) {
         String content = readFile(&arena, path);
         m.fileRead += readTimer();
 
-        FormatResult r = format(&arena, &parseArena, content);
+        FormatResult r = formatWithConfig(&arena, &parseArena, content, config);
 
         if(content.size != r.source.size || memcmp(content.data, r.source.data, content.size) != 0) {
             FILE *f = fopen(path, "wb");
@@ -391,7 +393,7 @@ repetitionTesterMain(Arena *arena, String content) {
     parser = createParser(tokens, arena);
     node = parseSourceUnit(&parser);
 
-    Render render = createRender(arena, content, tokens);
+    Render render = createRender(arena, content, tokens, defaultFormatConfig());
     Render cleanRender = render;
 
     startedAt = readTimer();
@@ -581,6 +583,77 @@ printThreadMetrics(ThreadWork *jobs, u32 processorCount) {
     printf("\n");
 }
 
+static int
+compareStrings(const void *a, const void *b) {
+    return strcmp(*(const char *const *)a, *(const char *const *)b);
+}
+
+static u32
+uniqueStrings(char **strings, u32 stringCount) {
+    if(stringCount < 2) return stringCount;
+
+    qsort(strings, stringCount, sizeof(strings[0]), compareStrings);
+
+    char *head = strings[0];
+    u32 newCount = 1;
+    for(u32 i = 1; i < stringCount; i++) {
+        if(strcmp(head, strings[i]) != 0) {
+            strings[newCount++] = strings[i];
+            head = strings[i];
+        }
+    }
+
+    return newCount;
+}
+
+static void
+printHelp(char *programName) {
+    printf(
+        "flos - a fast, multi-threaded Solidity formatter.\n"
+        "\n"
+        "Usage: %s [options] <paths...>\n"
+        "\n"
+        "Arguments:\n"
+        "  <paths...>              One or more .sol files or directories to format.\n"
+        "                          Directories are walked recursively.\n"
+        "\n"
+        "Options:\n"
+        "  -v, --verbose           Print per-thread metrics after formatting.\n"
+        "  --line-length=<N>       Maximum line width before wrapping (default: %u).\n"
+        "  --indent-width=<N>      Number of spaces per indent level (default: %u).\n"
+        "  -h, --help              Show this help message and exit.\n"
+        "\n"
+        "Examples:\n"
+        "  %s contracts/\n"
+        "  %s --line-length=120 --indent-width=4 MyContract.sol\n"
+        "  %s -v contracts/ lib/ test/\n",
+        programName,
+        defaultFormatConfig().maxLineWidth,
+        defaultFormatConfig().indentWidth,
+        programName, programName, programName
+    );
+}
+
+static u32
+parseIntArgument(String arg) {
+    SplitIterator it = stringSplit(arg, '=');
+    String prefix = stringNextInSplit(&it);
+    assert(prefix.data && "Programmer error");
+    String value = stringNextInSplit(&it);
+
+    if(value.data == 0x0) {
+        printf("ERROR: Use --flag=value\n");
+        exit(1);
+    }
+
+    if(!stringIsInteger(value)) {
+        printf("ERROR: Expected an integer, got [%.*s]\n", (int)value.size, value.data);
+        exit(1);
+    }
+
+    return stringToInteger(value);
+}
+
 int main(int argCount, char **args) {
     bool repetitionTester = false;
 
@@ -597,9 +670,33 @@ int main(int argCount, char **args) {
     } else {
         Arena arena = arenaCreate(16 * Megabyte, 32 * Kilobyte, 64);
 
+        bool verbose = false;
+        FormatConfig config = defaultFormatConfig();
+
         u64 elapsed = -readTimer();
-        char **paths = args + 1;
-        u32 pathCount = argCount - 1;
+        char **paths = arrayPush(&arena, char *, argCount - 1);
+        u32 pathCount = 0;
+
+        for(u32 i = 1; i < argCount; i++) {
+            char *cArg = args[i];
+            if(cArg[0] != '-') {
+                paths[pathCount++] = cArg;
+            } else {
+                String arg = { .data = (u8 *)cArg, .size = strlen(cArg) };
+                if(stringMatch(arg, LIT_TO_STR("-v")) || stringMatch(arg, LIT_TO_STR("--verbose"))) {
+                    verbose = true;
+                } else if(stringStartsWith(arg, LIT_TO_STR("--line-length"))) {
+                    config.maxLineWidth = parseIntArgument(arg);
+                } else if(stringStartsWith(arg, LIT_TO_STR("--indent-width"))) {
+                    config.indentWidth = parseIntArgument(arg);
+                } else if(stringMatch(arg, LIT_TO_STR("-h")) || stringMatch(arg, LIT_TO_STR("--help"))) {
+                    printHelp(args[0]);
+                    return 0;
+                }
+            }
+        }
+
+        pathCount = uniqueStrings(paths, pathCount);
 
         if(pathCount == 0) {
             printf("Usage: %s <paths>\n", args[0]);
@@ -628,6 +725,7 @@ int main(int argCount, char **args) {
 
         for(u32 i = 0; i < formatterThreadCount; i++) {
             jobs[i].queue = &queue;
+            jobs[i].config = config;
             pthread_create(&threads[i], 0x0, threadWorker, &jobs[i]);
         }
 
@@ -648,7 +746,9 @@ int main(int argCount, char **args) {
             inputBytes += jobs[i].metrics.inputBytes;
         }
 
-        printThreadMetrics(jobs, formatterThreadCount);
+        if(verbose) {
+            printThreadMetrics(jobs, formatterThreadCount);
+        }
 
         printf(
             "Formatted %s%llu%s files in %s%.0fms%s %s(%.0f MB/s)%s\n",
