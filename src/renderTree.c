@@ -325,6 +325,10 @@ static void
 preserveHardBreaksIntoDocument(Render *r, ASTNode *node) {
     u32 tokenIndex = node->startToken;
 
+    if(tokenHasCommentAfter(r->tokens, tokenIndex - 1)) {
+        return;
+    }
+
     String token = r->tokens.tokenStrings[tokenIndex];
     String previousToken = r->tokens.tokenStrings[tokenIndex - 1];
 
@@ -332,20 +336,6 @@ preserveHardBreaksIntoDocument(Render *r, ASTNode *node) {
         .data = previousToken.data + previousToken.size,
         .size = token.data >= inBetween.data ? token.data - inBetween.data : 0,
     };
-
-    u32 i = 0;
-    bool hasComment = false;
-    for (; i + 3 < inBetween.size && !hasComment; i += 4) {
-        hasComment = hasComment | (containsSlash(*((u32 *)(inBetween.data + i))));
-    }
-
-    for (; i < inBetween.size && !hasComment; i++) {
-        hasComment = hasComment | (inBetween.data[i] == '/');
-    }
-
-    if (hasComment) {
-        return;
-    }
 
     u32 newlines = 0;
     for(s32 i = inBetween.size - 1; i >= 0 && isWhitespace(inBetween.data[i]); i--) {
@@ -488,6 +478,10 @@ pushCommentsInRange(Render *r, u32 startOffset, u32 endOffset) {
 
 static void
 pushCommentsAfterTokenWithCurrent(Render *r, TokenId token, String current) {
+    if(!tokenHasCommentAfter(r->tokens, token)) {
+        return;
+    }
+
     String next = r->tokens.tokenStrings[token + 1];
 
     u32 startOffset = (current.data - r->sourceBaseAddress) + current.size;

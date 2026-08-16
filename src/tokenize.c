@@ -129,6 +129,9 @@ enum {
 
 typedef u16 TokenType;
 
+#define TOKEN_TYPE_MASK          ((TokenType)0x7fff)
+#define TOKEN_COMMENT_AFTER_FLAG ((TokenType)0x8000)
+
 #define INVALID_TOKEN_ID ((u32)(-1))
 typedef u32 TokenId;
 
@@ -355,7 +358,12 @@ allocateTokenSpace(Arena *arena, u32 capacity, u32 sourceSize) {
 
 static TokenType
 getTokenType(TokenizeResult tokens, TokenId tokenId) {
-    return tokens.tokenTypes[tokenId];
+    return tokens.tokenTypes[tokenId] & TOKEN_TYPE_MASK;
+}
+
+static bool
+tokenHasCommentAfter(TokenizeResult tokens, TokenId tokenId) {
+    return tokens.tokenTypes[tokenId] >> 15;
 }
 
 static String
@@ -370,6 +378,13 @@ pushToken(TokenizeResult *result, TokenType tokenType, String string) {
     result->tokenTypes[result->count] = tokenType;
     result->tokenStrings[result->count] = string;
     result->count += 1;
+}
+
+static void
+markCommentAfterLastToken(TokenizeResult *result) {
+    if(result->count > 0) {
+        result->tokenTypes[result->count - 1] |= TOKEN_COMMENT_AFTER_FLAG;
+    }
 }
 
 static const u8 isIdentifierChar[256] = {
@@ -699,13 +714,13 @@ tokenize(String source, Arena *arena) {
             u8 nextByte = peekByte(&c);
 
             if(nextByte == '*') {
-                String symbol = { .data = c.head - 1, .size = 2 };
                 consumeByte(&c);
-                symbol.size += consumeUntilMultilineCommentEnd(&c);
+                consumeUntilMultilineCommentEnd(&c);
+                markCommentAfterLastToken(&result);
             } else if(nextByte == '/') {
-                String symbol = { .data = c.head - 1, .size = 2 };
                 consumeByte(&c);
-                symbol.size += consumeUntilDelimiter(&c, '\n');
+                consumeUntilDelimiter(&c, '\n');
+                markCommentAfterLastToken(&result);
             } else if(nextByte == '=') {
                 consumeByte(&c);
                 String symbol = { .data = c.head - 2, .size = 2 };
