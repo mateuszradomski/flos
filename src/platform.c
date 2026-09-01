@@ -174,6 +174,23 @@ getProcessorCount() {
     return numCPU;
 }
 
+static void
+cpuPause() {
+#if defined(__x86_64__) || defined(__i386__)
+    __builtin_ia32_pause();
+#elif defined(__aarch64__) || defined(__arm__)
+    __asm__ volatile("yield");
+#else
+    atomic_signal_fence(memory_order_seq_cst);
+#endif
+}
+
+static void
+nsSleep(u64 count) {
+    struct timespec delay = { .tv_nsec = count };
+    nanosleep(&delay, 0x0);
+}
+
 static stat64_t
 fileStat(const char *path) {
     struct stat out;

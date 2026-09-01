@@ -38,7 +38,7 @@ stringQueueEnqueueBlocking(StringQueue *q, char *path) {
             atomic_store_explicit(&element->sequenceNumber, position + 1, memory_order_release);
             break;
         } else if (sequence < position) {
-            sched_yield();
+            nsSleep(100000); // 100us
         } else {
             assert(false);
         }
@@ -61,7 +61,7 @@ stringQueueDequeueBlocking(StringQueue *q) {
                 return element->path;
             }
         } else {
-            sched_yield();
+            cpuPause();
         }
     }
 }
