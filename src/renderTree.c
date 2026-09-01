@@ -512,6 +512,10 @@ pushTokenAsStringWord(Render *r, TokenId token) {
             if (current == '"') {
                 *head++ = '\\';
                 *head++ = '"';
+            } else if (current == '\\' && (i + 1 < text.size) && text.data[i + 1] == '\\') {
+                *head++ = '\\';
+                *head++ = '\\';
+                i++;
             } else if (current == '\\' && (i + 1 < text.size) && text.data[i + 1] == '\'') {
                 *head++ = '\'';
                 i++;

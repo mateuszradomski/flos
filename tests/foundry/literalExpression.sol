@@ -43,6 +43,8 @@ some words" /* comment10 */;
         "hello \"world\"";
         'hello \"world\"';
         "hello \'world\'";
+        '\\"';
+        "\\'";
 
 
         // hex literals
@@ -104,6 +106,8 @@ some words" /* comment10 */;
         "hello \"world\"";
         "hello \"world\"";
         "hello \'world\'";
+        "\\\"";
+        "\\'";
 
         // hex literals
         hex"001122FF";
