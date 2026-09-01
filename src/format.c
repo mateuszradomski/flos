@@ -3,6 +3,7 @@
 typedef struct FormatConfig {
     u32 maxLineWidth;
     u32 indentWidth;
+    bool sanityCheck;
 } FormatConfig;
 
 #include "./src/tokenize.c"
@@ -27,6 +28,7 @@ defaultFormatConfig() {
     return (FormatConfig){
         .maxLineWidth = 120,
         .indentWidth = 4,
+        .sanityCheck = false,
     };
 };
 
