@@ -231,6 +231,13 @@ threadWorker(void *arg) {
             fclose(f);
         }
 
+        if(config.sanityCheck) {
+            FormatResult r2 = formatWithConfig(&arena, &parseArena, r.source, config);
+            if(r2.source.size != r.source.size || memcmp(r.source.data, r2.source.data, r2.source.size) != 0) {
+                printf("Sanity check failed for: %s\n", path);
+            }
+        }
+
         arenaPopTo(&arena, start);
         arenaPopToZero(&parseArena, startParse);
 
@@ -619,6 +626,7 @@ printHelp(char *programName) {
         "\n"
         "Options:\n"
         "  -v, --verbose           Print per-thread metrics after formatting.\n"
+        "  --sanity-check          Reruns the formatting to ensure stable results.\n"
         "  --line-length=<N>       Maximum line width before wrapping (default: %u).\n"
         "  --indent-width=<N>      Number of spaces per indent level (default: %u).\n"
         "  -h, --help              Show this help message and exit.\n"
@@ -685,6 +693,8 @@ int main(int argCount, char **args) {
                 String arg = { .data = (u8 *)cArg, .size = strlen(cArg) };
                 if(stringMatch(arg, LIT_TO_STR("-v")) || stringMatch(arg, LIT_TO_STR("--verbose"))) {
                     verbose = true;
+                } else if(stringMatch(arg, LIT_TO_STR("--sanity-check"))) {
+                    config.sanityCheck = true;
                 } else if(stringStartsWith(arg, LIT_TO_STR("--line-length"))) {
                     config.maxLineWidth = parseIntArgument(arg);
                 } else if(stringStartsWith(arg, LIT_TO_STR("--indent-width"))) {
