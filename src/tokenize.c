@@ -613,13 +613,6 @@ consumeUntilMultilineCommentEnd(ByteConsumer *c) {
     return read;
 }
 
-static void
-skipWhitespace(ByteConsumer *c) {
-    while(isWhitespace(*c->head)) {
-        c->head++;
-    }
-}
-
 static TokenizeResult
 tokenize(String source, Arena *arena) {
     TokenizeResult result = allocateTokenSpace(arena, source.size, source.size);
@@ -627,7 +620,8 @@ tokenize(String source, Arena *arena) {
     assert(source.data[source.size] == 0);
     ByteConsumer c = createByteConsumer(source.data, source.size);
     while(true) {
-        skipWhitespace(&c);
+        while(isWhitespace(*c.head)) c.head++;
+
         u8 byte = consumeByte(&c);
         TokenType singleCharToken = singleCharTokenLUT[byte];
         if(singleCharToken != TokenType_None) {
@@ -640,13 +634,11 @@ tokenize(String source, Arena *arena) {
                 c.head++;
             }
 
-            u8 nextByte = peekByte(&c);
             TokenType tokenType = categorizeSymbol(symbol);
             if(tokenType != TokenType_HexStringLit && tokenType != TokenType_UnicodeStringLit) {
                 pushToken(&result, tokenType, symbol);
             } else if(tokenType == TokenType_HexStringLit) {
-                u8 delimiter = nextByte;
-                consumeByte(&c);
+                u8 delimiter = consumeByte(&c);
                 String symbol = { .data = c.head, .size = 0 };
 
                 while(peekByte(&c)) {
@@ -669,9 +661,7 @@ tokenize(String source, Arena *arena) {
 
                 pushToken(&result, TokenType_HexStringLit, symbol);
             } else {
-                u8 delimiter = nextByte;
-
-                consumeByte(&c);
+                u8 delimiter = consumeByte(&c);
                 String symbol = { .data = c.head, .size = 0 };
                 symbol.size += consumeUntilDelimiter(&c, delimiter);
                 consumeByte(&c);
