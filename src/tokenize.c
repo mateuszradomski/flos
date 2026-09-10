@@ -613,6 +613,26 @@ consumeUntilMultilineCommentEnd(ByteConsumer *c) {
     return read;
 }
 
+static String
+parseStringWithEscapes(ByteConsumer *c, u8 delimiter) {
+    String symbol = { .data = c->head, .size = 0 };
+
+    u8 *start = c->head;
+    u8 *p = start;
+    for (;;) {
+        u8 *d = memchr(p, delimiter, (size_t)(c->end - p));
+        u8 *b = d;
+        while (b > start && b[-1] == '\\') b--;
+        if (((d - b) & 1) == 0) {
+            c->head = d + 1;
+
+            symbol.size = d - start;
+            return symbol;
+        }
+        p = d + 1;
+    }
+}
+
 static TokenizeResult
 tokenize(String source, Arena *arena) {
     TokenizeResult result = allocateTokenSpace(arena, source.size, source.size);
@@ -688,32 +708,10 @@ tokenize(String source, Arena *arena) {
                 pushToken(&result, TokenType_Divide, symbol);
             }
         } else if(byte == '"') {
-            String symbol = { .data = c.head, .size = 0 };
-            bool escaping = false;
-            while(true) {
-                u8 nextByte = consumeByte(&c);
-                if(nextByte == '"' && !escaping) {
-                    break;
-                }
-
-                escaping = nextByte == '\\' ? !escaping : false;
-                symbol.size += 1;
-            }
-
+            String symbol = parseStringWithEscapes(&c, '"');
             pushToken(&result, TokenType_StringLit, symbol);
         } else if(byte == '\'') {
-            String symbol = { .data = c.head, .size = 0 };
-            bool escaping = false;
-            while(true) {
-                u8 nextByte = consumeByte(&c);
-                if(nextByte == '\'' && !escaping) {
-                    break;
-                }
-
-                escaping = nextByte == '\\' ? !escaping : false;
-                symbol.size += 1;
-            }
-
+            String symbol = parseStringWithEscapes(&c, '\'');
             pushToken(&result, TokenType_StringLit, symbol);
         } else if(isDigit(byte)) {
             Token token = tokenizeNumberLiteral(&c, byte);
