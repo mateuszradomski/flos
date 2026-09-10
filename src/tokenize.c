@@ -689,28 +689,28 @@ tokenize(String source, Arena *arena) {
             }
         } else if(byte == '"') {
             String symbol = { .data = c.head, .size = 0 };
-            u32 escapeCount = 0;
-            while(peekByte(&c)) {
+            bool escaping = false;
+            while(true) {
                 u8 nextByte = consumeByte(&c);
-                if(nextByte == '"' && (escapeCount & 1) == 0) {
+                if(nextByte == '"' && !escaping) {
                     break;
                 }
 
-                escapeCount = nextByte == '\\' ? escapeCount + 1 : 0;
+                escaping = nextByte == '\\' ? !escaping : false;
                 symbol.size += 1;
             }
 
             pushToken(&result, TokenType_StringLit, symbol);
         } else if(byte == '\'') {
             String symbol = { .data = c.head, .size = 0 };
-            u32 escapeCount = 0;
-            while(peekByte(&c)) {
+            bool escaping = false;
+            while(true) {
                 u8 nextByte = consumeByte(&c);
-                if(nextByte == '\'' && (escapeCount & 1) == 0) {
+                if(nextByte == '\'' && !escaping) {
                     break;
                 }
 
-                escapeCount = nextByte == '\\' ? escapeCount + 1 : 0;
+                escaping = nextByte == '\\' ? !escaping : false;
                 symbol.size += 1;
             }
 
