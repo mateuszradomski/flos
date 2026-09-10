@@ -636,7 +636,7 @@ tokenize(String source, Arena *arena) {
             String symbol = { .data = c.head - 1, .size = 1 };
 
             u8 *end = c.data + c.length;
-            while(c.head < end && isIdentifierChar[*c.head]) {
+            while(isIdentifierChar[*c.head]) {
                 symbol.size++;
                 c.head++;
             }
