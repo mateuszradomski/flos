@@ -635,7 +635,6 @@ tokenize(String source, Arena *arena) {
         } else if(isAlphabet(byte) || byte == '_' || byte == '$') {
             String symbol = { .data = c.head - 1, .size = 1 };
 
-            u8 *end = c.data + c.length;
             while(isIdentifierChar[*c.head]) {
                 symbol.size++;
                 c.head++;
