@@ -661,7 +661,7 @@ static bool parseExpression(Parser *parser, ASTNode *node);
 
 static bool
 acceptYulToken(YulLexer *lexer, YulTokenType type) {
-    if(peekYulToken(lexer).type == type) {
+    if(peekYulToken(lexer) == type) {
         advanceYulToken(lexer);
         return true;
     }
@@ -675,7 +675,7 @@ static void
 _expectYulToken(Parser *parser, YulLexer *lexer, YulTokenType type, const char *file, u32 line) {
     bool success = acceptYulToken(lexer, type);
     if(!success) {
-        _reportError(parser, file, line, "Unexpected token => encountered (%d) but wanted (%d)", peekYulToken(lexer).type, type);
+        _reportError(parser, file, line, "Unexpected token => encountered (%d) but wanted (%d)", peekYulToken(lexer), type);
     }
 }
 
@@ -1791,7 +1791,7 @@ parseYulExpression(Parser *parser, ASTNode *node, YulLexer *lexer) {
             }
         }
     } else {
-        reportError(parser, "Unexpected token while parsing Yul expression - %S", peekYulToken(lexer).string);
+        reportError(parser, "Unexpected token while parsing Yul expression - %d", peekYulToken(lexer));
     }
 
     node->endToken = lexer->currentPosition - 1;
@@ -1908,7 +1908,7 @@ parseYulStatement(Parser *parser, ASTNode *node, YulLexer *lexer) {
             do {
                 TokenId identifier = parseYulIdentifier(lexer);
                 assertError(identifier != INVALID_TOKEN_ID, parser,
-                            "Expected identifier in Yul function parameter list, received (%S)", peekYulToken(lexer).string);
+                            "Expected identifier in Yul function parameter list, received (%d)", peekYulToken(lexer));
                 listPushTokenId(&function->parameters, identifier, parser->arena);
             } while(acceptYulToken(lexer, YulTokenType_Comma));
             expectYulToken(parser, lexer, YulTokenType_RParen);
@@ -1918,7 +1918,7 @@ parseYulStatement(Parser *parser, ASTNode *node, YulLexer *lexer) {
             do {
                 TokenId identifier = parseYulIdentifier(lexer);
                 assertError(identifier != INVALID_TOKEN_ID, parser,
-                            "Expected identifier in Yul function return parameter list, received (%S)", peekYulToken(lexer).string);
+                            "Expected identifier in Yul function return parameter list, received (%d)", peekYulToken(lexer));
                 listPushTokenId(&function->returnParameters, identifier, parser->arena);
             } while(acceptYulToken(lexer, YulTokenType_Comma));
         }
@@ -1980,7 +1980,7 @@ parseYulStatement(Parser *parser, ASTNode *node, YulLexer *lexer) {
     } else if(acceptYulToken(lexer, YulTokenType_Continue)) {
         node->type = ASTNodeType_YulContinueStatement;
     } else {
-        reportError(parser, "Unhandeled Yul statement for token - %S", peekYulToken(lexer).string);
+        reportError(parser, "Unhandeled Yul statement for token - %d", peekYulToken(lexer));
     }
 
     node->endToken = lexer->currentPosition - 1;
