@@ -860,7 +860,25 @@ parseType(Parser *parser, ASTNode *node) {
     TokenId identifier = INVALID_TOKEN_ID;
 
     u32 startToken = parser->current;
-    if(acceptToken(parser, TokenType_Mapping)) {
+    if((identifier = parseIdentifier(parser)) != INVALID_TOKEN_ID) {
+        if(isBaseTypeName(getTokenString(parser->tokens, identifier))) {
+            node->startToken = startToken;
+            node->type = ASTNodeType_BaseType;
+            node->baseTypeNode.typeName = identifier;
+
+            node->baseTypeNode.payable = 0;
+            if(acceptToken(parser, TokenType_Payable)) {
+                bool isAddress = stringMatch(getTokenString(parser->tokens, identifier), LIT_TO_STR("address"));
+                if(!isAddress) {
+                    reportError(parser, "Only address types can be payable");
+                }
+                node->baseTypeNode.payable = 1;
+            }
+        } else {
+            parser->current -= 1;
+            parseIdentifierPath(parser, node);
+        }
+    } else if(acceptToken(parser, TokenType_Mapping)) {
         node->startToken = startToken;
         node->type = ASTNodeType_MappingType;
         ASTNodeMapping *mapping = &node->mappingNode;
@@ -941,24 +959,6 @@ parseType(Parser *parser, ASTNode *node) {
                 parseFunctionParameters(parser, &function->firstReturnParameter, &lastReturnParameter);
                 expectToken(parser, TokenType_RParen);
             }
-        }
-    } else if((identifier = parseIdentifier(parser)) != INVALID_TOKEN_ID) {
-        if(isBaseTypeName(getTokenString(parser->tokens, identifier))) {
-            node->startToken = startToken;
-            node->type = ASTNodeType_BaseType;
-            node->baseTypeNode.typeName = identifier;
-
-            node->baseTypeNode.payable = 0;
-            if(acceptToken(parser, TokenType_Payable)) {
-                bool isAddress = stringMatch(getTokenString(parser->tokens, identifier), LIT_TO_STR("address"));
-                if(!isAddress) {
-                    reportError(parser, "Only address types can be payable");
-                }
-                node->baseTypeNode.payable = 1;
-            }
-        } else {
-            parser->current -= 1;
-            parseIdentifierPath(parser, node);
         }
     } else {
         return false;
@@ -1467,24 +1467,7 @@ parseExpressionImpl(Parser *parser, ASTNode *node, u32 previousPrecedence) {
         default: {
             parser->current -= 1;
 
-            if(isUnaryOperator(peekTokenType(parser))) {
-                u32 operator = peekTokenType(parser);
-                advanceToken(parser);
-
-                if(operator == TokenType_New) {
-                    node->type = ASTNodeType_NewExpression;
-                    node->newExpressionNode.typeName = allocateNode(parser);
-
-                    parseType(parser, node->newExpressionNode.typeName);
-                } else {
-                    node->type = ASTNodeType_UnaryExpression;
-                    node->unaryExpressionNode.operator = operator;
-                    node->unaryExpressionNode.subExpression = allocateNode(parser);
-
-                    u32 precedence = getUnaryOperatorPrecedence(parser, node->unaryExpressionNode.operator);
-                    parseExpressionImpl(parser, node->unaryExpressionNode.subExpression, precedence);
-                }
-            } else if(parseIdentifier(parser) != INVALID_TOKEN_ID) {
+            if(parseIdentifier(parser) != INVALID_TOKEN_ID) {
                 String identString = peekLastTokenString(parser);
 
                 if(isBaseTypeName(identString)) {
@@ -1505,6 +1488,23 @@ parseExpressionImpl(Parser *parser, ASTNode *node, u32 previousPrecedence) {
                 } else {
                     node->type = ASTNodeType_IdentifierExpression;
                     node->identifierExpressionNode.value = peekLastTokenId(parser);
+                }
+            } else if(isUnaryOperator(peekTokenType(parser))) {
+                u32 operator = peekTokenType(parser);
+                advanceToken(parser);
+
+                if(operator == TokenType_New) {
+                    node->type = ASTNodeType_NewExpression;
+                    node->newExpressionNode.typeName = allocateNode(parser);
+
+                    parseType(parser, node->newExpressionNode.typeName);
+                } else {
+                    node->type = ASTNodeType_UnaryExpression;
+                    node->unaryExpressionNode.operator = operator;
+                    node->unaryExpressionNode.subExpression = allocateNode(parser);
+
+                    u32 precedence = getUnaryOperatorPrecedence(parser, node->unaryExpressionNode.operator);
+                    parseExpressionImpl(parser, node->unaryExpressionNode.subExpression, precedence);
                 }
             } else {
                 reportError(parser, "Unexpected token while parsing expression - %S",
