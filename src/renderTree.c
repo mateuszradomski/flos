@@ -413,7 +413,8 @@ pushCommentsInRange(Render *r, u32 startOffset, u32 endOffset) {
         if(i++ >= input.size) { break; }
 
         if(input.data[i++] == '/') {
-            for(; i < input.size && input.data[i] != '\n'; i += 1) {}
+            u8 *newline = memchr(input.data + i, '\n', input.size - i);
+            i = newline ? i + (newline - (input.data + i)) : input.size;
 
             String comment = {
                 .data = input.data + commentStart,
@@ -422,11 +423,15 @@ pushCommentsInRange(Render *r, u32 startOffset, u32 endOffset) {
 
             pushTrailing(r, wordText(stringTrim(comment)));
         } else {
+            u32 newlineCount = 0;
+            u32 newlineCache[16] = {};
+
             bool isStarAligned = true;
             bool checkStarAlignment = false;
 
             while(i < input.size - 1 && (input.data[i] != '*' || input.data[i + 1] != '/')) {
                 if(input.data[i] == '\n') {
+                    if(newlineCount < ARRAY_LENGTH(newlineCache)) { newlineCache[newlineCount++] = i - commentStart; }
                     checkStarAlignment = true;
                 }
 
@@ -447,13 +452,21 @@ pushCommentsInRange(Render *r, u32 startOffset, u32 endOffset) {
                 .size = i - commentStart
             };
 
-            if(isStarAligned) {
+            if(isStarAligned && newlineCount > 0) {
                 String line = { .data = comment.data, .size = 0 };
                 u32 lineCount = 0;
-                for(u32 k = 0; k < comment.size; k++) {
+
+                for(u32 k = 0; k < newlineCount; k++) {
+                    line.size = newlineCache[k] - (line.data - comment.data);
+                    if(++lineCount > 1) { pushTrailing(r, wordSpace()); }
+                    pushTrailing(r, wordText(stringTrim(line)));
+                    pushTrailing(r, wordHardBreak());
+                    line = (String){ .data = line.data + line.size + 1, .size = 0 };
+                }
+
+                for(u32 k = line.data - comment.data; k < comment.size; k++) {
                     if(comment.data[k] == '\n') {
-                        lineCount += 1;
-                        if(lineCount > 1) { pushTrailing(r, wordSpace()); }
+                        if(++lineCount > 1) { pushTrailing(r, wordSpace()); }
                         pushTrailing(r, wordText(stringTrim(line)));
                         pushTrailing(r, wordHardBreak());
                         line = (String){ .data = line.data + line.size + 1, .size = 0 };
