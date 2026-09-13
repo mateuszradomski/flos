@@ -629,6 +629,7 @@ printHelp(char *programName) {
         "  --sanity-check          Reruns the formatting to ensure stable results.\n"
         "  --line-length=<N>       Maximum line width before wrapping (default: %u).\n"
         "  --indent-width=<N>      Number of spaces per indent level (default: %u).\n"
+        "  -T=<N>, --threads=<N>   Number of worker threads.\n"
         "  -h, --help              Show this help message and exit.\n"
         "\n"
         "Examples:\n"
@@ -685,6 +686,8 @@ int main(int argCount, char **args) {
         char **paths = arrayPush(&arena, char *, argCount - 1);
         u32 pathCount = 0;
 
+        u32 threadCount = getProcessorCount();
+        u32 formatterThreadCount = threadCount - 1;
         for(u32 i = 1; i < argCount; i++) {
             char *cArg = args[i];
             if(cArg[0] != '-') {
@@ -699,6 +702,9 @@ int main(int argCount, char **args) {
                     config.maxLineWidth = parseIntArgument(arg);
                 } else if(stringStartsWith(arg, LIT_TO_STR("--indent-width"))) {
                     config.indentWidth = parseIntArgument(arg);
+                } else if(stringStartsWith(arg, LIT_TO_STR("-T")) || stringStartsWith(arg, LIT_TO_STR("--threads"))) {
+                    u32 argThreads = parseIntArgument(arg);
+                    formatterThreadCount = argThreads == 0 ? formatterThreadCount : argThreads;
                 } else if(stringMatch(arg, LIT_TO_STR("-h")) || stringMatch(arg, LIT_TO_STR("--help"))) {
                     printHelp(args[0]);
                     return 0;
@@ -728,8 +734,6 @@ int main(int argCount, char **args) {
         pthread_t walkerThread;
         pthread_create(&walkerThread, 0x0, walkerThreadMain, &params);
 
-        u32 processorCount = getProcessorCount();
-        u32 formatterThreadCount = processorCount - 1;
         ThreadWork *jobs = arrayPush(&arena, ThreadWork, formatterThreadCount);
         pthread_t *threads = arrayPush(&arena, pthread_t, formatterThreadCount);
 
