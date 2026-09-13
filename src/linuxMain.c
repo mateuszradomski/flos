@@ -226,9 +226,9 @@ threadWorker(void *arg) {
         FormatResult r = formatWithConfig(&arena, &parseArena, content, config);
 
         if(content.size != r.source.size || memcmp(content.data, r.source.data, content.size) != 0) {
-            FILE *f = fopen(path, "wb");
-            fwrite(r.source.data, 1, r.source.size, f);
-            fclose(f);
+            FileHandle f = openFile(path);
+            writeFile(f, r.source.data, r.source.size);
+            closeFile(f);
         }
 
         if(config.sanityCheck) {
