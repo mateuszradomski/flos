@@ -200,7 +200,7 @@ fileStat(const char *path) {
 
 static FileHandle
 openFile(const char *filepath) {
-    return open(filepath, O_RDWR | O_CREAT);
+    return open(filepath, O_RDWR | O_CREAT | O_TRUNC);
 }
 
 /*static void*/
@@ -210,7 +210,12 @@ openFile(const char *filepath) {
 
 static void
 writeFile(FileHandle handle, u8 *data, u64 length) {
-    write(handle, data, length);
+    u64 offset = 0;
+    while(offset != length) {
+        ssize_t written = write(handle, data + offset, length - offset);
+        assert(written != -1 && "Failed to write file");
+        offset += written;
+    }
 }
 
 static void
