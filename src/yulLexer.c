@@ -133,55 +133,93 @@ createYulLexer(TokenizeResult tokens, u32 tokenCount, u32 currentPosition) {
     return result;
 }
 
+// let     = 1
+// case    = 4
+// leave   = 5
+// switch  = 0
+// default = 3
+//
+// let     = 29797
+// case    = 25971
+// leave   = 25974
+// switch  = 26723
+// default = 29804
+
+#define STR_U16(s) ((u16)((u8)(s)[0] | ((u16)(u8)(s)[1] << 8)))
+
+static const u32 yulKeywordPreHashes[8] = {
+    [1] = STR_U16("et"), [4] = STR_U16("se"),
+    [5] = STR_U16("ve"), [0] = STR_U16("ch"),
+    [3] = STR_U16("lt")
+};
+
+static const u32 yulKeywordLens[8] = {
+    [1] = LIT_TO_STR("let").size,
+    [4] = LIT_TO_STR("case").size,
+    [5] = LIT_TO_STR("leave").size,
+    [0] = LIT_TO_STR("switch").size,
+    [3] = LIT_TO_STR("default").size
+};
+
+static const u8 yulKeywordStrings[8][8] = {
+    [1] = { 'l', 'e', 't' },
+    [4] = { 'c', 'a', 's', 'e',  },
+    [5] = { 'l', 'e', 'a', 'v', 'e' },
+    [0] = { 's', 'w', 'i', 't', 'c', 'h' },
+    [3] = { 'd', 'e', 'f', 'a', 'u', 'l', 't' },
+};
+
+static const YulTokenType yulKeywordTypes[8] = {
+    [1] = YulTokenType_Let,
+    [4] = YulTokenType_Case,
+    [5] = YulTokenType_Leave,
+    [0] = YulTokenType_Switch,
+    [3] = YulTokenType_Default,
+};
+
+static YulTokenType
+categorizeYulSymbolPTable(String symbol) {
+    u16 preHash = *((u16 *)(symbol.data + symbol.size - 2));
+    u32 index = (preHash >> 2) & 7;
+
+    if(yulKeywordLens[index] != symbol.size) return YulTokenType_Identifier;
+
+    const u8 *actual = symbol.data;
+    const u8 *expected = yulKeywordStrings[index];
+    u64 diff = *(u64 *)actual ^ *(u64 *)expected;
+    diff <<= (8 - symbol.size) << 3;
+    return diff == 0 ? yulKeywordTypes[index] : YulTokenType_Identifier;
+}
+
 static YulTokenType
 advanceYulToken(YulLexer *lexer) {
     if (lexer->currentPosition >= lexer->tokenCount) {
         return YulTokenType_EOF;
     }
 
-    YulTokenType result = { 0 };
+    YulTokenType result = 0;
     lexer->lastPosition = lexer->currentPosition;
     TokenType tokenType = getTokenType(lexer->tokens, lexer->currentPosition);
-    String tokenString = getTokenString(lexer->tokens, lexer->currentPosition);
-    lexer->currentPosition += 1;
-    if(tokenToYulTokenLUT[tokenType] != YulTokenType_None) {
-        result = tokenToYulTokenLUT[tokenType];
-    } else {
     switch(tokenType) {
         case TokenType_Symbol: {
-            if(stringMatch(tokenString, LIT_TO_STR("let"))) {
-                result = YulTokenType_Let;
-            } else if(stringMatch(tokenString, LIT_TO_STR("case"))) {
-                result = YulTokenType_Case;
-            } else if(stringMatch(tokenString, LIT_TO_STR("leave"))) {
-                result = YulTokenType_Leave;
-            } else if(stringMatch(tokenString, LIT_TO_STR("switch"))) {
-                result = YulTokenType_Switch;
-            } else if(stringMatch(tokenString, LIT_TO_STR("default"))) {
-                result = YulTokenType_Default;
-            } else {
-                result = YulTokenType_Identifier;
-            }
-
+            String tokenString = getTokenString(lexer->tokens, lexer->currentPosition);
+            result = categorizeYulSymbolPTable(tokenString);
         } break;
         case TokenType_Colon: {
-            assert(getTokenType(lexer->tokens, lexer->currentPosition++) == TokenType_Equal);
+            assert(getTokenType(lexer->tokens, ++lexer->currentPosition) == TokenType_Equal);
             result = YulTokenType_ColonEqual;
         } break;
         case TokenType_Minus: {
-            assert(getTokenType(lexer->tokens, lexer->currentPosition++) == TokenType_RTick);
+            assert(getTokenType(lexer->tokens, ++lexer->currentPosition) == TokenType_RTick);
             result = YulTokenType_RightArrow;
         } break;
         default: {
-            javascriptPrintString("Unknown token type in Yul lexer\n");
-            javascriptPrintNumber(tokenType);
-            String type = tokenTypeToString(tokenType);
-            printf("Token type = %.*s [%u]\n", (u32)type.size, type.data, tokenType);
-            assert(0);
+            result = tokenToYulTokenLUT[tokenType];
+            assert(result != YulTokenType_None);
         }
     }
-    }
 
+    lexer->currentPosition += 1;
     return result;
 }
 
@@ -193,6 +231,21 @@ peekYulToken(YulLexer *lexer) {
     lexer->currentPosition = position;
     lexer->lastPosition = lastPosition;
     return result;
+}
+
+static bool
+acceptYulToken(YulLexer *lexer, YulTokenType type) {
+    u32 position = lexer->currentPosition;
+    u32 lastPosition = lexer->lastPosition;
+    YulTokenType result = advanceYulToken(lexer);
+    bool matches = result == type; 
+    if(matches) {
+        return true;
+    }
+
+    lexer->currentPosition = position;
+    lexer->lastPosition = lastPosition;
+    return false;
 }
 
 static TokenId
