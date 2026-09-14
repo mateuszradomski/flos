@@ -311,8 +311,10 @@ static TokenIdBucket *
 listPushTokenId(TokenIdList *list, TokenId token, Arena *arena) {
     TokenIdBucket *bucket = 0x0;
     if(list->count == 0) {
-        assert(list->first == 0x0 && list->last == 0x0);
+        assert(list->first == 0x0);
+        assert(list->last == 0x0);
         bucket = structPush(arena, TokenIdBucket);
+        bucket->count = 0;
         SLL_QUEUE_PUSH(list->first, list->last, bucket);
     } else {
         bucket = list->last;
@@ -320,6 +322,7 @@ listPushTokenId(TokenIdList *list, TokenId token, Arena *arena) {
 
     if(bucket->count >= ARRAY_LENGTH(bucket->tokens)) {
         bucket = structPush(arena, TokenIdBucket);
+        bucket->count = 0;
         SLL_QUEUE_PUSH(list->first, list->last, bucket);
     }
 

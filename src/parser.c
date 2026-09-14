@@ -275,11 +275,6 @@ typedef struct ASTNodeContractDefinition {
     ASTNode *layoutExpression;
 } ASTNodeContractDefinition;
 
-typedef struct ASTNodeLibraryDefinition {
-    TokenId name;
-    ASTNode *firstElement;
-} ASTNodeLibraryDefinition;
-
 typedef struct ASTNodeForStatement {
     ASTNode *variableStatement;
     ASTNode *conditionExpression;
@@ -480,7 +475,6 @@ typedef struct ASTNode {
         ASTNodeInheritanceSpecifier inheritanceSpecifierNode;
         ASTNodeModifierInvocation modifierInvocationNode;
         ASTNodeContractDefinition contractDefinitionNode;
-        ASTNodeLibraryDefinition libraryDefinitionNode;
         ASTNodeRevertStatement revertStatementNode;
         ASTNodeForStatement forStatementNode;
         ASTNodeEmitStatement emitStatementNode;
@@ -539,7 +533,9 @@ createParser(TokenizeResult tokens, Arena *arena) {
 static ASTNode *
 allocateNode(Parser *parser) {
     assert(parser->nodeCount < parser->nodeCapacity);
-    return &parser->nodes[parser->nodeCount++];
+    ASTNode *result = &parser->nodes[parser->nodeCount++];
+    result->next = 0x0;
+    return result;
 }
 
 #define reportError(parser, userErrorFormat, ...) _reportError(parser, __FILE__, __LINE__, userErrorFormat, ##__VA_ARGS__)
@@ -846,6 +842,7 @@ static void
 parseIdentifierPath(Parser *parser, ASTNode *node) {
     node->startToken = parser->current;
     node->type = ASTNodeType_IdentifierPath;
+    node->identifierPathNode.identifiers = (TokenIdList){0};
     do {
         TokenId nextIdentifier = parseIdentifier(parser);
         assertError(nextIdentifier != INVALID_TOKEN_ID, parser,
@@ -906,6 +903,8 @@ parseType(Parser *parser, ASTNode *node) {
         node->startToken = startToken;
         node->type = ASTNodeType_FunctionType;
         ASTNodeFunctionType *function = &node->functionTypeNode;
+        function->firstParameter = 0x0;
+        function->firstReturnParameter = 0x0;
 
         ASTNode *lastParameter = 0x0;
         if(!acceptToken(parser, TokenType_RParen)) {
@@ -995,6 +994,7 @@ parsePragma(Parser *parser, ASTNode *node) {
     node->startToken = parser->current - 1;
     node->type = ASTNodeType_Pragma;
     ASTNodePragma *pragma = &node->pragmaNode;
+    pragma->following = (TokenIdList){0};
 
     pragma->major = parseIdentifier(parser);
     assertError(pragma->major != INVALID_TOKEN_ID, parser,
@@ -1018,6 +1018,8 @@ parseImport(Parser *parser, ASTNode *node) {
     node->type = ASTNodeType_Import;
     node->startToken = parser->current - 1;
     ASTNodeImport *import = &node->importNode;
+    import->symbols = (TokenIdList){0};
+    import->symbolAliases = (TokenIdList){0};
 
     if(acceptToken(parser, TokenType_StringLit)) {
         import->pathTokenId = peekLastTokenId(parser);
@@ -1105,8 +1107,10 @@ parseUsing(Parser *parser, ASTNode *node) {
 
     node->type = ASTNodeType_Using;
     ASTNodeUsing *using = &node->usingNode;
+    using->firstIdentifier = 0x0;
+    using->operators = (U16List){0};
 
-    ASTNode *last = using->firstIdentifier;
+    ASTNode *last = 0x0;
     if(acceptToken(parser, TokenType_LBrace)) {
         using->onLibrary = 0;
         do {
@@ -1154,6 +1158,8 @@ parseEnum(Parser *parser, ASTNode *node) {
     node->type = ASTNodeType_EnumDefinition;
 
     ASTNodeEnum *enumNode = &node->enumNode;
+    enumNode->values = (TokenIdList){0};
+
     TokenId nameTokenId = parseIdentifier(parser);
     assertError(nameTokenId != INVALID_TOKEN_ID, parser,
                 "Name of enum must be an identifier, received (%S)", tokenTypeToString(peekTokenType(parser)));
@@ -1186,6 +1192,7 @@ parseStruct(Parser *parser, ASTNode *baseNode) {
     node->nameTokenId = nameTokenId;
     expectToken(parser, TokenType_LBrace);
 
+    node->firstMember = 0x0;
     ASTNode *lastMember = 0x0;
     while(!acceptToken(parser, TokenType_RBrace)) {
         parseVariableDeclarationIntoList(parser, &node->firstMember, &lastMember);
@@ -1205,6 +1212,7 @@ parseError(Parser *parser, ASTNode *node) {
                 "Name of error must be an identifier, received (%S)", tokenTypeToString(peekTokenType(parser)));
 
     expectToken(parser, TokenType_LParen);
+    error->firstParameter = 0x0;
     ASTNode *lastParameter = 0x0;
     if(!acceptToken(parser, TokenType_RParen)) {
         parseFunctionParameters(parser, &error->firstParameter, &lastParameter);
@@ -1225,6 +1233,8 @@ parseEvent(Parser *parser, ASTNode *node) {
 
     expectToken(parser, TokenType_LParen);
 
+    event->firstParameter = 0x0;
+    event->anonymous = 0;
     ASTNode *lastParameter = 0x0;
     if(!acceptToken(parser, TokenType_RParen)) {
         parseFunctionParameters(parser, &event->firstParameter, &lastParameter);
@@ -1373,12 +1383,13 @@ parseFunctionCallExpression(Parser *parser, ASTNode *node) {
     *expression = *node;
     expression->endToken = parser->current - 2;
 
-    memset(node, 0, sizeof(ASTNode));
     node->startToken = expression->startToken;
     node->type = ASTNodeType_FunctionCallExpression;
     ASTNodeFunctionCallExpression *functionCall = &node->functionCallExpressionNode;
 
     functionCall->expression = expression;
+    functionCall->firstArgumentExpression = 0x0;
+    functionCall->argumentsName = (TokenIdList){0};
     parseCallArgumentList(parser, &functionCall->firstArgumentExpression, &functionCall->argumentsName);
 
     return node;
@@ -1402,6 +1413,7 @@ parseExpressionImpl(Parser *parser, ASTNode *node, u32 previousPrecedence) {
         } break;
         case TokenType_StringLit: {
             node->type = ASTNodeType_StringLitExpression;
+            node->stringLitExpressionNode.values = (TokenIdList){0};
             do {
                 TokenId literal = peekLastTokenId(parser);
                 listPushTokenId(&node->stringLitExpressionNode.values, literal, parser->arena);
@@ -1409,6 +1421,7 @@ parseExpressionImpl(Parser *parser, ASTNode *node, u32 previousPrecedence) {
         } break;
         case TokenType_HexStringLit: {
             node->type = ASTNodeType_HexStringLitExpression;
+            node->stringLitExpressionNode.values = (TokenIdList){0};
             do {
                 TokenId literal = peekLastTokenId(parser);
                 listPushTokenId(&node->stringLitExpressionNode.values, literal, parser->arena);
@@ -1416,6 +1429,7 @@ parseExpressionImpl(Parser *parser, ASTNode *node, u32 previousPrecedence) {
         } break;
         case TokenType_UnicodeStringLit: {
             node->type = ASTNodeType_UnicodeStringLitExpression;
+            node->stringLitExpressionNode.values = (TokenIdList){0};
             do {
                 TokenId literal = peekLastTokenId(parser);
                 listPushTokenId(&node->stringLitExpressionNode.values, literal, parser->arena);
@@ -1428,6 +1442,7 @@ parseExpressionImpl(Parser *parser, ASTNode *node, u32 previousPrecedence) {
         } break;
         case TokenType_LParen: {
             node->type = ASTNodeType_TupleExpression;
+            node->tupleExpressionNode.firstElement = 0x0;
 
             ASTNode *lastElement = 0x0;
             if(!acceptToken(parser, TokenType_RParen)) {
@@ -1447,6 +1462,7 @@ parseExpressionImpl(Parser *parser, ASTNode *node, u32 previousPrecedence) {
         case TokenType_LBracket: {
             node->type = ASTNodeType_InlineArrayExpression;
             ASTNodeInlineArrayExpression *array = &node->inlineArrayExpressionNode;
+            array->firstExpression = 0x0;
 
             ASTNode *lastExpression = 0x0;
             do {
@@ -1567,10 +1583,11 @@ parseExpressionImpl(Parser *parser, ASTNode *node, u32 previousPrecedence) {
                 *expression = *node;
                 expression->endToken = parser->current - 2;
 
-                memset(node, 0, sizeof(ASTNode));
                 node->startToken = expression->startToken;
                 node->type = ASTNodeType_NamedParameterExpression;
                 node->namedParametersExpressionNode.expression = expression;
+                node->namedParametersExpressionNode.names = (TokenIdList){0};
+                node->namedParametersExpressionNode.firstExpression = 0x0;
 
                 node->namedParametersExpressionNode.listStartToken = parser->current;
                 ASTNode *lastExpression = 0x0;
@@ -1716,11 +1733,13 @@ tryParseVariableDeclarationTuple(Parser *parser, ASTNode *node) {
     expectToken(parser, TokenType_LParen);
 
     ASTNodeVariableDeclarationTupleStatement *tuple = &node->variableDeclarationTupleStatementNode;
+    tuple->firstDeclaration = 0x0;
     if(!acceptToken(parser, TokenType_RParen)) {
         ASTNode *lastDeclaration = 0x0;
         do {
             ASTNode *declaration = allocateNode(parser);
 
+            declaration->type = ASTNodeType_None;
             declaration->startToken = parser->current;
             if(!nextTokenIs(parser, TokenType_Comma) && !nextTokenIs(parser, TokenType_RParen)) {
                 if(!tryParseVariableDeclaration(parser, declaration)) {
@@ -1779,6 +1798,7 @@ parseYulExpression(Parser *parser, ASTNode *node, YulLexer *lexer) {
             node->type = ASTNodeType_YulFunctionCallExpression;
             ASTNodeYulFunctionCallExpression *functionCall = &node->yulFunctionCallExpressionNode;
             functionCall->identifier = identifier;
+            functionCall->firstArgument = 0x0;
 
             ASTNode *lastArgument = 0x0;
             if(!acceptYulToken(lexer, YulTokenType_RParen)) {
@@ -1803,6 +1823,7 @@ parseYulStatement(Parser *parser, ASTNode *node, YulLexer *lexer) {
 
     if(acceptYulToken(lexer, YulTokenType_LBrace)) {
         node->type = ASTNodeType_YulBlockStatement;
+        node->blockStatementNode.firstStatement = 0x0;
 
         ASTNode *lastStatement = 0x0;
         while(!acceptYulToken(lexer, YulTokenType_RBrace)) {
@@ -1815,11 +1836,13 @@ parseYulStatement(Parser *parser, ASTNode *node, YulLexer *lexer) {
         node->type = ASTNodeType_YulVariableDeclaration;
         ASTNodeYulVariableDeclaration *declaration = &node->yulVariableDeclarationNode;
 
-        declaration->identifiers.count = 0;
+        declaration->identifiers = (TokenIdList){0};
         listPushTokenId(&declaration->identifiers, parseYulIdentifier(lexer), parser->arena);
         while(acceptYulToken(lexer, YulTokenType_Comma)) {
             listPushTokenId(&declaration->identifiers, parseYulIdentifier(lexer), parser->arena);
         }
+
+        declaration->value = 0x0;
         if(acceptYulToken(lexer, YulTokenType_ColonEqual)) {
             declaration->value = allocateNode(parser);
             parseYulExpression(parser, declaration->value, lexer);
@@ -1831,6 +1854,7 @@ parseYulStatement(Parser *parser, ASTNode *node, YulLexer *lexer) {
             node->type = ASTNodeType_YulFunctionCallExpression;
             ASTNodeYulFunctionCallExpression *functionCall = &node->yulFunctionCallExpressionNode;
             functionCall->identifier = identifier;
+            functionCall->firstArgument = 0x0;
 
             if(!acceptYulToken(lexer, YulTokenType_RParen)) {
                 ASTNode *lastArgument = 0x0;
@@ -1844,6 +1868,8 @@ parseYulStatement(Parser *parser, ASTNode *node, YulLexer *lexer) {
         } else {
             node->type = ASTNodeType_YulVariableAssignment;
             ASTNodeYulVariableAssignment *assignment = &node->yulVariableAssignmentNode;
+            assignment->firstPath = 0x0;
+            assignment->value = 0x0;
 
             ASTNode *path = allocateNode(parser);
             path->type = ASTNodeType_YulMemberAccessExpression;
@@ -1903,6 +1929,8 @@ parseYulStatement(Parser *parser, ASTNode *node, YulLexer *lexer) {
         ASTNodeYulFunctionDefinition *function = &node->yulFunctionDefinitionNode;
 
         function->identifier = parseYulIdentifier(lexer);
+        function->parameters = (TokenIdList){0};
+        function->returnParameters = (TokenIdList){0};
         expectYulToken(parser, lexer, YulTokenType_LParen);
         if(!acceptYulToken(lexer, YulTokenType_RParen)) {
             do {
@@ -1932,6 +1960,8 @@ parseYulStatement(Parser *parser, ASTNode *node, YulLexer *lexer) {
         switchStatement->expression = allocateNode(parser);
         parseYulExpression(parser, switchStatement->expression, lexer);
 
+        switchStatement->firstCase = 0x0;
+        switchStatement->defaultBlock = 0x0;
         ASTNode *lastCase = 0x0;
         while(acceptYulToken(lexer, YulTokenType_Case)) {
             ASTNode *c = allocateNode(parser);
@@ -2021,6 +2051,7 @@ parseStatement(Parser *parser, ASTNode *node) {
         ifStatement->trueStatement = allocateNode(parser);
         parseStatement(parser, ifStatement->trueStatement);
 
+        ifStatement->falseStatement = 0x0;
         if(acceptToken(parser, TokenType_Else)) {
             ifStatement->falseStatement = allocateNode(parser);
             parseStatement(parser, ifStatement->falseStatement);
@@ -2029,6 +2060,7 @@ parseStatement(Parser *parser, ASTNode *node) {
     } else if(acceptToken(parser, TokenType_LBrace)) {
         node->type = ASTNodeType_BlockStatement;
         node->startToken = parser->current - 1;
+        node->blockStatementNode.firstStatement = 0x0;
 
         ASTNode *lastStatement = 0x0;
         while(!acceptToken(parser, TokenType_RBrace)) {
@@ -2157,6 +2189,7 @@ parseStatement(Parser *parser, ASTNode *node) {
         statement->body = allocateNode(parser);
         parseStatement(parser, statement->body);
 
+        statement->firstCatch = 0x0;
         ASTNode *lastCatch = 0x0;
         ASTNode *lastParameter = 0x0;
         while(acceptToken(parser, TokenType_Catch)) {
@@ -2192,6 +2225,8 @@ parseStatement(Parser *parser, ASTNode *node) {
         node->type = ASTNodeType_AssemblyStatement;
         node->startToken = parser->current - 1;
         ASTNodeAssemblyStatement *statement = &node->assemblyStatementNode;
+        statement->isEVMAsm = 0;
+        statement->flags = (TokenIdList){0};
         if(acceptToken(parser, TokenType_StringLit)) {
             statement->isEVMAsm = stringMatch(peekLastTokenString(parser), LIT_TO_STR("evmasm"));
             if(!statement->isEVMAsm) {
@@ -2273,6 +2308,7 @@ parseConstVariable(Parser *parser, ASTNode *node, ASTNode *type) {
 
 static void
 parseOverrideSpecifierArgs(Parser *parser, ASTNode **first) {
+    *first = 0x0;
     ASTNode *last = 0x0;
     if(acceptToken(parser, TokenType_LParen)) {
         do {
@@ -2338,6 +2374,7 @@ tryParseStateVariableDeclaration(Parser *parser, ASTNode *node) {
         return false;
     }
 
+    decl->expression = 0x0;
     if(acceptToken(parser, TokenType_Equal)) {
         decl->expression = allocateNode(parser);
         parseExpression(parser, decl->expression);
@@ -2362,6 +2399,7 @@ parseModifierInvocation(Parser *parser, ASTNode *node) {
     invocation->identifier = allocateNode(parser);
     parseIdentifierPath(parser, invocation->identifier);
 
+    invocation->argumentsName = (TokenIdList){0};
     invocation->firstArgumentExpression = MISSING_ELEMENT;
     if(acceptToken(parser, TokenType_LParen)) {
         invocation->firstArgumentExpression = 0x0;
@@ -2387,6 +2425,9 @@ parseFunction(Parser *parser, ASTNode *node) {
     ASTNodeFunctionDefinition *function = &node->functionDefinitionNode;
     function->name = name;
 
+    function->firstParameter = 0x0;
+    function->firstReturnParameter = 0x0;
+    function->firstModifier = 0x0;
     ASTNode *lastParameter = 0x0;
     expectToken(parser, TokenType_LParen);
     if(!acceptToken(parser, TokenType_RParen)) {
@@ -2512,6 +2553,8 @@ parseConstructor(Parser *parser, ASTNode *node) {
     node->startToken = parser->current - 1;
     ASTNodeConstructorDefinition *constructor = &node->constructorDefinitionNode;
 
+    constructor->firstParameter = 0x0;
+    constructor->firstModifier = 0x0;
     ASTNode *lastParameter = 0x0;
     expectToken(parser, TokenType_LParen);
     if(!acceptToken(parser, TokenType_RParen)) {
@@ -2555,6 +2598,7 @@ parseConstructor(Parser *parser, ASTNode *node) {
 
 static void
 parseContractBody(Parser *parser, ASTNode **firstElement) {
+    *firstElement = 0x0;
     ASTNode *lastElement = 0x0;
     expectToken(parser, TokenType_LBrace);
     while(!acceptToken(parser, TokenType_RBrace)) {
@@ -2566,8 +2610,6 @@ parseContractBody(Parser *parser, ASTNode **firstElement) {
             parser->current -= 1;
             if(!tryParseStateVariableDeclaration(parser, element)) {
                 parser->current += 1;
-                memset(element, 0, sizeof(ASTNode));
-
                 parseFunction(parser, element);
             }
         } else if(acceptToken(parser, TokenType_Modifier)) {
@@ -2592,8 +2634,6 @@ parseContractBody(Parser *parser, ASTNode **firstElement) {
             parser->current -= 1;
             if(!tryParseStateVariableDeclaration(parser, element)) {
                 parser->current += 1;
-                memset(element, 0, sizeof(ASTNode));
-
                 parseError(parser, element);
             }
         } else if(acceptToken(parser, TokenType_EOF)) {
@@ -2614,6 +2654,8 @@ parseContract(Parser *parser, ASTNode *node) {
     ASTNodeContractDefinition *contract = &node->contractDefinitionNode;
 
     contract->name = parseIdentifier(parser);
+    contract->firstBaseContract = 0x0;
+    contract->layoutExpression = 0x0;
 
     ASTNode *lastBaseContract = 0x0;
     while(true) {
@@ -2630,6 +2672,7 @@ parseContract(Parser *parser, ASTNode *node) {
                 assertError(inheritance->identifier->type == ASTNodeType_IdentifierPath,
                             parser, "Expected identifier path in inheritance specifier");
 
+                inheritance->argumentsName = (TokenIdList){0};
                 inheritance->firstArgumentExpression = MISSING_ELEMENT;
                 if(acceptToken(parser, TokenType_LParen)) {
                     inheritance->firstArgumentExpression = 0x0;
@@ -2642,6 +2685,7 @@ parseContract(Parser *parser, ASTNode *node) {
             } while(acceptToken(parser, TokenType_Comma));
         } else if(acceptToken(parser, TokenType_Layout)) {
             ASTNode *layout = structPush(parser->arena, ASTNode);
+            layout->next = 0x0;
             expectToken(parser, TokenType_At);
             parseExpression(parser, layout);
             contract->layoutExpression = layout;
@@ -2680,9 +2724,11 @@ static void
 parseLibrary(Parser *parser, ASTNode *node) {
     node->type = ASTNodeType_LibraryDefinition;
     node->startToken = parser->current - 1;
-    ASTNodeLibraryDefinition *library = &node->libraryDefinitionNode;
+    ASTNodeContractDefinition *library = &node->contractDefinitionNode;
 
     library->name = parseIdentifier(parser);
+    library->firstBaseContract = 0x0;
+    library->layoutExpression = 0x0;
 
     parseContractBody(parser, &library->firstElement);
     node->endToken = parser->current - 1;
@@ -2733,7 +2779,6 @@ printASTNodeSizes(Arena *arena) {
         { LIT_TO_STR("ASTNodeInheritanceSpecifier"), sizeof(ASTNodeInheritanceSpecifier)},
         { LIT_TO_STR("ASTNodeModifierInvocation"), sizeof(ASTNodeModifierInvocation)},
         { LIT_TO_STR("ASTNodeContractDefinition"), sizeof(ASTNodeContractDefinition)},
-        { LIT_TO_STR("ASTNodeLibraryDefinition"), sizeof(ASTNodeLibraryDefinition)},
         { LIT_TO_STR("ASTNodeRevertStatement"), sizeof(ASTNodeRevertStatement)},
         { LIT_TO_STR("ASTNodeForStatement"), sizeof(ASTNodeForStatement)},
         { LIT_TO_STR("ASTNodeEmitStatement"), sizeof(ASTNodeEmitStatement)},
@@ -2904,7 +2949,7 @@ astNodeTypeSize(ASTNodeType type) {
         case ASTNodeType_ContractDefinition: return sizeof(ASTNodeContractDefinition);
         case ASTNodeType_RevertStatement: return sizeof(ASTNodeRevertStatement);
         case ASTNodeType_StateVariableDeclaration: return sizeof(ASTNodeConstVariable);
-        case ASTNodeType_LibraryDefinition: return sizeof(ASTNodeLibraryDefinition);
+        case ASTNodeType_LibraryDefinition: return sizeof(ASTNodeContractDefinition);
         case ASTNodeType_TerneryExpression: return sizeof(ASTNodeTerneryExpression);
         case ASTNodeType_ForStatement: return sizeof(ASTNodeForStatement);
         case ASTNodeType_BreakStatement: return 0;

@@ -352,6 +352,17 @@ arenaPush(Arena *arena, size_t size) {
         cursor->cursorPointer += paddingNeeded;
         result = cursor->cursorPointer;
         cursor->cursorPointer += size;
+
+#ifdef SANITIZE
+        static _Thread_local u64 poisonState = 0x9E3779B97F4A7C15ull;
+        u8 *bytes = (u8 *)result;
+        for(size_t i = 0; i < size; i++) {
+            poisonState ^= poisonState << 13;
+            poisonState ^= poisonState >> 7;
+            poisonState ^= poisonState << 17;
+            bytes[i] = (u8)poisonState;
+        }
+#endif
     }
 
     return result;
@@ -1030,8 +1041,10 @@ static U16Bucket *
 listPushU16(U16List *list, u16 value, Arena *arena) {
     U16Bucket *bucket = 0x0;
     if(list->count == 0) {
-        assert(list->first == 0x0 && list->last == 0x0);
+        assert(list->first == 0x0);
+        assert(list->last == 0x0);
         bucket = structPush(arena, U16Bucket);
+        bucket->count = 0;
         SLL_QUEUE_PUSH(list->first, list->last, bucket);
     } else {
         bucket = list->last;
@@ -1039,6 +1052,7 @@ listPushU16(U16List *list, u16 value, Arena *arena) {
 
     if(bucket->count >= ARRAY_LENGTH(bucket->values)) {
         bucket = structPush(arena, U16Bucket);
+        bucket->count = 0;
         SLL_QUEUE_PUSH(list->first, list->last, bucket);
     }
 

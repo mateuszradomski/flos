@@ -83,6 +83,7 @@ listPushString(BucketedStringList *list, String value, Arena *arena) {
     StringBucket *bucket = 0x0;
     if(list->count == 0) {
         bucket = structPush(arena, StringBucket);
+        bucket->count = 0; bucket->next = 0;
         SLL_STACK_PUSH(list->first, bucket);
     } else {
         bucket = list->first;
@@ -90,6 +91,7 @@ listPushString(BucketedStringList *list, String value, Arena *arena) {
 
     if(bucket->count >= ARRAY_LENGTH(bucket->values)) {
         bucket = structPush(arena, StringBucket);
+        bucket->count = 0; bucket->next = 0;
         SLL_STACK_PUSH(list->first, bucket);
     }
 
@@ -239,7 +241,7 @@ threadWorker(void *arg) {
         }
 
         arenaPopTo(&arena, start);
-        arenaPopToZero(&parseArena, startParse);
+        arenaPopTo(&parseArena, startParse);
 
         m.inputBytes += content.size;
         m.tokenize   += r.timings[Measurement_Tokenize];
@@ -375,7 +377,7 @@ repetitionTesterMain(Arena *arena, String content) {
             node = parseSourceUnit(&parser);
             timing += readTimer();
 
-            arenaPopToZero(arena, start);
+            arenaPopTo(arena, start);
 
             timingSum += timing;
             timingCount += 1;
