@@ -313,14 +313,6 @@ wordLine(void) {
     return (Word) { .type = WordType_Line, .text = (u8 *)" ",  .textSize = 1 };
 }
 
-static bool
-containsSlash(u32 word) {
-    u32 mask = 0x2F2F2F2F;
-    u32 cmp  = word ^ mask;
-    u32 tmp  = ((cmp - 0x01010101) & ~cmp & 0x80808080);
-    return tmp != 0;
-}
-
 static void
 preserveHardBreaksIntoDocument(Render *r, ASTNode *node) {
     u32 tokenIndex = node->startToken;
@@ -337,13 +329,15 @@ preserveHardBreaksIntoDocument(Render *r, ASTNode *node) {
         .size = token.data >= inBetween.data ? token.data - inBetween.data : 0,
     };
 
+    if(inBetween.size < 2) { return; }
+
     u32 newlines = 0;
-    for(s32 i = inBetween.size - 1; i >= 0 && isWhitespace(inBetween.data[i]); i--) {
+    for(s32 i = 0; i < inBetween.size; i++) {
         newlines += inBetween.data[i] == '\n';
-        if(newlines == 2) {
-            pushWord(r, wordHardBreak());
-            return;
-        }
+    }
+
+    if(newlines >= 2) {
+        pushWord(r, wordHardBreak());
     }
 }
 
@@ -354,30 +348,9 @@ pushCommentsInRange(Render *r, u32 startOffset, u32 endOffset) {
         .size = endOffset - startOffset,
     };
 
-    if(input.size <= 2) {
-        return;
-    }
-
     u32 size = input.size;
     u8 *data = input.data;
-    bool hasSlash = false;
-    u32 k = 0;
-    for (; k + 3 < size; k += 4) {
-        hasSlash = containsSlash(*((u32 *)(data + k)));
-        if (hasSlash) break;
-    }
-    if (!hasSlash) {
-        for (; k < size; k++) {
-            if (data[k] == '/') { hasSlash = true; break; }
-        }
-    }
-    if (!hasSlash) return;
-
     for(; input.size > 0 && !isWhitespace(input.data[0]) && input.data[0] != '/'; input.data++, input.size--) { }
-
-    if(input.size <= 2) {
-        return;
-    }
 
     u32 i = 0;
     while(i < input.size) {
