@@ -651,6 +651,46 @@ parseStringWithEscapes(ByteConsumer *c, u8 delimiter) {
     }
 }
 
+static void
+printTokenHistogram(TokenizeResult *t) {
+    assert(t != 0x0);
+
+    u32 counts[TokenType_Count] = {0};
+    for(u32 i = 0; i < t->count; i++) {
+        TokenType type = getTokenType(*t, i);
+        assert(type < TokenType_Count);
+        counts[type] += 1;
+    }
+
+    u32 order[TokenType_Count];
+    for(u32 i = 0; i < TokenType_Count; i++) {
+        order[i] = i;
+    }
+
+    // Selection sort by count descending. Bounded, predictable, no recursion.
+    for(u32 i = 0; i < TokenType_Count; i++) {
+        u32 maxIndex = i;
+        for(u32 j = i + 1; j < TokenType_Count; j++) {
+            if(counts[order[j]] > counts[order[maxIndex]]) {
+                maxIndex = j;
+            }
+        }
+        u32 tmp = order[i];
+        order[i] = order[maxIndex];
+        order[maxIndex] = tmp;
+    }
+
+    u32 total = t->count;
+    printf("Node histogram (%u nodes total):\n", total);
+    for(u32 i = 0; i < TokenType_Count; i++) {
+        u32 type = order[i];
+        u32 count = counts[type];
+        if(count == 0) { break; }
+        double percent = total > 0 ? (100.0 * (double)count / (double)total) : 0.0;
+        printf("  %-36s %8u  %6.2f%%\n", tokenTypeToString(type).data, count, percent);
+    }
+}
+
 static TokenizeResult
 tokenize(String source, Arena *arena) {
     TokenizeResult result = allocateTokenSpace(arena, source.size, source.size);
@@ -881,6 +921,7 @@ tokenize(String source, Arena *arena) {
     }
 end:
 
+    // printTokenHistogram(&result);
 
     return result;
 }
