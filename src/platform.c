@@ -25,6 +25,7 @@ typedef ThreadReturnType (*ThreadFunction)(void *);
 typedef pthread_t ThreadHandle;
 typedef pthread_mutex_t Mutex;
 
+typedef int FileHandle;
 typedef struct stat stat64_t;
 
 static ThreadHandle
