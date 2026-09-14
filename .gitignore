@@ -1,11 +1,9 @@
 test.exe
 test.ilk
 test.pdb
-test.dSYM/Contents
+*.dSYM
 test
 tags
 expected.sol
 result.sol
 output.html
-./flos
-flos.dSYM/Contents
