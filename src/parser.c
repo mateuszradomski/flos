@@ -801,14 +801,13 @@ parseVariableDeclarationIntoList(Parser *parser, ASTNode **first, ASTNode **last
     }
 
     variableDeclaration->dataLocation = INVALID_TOKEN_ID;
-    if(acceptToken(parser, TokenType_Memory)) {
-        variableDeclaration->dataLocation = peekLastTokenId(parser);
-    } else if(acceptToken(parser, TokenType_Storage)) {
-        variableDeclaration->dataLocation = peekLastTokenId(parser);
-    } else if(acceptToken(parser, TokenType_Calldata)) {
-        variableDeclaration->dataLocation = peekLastTokenId(parser);
-    } else if(acceptToken(parser, TokenType_Indexed)) {
-        variableDeclaration->dataLocation = peekLastTokenId(parser);
+    switch(peekTokenType(parser)) {
+        case TokenType_Memory:
+        case TokenType_Storage:
+        case TokenType_Calldata:
+        case TokenType_Indexed: {
+            variableDeclaration->dataLocation = parser->current++;
+        } break;
     }
 
     variableDeclaration->name = parseIdentifier(parser);
@@ -1687,12 +1686,12 @@ tryParseVariableDeclaration(Parser *parser, ASTNode *node) {
     }
 
     TokenId dataLocation = INVALID_TOKEN_ID;
-    if(acceptToken(parser, TokenType_Memory)) {
-        dataLocation = peekLastTokenId(parser);
-    } else if(acceptToken(parser, TokenType_Storage)) {
-        dataLocation = peekLastTokenId(parser);
-    } else if(acceptToken(parser, TokenType_Calldata)) {
-        dataLocation = peekLastTokenId(parser);
+    switch(peekTokenType(parser)) {
+        case TokenType_Memory:
+        case TokenType_Storage:
+        case TokenType_Calldata: {
+            dataLocation = parser->current++;
+        } break;
     }
 
     TokenId name = parseIdentifier(parser);
