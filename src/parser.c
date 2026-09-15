@@ -2036,258 +2036,276 @@ parseYulBlock(Parser *parser, ASTNode *node) {
 
 static void
 parseStatement(Parser *parser, ASTNode *node) {
-    if(acceptToken(parser, TokenType_Return)) {
-        node->startToken = parser->current - 1;
-        ASTNode *returnStatement = node;
-        returnStatement->type = ASTNodeType_ReturnStatement;
-        returnStatement->returnStatementNode.expression = 0x0;
+    switch(advanceToken(parser)) {
+        case TokenType_Return: {
+            node->startToken = parser->current - 1;
+            ASTNode *returnStatement = node;
+            returnStatement->type = ASTNodeType_ReturnStatement;
+            returnStatement->returnStatementNode.expression = 0x0;
 
-        if(!acceptToken(parser, TokenType_Semicolon)) {
-            returnStatement->returnStatementNode.expression = allocateNode(parser);
-            parseExpression(parser, returnStatement->returnStatementNode.expression);
+            if(!acceptToken(parser, TokenType_Semicolon)) {
+                returnStatement->returnStatementNode.expression = allocateNode(parser);
+                parseExpression(parser, returnStatement->returnStatementNode.expression);
+                expectToken(parser, TokenType_Semicolon);
+            }
+            node->endToken = parser->current - 1;
+        } break;
+        case TokenType_If: {
+            node->startToken = parser->current - 1;
+            node->type = ASTNodeType_IfStatement;
+            ASTNodeIfStatement *ifStatement = &node->ifStatementNode;
+            ifStatement->conditionExpression = allocateNode(parser);
+
+            expectToken(parser, TokenType_LParen);
+            parseExpression(parser, ifStatement->conditionExpression);
+            expectToken(parser, TokenType_RParen);
+
+            ifStatement->trueStatement = allocateNode(parser);
+            parseStatement(parser, ifStatement->trueStatement);
+
+            ifStatement->falseStatement = 0x0;
+            if(acceptToken(parser, TokenType_Else)) {
+                ifStatement->falseStatement = allocateNode(parser);
+                parseStatement(parser, ifStatement->falseStatement);
+            }
+            node->endToken = parser->current - 1;
+        } break;
+        case TokenType_LBrace: {
+            node->type = ASTNodeType_BlockStatement;
+            node->startToken = parser->current - 1;
+            node->blockStatementNode.firstStatement = 0x0;
+
+            ASTNode *lastStatement = 0x0;
+            while(!acceptToken(parser, TokenType_RBrace)) {
+                ASTNode *statement = allocateNode(parser);
+                parseStatement(parser, statement);
+
+                SLL_QUEUE_PUSH(node->blockStatementNode.firstStatement, lastStatement, statement);
+            }
+            node->endToken = parser->current - 1;
+        } break;
+        case TokenType_Unchecked: {
+            node->type = ASTNodeType_UncheckedBlockStatement;
+            node->startToken = parser->current - 1;
+            ASTNodeUncheckedBlockStatement *statement = &node->uncheckedBlockStatementNode;
+            statement->block = allocateNode(parser);
+            parseStatement(parser, statement->block);
+            assertError(statement->block->type == ASTNodeType_BlockStatement, parser, "A block statement must follow the unchecked keyword");
+            node->endToken = parser->current - 1;
+        } break;
+        case TokenType_While: {
+            node->type = ASTNodeType_WhileStatement;
+            node->startToken = parser->current - 1;
+            ASTNodeWhileStatement *statement = &node->whileStatementNode;
+
+            expectToken(parser, TokenType_LParen);
+            statement->expression = allocateNode(parser);
+            parseExpression(parser, statement->expression);
+            expectToken(parser, TokenType_RParen);
+
+            statement->body = allocateNode(parser);
+            parseStatement(parser, statement->body);
+            node->endToken = parser->current - 1;
+        } break;
+        case TokenType_Do: {
+            node->type = ASTNodeType_DoWhileStatement;
+            node->startToken = parser->current - 1;
+            ASTNodeWhileStatement *statement = &node->doWhileStatementNode;
+
+            statement->body = allocateNode(parser);
+            parseStatement(parser, statement->body);
+
+            expectToken(parser, TokenType_While);
+            expectToken(parser, TokenType_LParen);
+            statement->expression = allocateNode(parser);
+            parseExpression(parser, statement->expression);
+            expectToken(parser, TokenType_RParen);
             expectToken(parser, TokenType_Semicolon);
-        }
-        node->endToken = parser->current - 1;
-    } else if(acceptToken(parser, TokenType_If)) {
-        node->startToken = parser->current - 1;
-        node->type = ASTNodeType_IfStatement;
-        ASTNodeIfStatement *ifStatement = &node->ifStatementNode;
-        ifStatement->conditionExpression = allocateNode(parser);
+            node->endToken = parser->current - 1;
+        } break;
+        case TokenType_For: {
+            node->type = ASTNodeType_ForStatement;
+            node->startToken = parser->current - 1;
+            ASTNodeForStatement *statement = &node->forStatementNode;
 
-        expectToken(parser, TokenType_LParen);
-        parseExpression(parser, ifStatement->conditionExpression);
-        expectToken(parser, TokenType_RParen);
-
-        ifStatement->trueStatement = allocateNode(parser);
-        parseStatement(parser, ifStatement->trueStatement);
-
-        ifStatement->falseStatement = 0x0;
-        if(acceptToken(parser, TokenType_Else)) {
-            ifStatement->falseStatement = allocateNode(parser);
-            parseStatement(parser, ifStatement->falseStatement);
-        }
-        node->endToken = parser->current - 1;
-    } else if(acceptToken(parser, TokenType_LBrace)) {
-        node->type = ASTNodeType_BlockStatement;
-        node->startToken = parser->current - 1;
-        node->blockStatementNode.firstStatement = 0x0;
-
-        ASTNode *lastStatement = 0x0;
-        while(!acceptToken(parser, TokenType_RBrace)) {
-            ASTNode *statement = allocateNode(parser);
-            parseStatement(parser, statement);
-
-            SLL_QUEUE_PUSH(node->blockStatementNode.firstStatement, lastStatement, statement);
-        }
-        node->endToken = parser->current - 1;
-    } else if(acceptToken(parser, TokenType_Unchecked)) {
-        node->type = ASTNodeType_UncheckedBlockStatement;
-        node->startToken = parser->current - 1;
-        ASTNodeUncheckedBlockStatement *statement = &node->uncheckedBlockStatementNode;
-        statement->block = allocateNode(parser);
-        parseStatement(parser, statement->block);
-        assertError(statement->block->type == ASTNodeType_BlockStatement, parser, "A block statement must follow the unchecked keyword");
-        node->endToken = parser->current - 1;
-    } else if(acceptToken(parser, TokenType_While)) {
-        node->type = ASTNodeType_WhileStatement;
-        node->startToken = parser->current - 1;
-        ASTNodeWhileStatement *statement = &node->whileStatementNode;
-
-        expectToken(parser, TokenType_LParen);
-        statement->expression = allocateNode(parser);
-        parseExpression(parser, statement->expression);
-        expectToken(parser, TokenType_RParen);
-
-        statement->body = allocateNode(parser);
-        parseStatement(parser, statement->body);
-        node->endToken = parser->current - 1;
-    } else if(acceptToken(parser, TokenType_Do)) {
-        node->type = ASTNodeType_DoWhileStatement;
-        node->startToken = parser->current - 1;
-        ASTNodeWhileStatement *statement = &node->doWhileStatementNode;
-
-        statement->body = allocateNode(parser);
-        parseStatement(parser, statement->body);
-
-        expectToken(parser, TokenType_While);
-        expectToken(parser, TokenType_LParen);
-        statement->expression = allocateNode(parser);
-        parseExpression(parser, statement->expression);
-        expectToken(parser, TokenType_RParen);
-        expectToken(parser, TokenType_Semicolon);
-        node->endToken = parser->current - 1;
-    } else if(acceptToken(parser, TokenType_For)) {
-        node->type = ASTNodeType_ForStatement;
-        node->startToken = parser->current - 1;
-        ASTNodeForStatement *statement = &node->forStatementNode;
-
-        expectToken(parser, TokenType_LParen);
-
-        statement->variableStatement = 0x0;
-        if(!acceptToken(parser, TokenType_Semicolon)) {
-            statement->variableStatement = allocateNode(parser);
-            parseStatement(parser, statement->variableStatement);
-            assertError(statement->variableStatement->type == ASTNodeType_ExpressionStatement ||
-                        statement->variableStatement->type == ASTNodeType_VariableDeclarationStatement ||
-                        statement->variableStatement->type == ASTNodeType_VariableDeclarationTupleStatement,
-                        parser, "Expected variable declaration or expression statement in for loop initializer");
-        }
-
-        statement->conditionExpression = 0x0;
-        if(!acceptToken(parser, TokenType_Semicolon)) {
-            statement->conditionExpression = allocateNode(parser);
-            parseExpression(parser, statement->conditionExpression);
-            expectToken(parser, TokenType_Semicolon);
-        }
-
-        statement->incrementExpression = 0x0;
-        if(!acceptToken(parser, TokenType_RParen)) {
-            statement->incrementExpression = allocateNode(parser);
-            parseExpression(parser, statement->incrementExpression);
-            acceptToken(parser, TokenType_RParen);
-        }
-
-        statement->body = allocateNode(parser);
-        parseStatement(parser, statement->body);
-        node->endToken = parser->current - 1;
-    } else if(acceptToken(parser, TokenType_Revert)) {
-        node->type = ASTNodeType_RevertStatement;
-        node->startToken = parser->current - 1;
-        ASTNodeRevertStatement *statement = &node->revertStatementNode;
-
-        statement->expression = allocateNode(parser);
-        parseExpression(parser, statement->expression);
-        expectToken(parser, TokenType_Semicolon);
-        node->endToken = parser->current - 1;
-    } else if(acceptToken(parser, TokenType_Break)) {
-        node->type = ASTNodeType_BreakStatement;
-        node->startToken = parser->current - 1;
-        expectToken(parser, TokenType_Semicolon);
-        node->endToken = parser->current - 1;
-    } else if(acceptToken(parser, TokenType_Continue)) {
-        node->type = ASTNodeType_ContinueStatement;
-        node->startToken = parser->current - 1;
-        expectToken(parser, TokenType_Semicolon);
-        node->endToken = parser->current - 1;
-    } else if(acceptToken(parser, TokenType_Emit)) {
-        node->type = ASTNodeType_EmitStatement;
-        node->startToken = parser->current - 1;
-        node->emitStatementNode.expression = allocateNode(parser);
-        parseExpression(parser, node->emitStatementNode.expression);
-        assertError(node->emitStatementNode.expression->type == ASTNodeType_FunctionCallExpression,
-                    parser, "Expected function call expression after emit keyword");
-        expectToken(parser, TokenType_Semicolon);
-        node->endToken = parser->current - 1;
-    } else if(acceptToken(parser, TokenType_Try)) {
-        node->type = ASTNodeType_TryStatement;
-        node->startToken = parser->current - 1;
-        ASTNodeTryStatement *statement = &node->tryStatementNode;
-
-        statement->expression = allocateNode(parser);
-        parseExpression(parser, statement->expression);
-
-        statement->firstReturnParameter = MISSING_ELEMENT;
-        ASTNode *lastReturnParameter = 0x0;
-        if(acceptToken(parser, TokenType_Returns)) {
-            statement->firstReturnParameter = 0x0;
             expectToken(parser, TokenType_LParen);
 
-            parseFunctionParameters(parser, &statement->firstReturnParameter, &lastReturnParameter);
-            expectToken(parser, TokenType_RParen);
-        }
+            statement->variableStatement = 0x0;
+            if(!acceptToken(parser, TokenType_Semicolon)) {
+                statement->variableStatement = allocateNode(parser);
+                parseStatement(parser, statement->variableStatement);
+                assertError(statement->variableStatement->type == ASTNodeType_ExpressionStatement ||
+                            statement->variableStatement->type == ASTNodeType_VariableDeclarationStatement ||
+                            statement->variableStatement->type == ASTNodeType_VariableDeclarationTupleStatement,
+                            parser, "Expected variable declaration or expression statement in for loop initializer");
+            }
 
-        statement->body = allocateNode(parser);
-        parseStatement(parser, statement->body);
+            statement->conditionExpression = 0x0;
+            if(!acceptToken(parser, TokenType_Semicolon)) {
+                statement->conditionExpression = allocateNode(parser);
+                parseExpression(parser, statement->conditionExpression);
+                expectToken(parser, TokenType_Semicolon);
+            }
 
-        statement->firstCatch = 0x0;
-        ASTNode *lastCatch = 0x0;
-        ASTNode *lastParameter = 0x0;
-        while(acceptToken(parser, TokenType_Catch)) {
-            ASTNode *catch = allocateNode(parser);
-            catch->type = ASTNodeType_CatchStatement;
-            catch->startToken = parser->current - 1;
-            ASTNodeCatchStatement *catchStatement = &catch->catchStatementNode;
+            statement->incrementExpression = 0x0;
+            if(!acceptToken(parser, TokenType_RParen)) {
+                statement->incrementExpression = allocateNode(parser);
+                parseExpression(parser, statement->incrementExpression);
+                acceptToken(parser, TokenType_RParen);
+            }
 
-            catchStatement->identifier = INVALID_TOKEN_ID;
-            catchStatement->firstParameter = MISSING_ELEMENT;
+            statement->body = allocateNode(parser);
+            parseStatement(parser, statement->body);
+            node->endToken = parser->current - 1;
+        } break;
+        case TokenType_Revert: {
+            node->type = ASTNodeType_RevertStatement;
+            node->startToken = parser->current - 1;
+            ASTNodeRevertStatement *statement = &node->revertStatementNode;
 
-            if(!acceptToken(parser, TokenType_LBrace)) {
-                catchStatement->firstParameter = 0x0;
-                if(!acceptToken(parser, TokenType_LParen)) {
-                    catchStatement->identifier = parseIdentifier(parser);
-                    expectToken(parser, TokenType_LParen);
+            statement->expression = allocateNode(parser);
+            parseExpression(parser, statement->expression);
+            expectToken(parser, TokenType_Semicolon);
+            node->endToken = parser->current - 1;
+        } break;
+        case TokenType_Break: {
+            node->type = ASTNodeType_BreakStatement;
+            node->startToken = parser->current - 1;
+            expectToken(parser, TokenType_Semicolon);
+            node->endToken = parser->current - 1;
+        } break;
+        case TokenType_Continue: {
+            node->type = ASTNodeType_ContinueStatement;
+            node->startToken = parser->current - 1;
+            expectToken(parser, TokenType_Semicolon);
+            node->endToken = parser->current - 1;
+        } break;
+        case TokenType_Emit: {
+            node->type = ASTNodeType_EmitStatement;
+            node->startToken = parser->current - 1;
+            node->emitStatementNode.expression = allocateNode(parser);
+            parseExpression(parser, node->emitStatementNode.expression);
+            assertError(node->emitStatementNode.expression->type == ASTNodeType_FunctionCallExpression,
+                        parser, "Expected function call expression after emit keyword");
+            expectToken(parser, TokenType_Semicolon);
+            node->endToken = parser->current - 1;
+        } break;
+        case TokenType_Try: {
+            node->type = ASTNodeType_TryStatement;
+            node->startToken = parser->current - 1;
+            ASTNodeTryStatement *statement = &node->tryStatementNode;
+
+            statement->expression = allocateNode(parser);
+            parseExpression(parser, statement->expression);
+
+            statement->firstReturnParameter = MISSING_ELEMENT;
+            ASTNode *lastReturnParameter = 0x0;
+            if(acceptToken(parser, TokenType_Returns)) {
+                statement->firstReturnParameter = 0x0;
+                expectToken(parser, TokenType_LParen);
+
+                parseFunctionParameters(parser, &statement->firstReturnParameter, &lastReturnParameter);
+                expectToken(parser, TokenType_RParen);
+            }
+
+            statement->body = allocateNode(parser);
+            parseStatement(parser, statement->body);
+
+            statement->firstCatch = 0x0;
+            ASTNode *lastCatch = 0x0;
+            ASTNode *lastParameter = 0x0;
+            while(acceptToken(parser, TokenType_Catch)) {
+                ASTNode *catch = allocateNode(parser);
+                catch->type = ASTNodeType_CatchStatement;
+                catch->startToken = parser->current - 1;
+                ASTNodeCatchStatement *catchStatement = &catch->catchStatementNode;
+
+                catchStatement->identifier = INVALID_TOKEN_ID;
+                catchStatement->firstParameter = MISSING_ELEMENT;
+
+                if(!acceptToken(parser, TokenType_LBrace)) {
+                    catchStatement->firstParameter = 0x0;
+                    if(!acceptToken(parser, TokenType_LParen)) {
+                        catchStatement->identifier = parseIdentifier(parser);
+                        expectToken(parser, TokenType_LParen);
+                    }
+
+                    parseFunctionParameters(parser, &catchStatement->firstParameter, &lastParameter);
+                    expectToken(parser, TokenType_RParen);
+                } else {
+                    parser->current -= 1;
                 }
 
-                parseFunctionParameters(parser, &catchStatement->firstParameter, &lastParameter);
+                catchStatement->body = allocateNode(parser);
+                parseStatement(parser, catchStatement->body);
+                catch->endToken = parser->current - 1;
+
+                SLL_QUEUE_PUSH(statement->firstCatch, lastCatch, catch);
+            }
+            node->endToken = parser->current - 1;
+        } break;
+        case TokenType_Assembly: {
+            node->type = ASTNodeType_AssemblyStatement;
+            node->startToken = parser->current - 1;
+            ASTNodeAssemblyStatement *statement = &node->assemblyStatementNode;
+            statement->isEVMAsm = 0;
+            statement->flags = (TokenIdList){0};
+            if(acceptToken(parser, TokenType_StringLit)) {
+                statement->isEVMAsm = stringMatch(peekLastTokenString(parser), LIT_TO_STR("evmasm"));
+                if(!statement->isEVMAsm) {
+                    reportError(parser, "Expected (\"evmasm\") as string literal, but got (\"%S\")", peekLastTokenString(parser));
+                }
+            }
+
+            if(acceptToken(parser, TokenType_LParen)) {
+                do {
+                    expectToken(parser, TokenType_StringLit);
+                    listPushTokenId(&statement->flags, peekLastTokenId(parser), parser->arena);
+                } while(acceptToken(parser, TokenType_Comma));
                 expectToken(parser, TokenType_RParen);
+            }
+
+            statement->body = allocateNode(parser);
+            parseYulBlock(parser, statement->body);
+            node->endToken = parser->current - 1;
+        } break;
+        default: {
+            // Not a statement keyword - rewind and re-parse from the first token.
+            parser->current -= 1;
+
+            u32 startToken = parser->current;
+            if(tryParseVariableDeclaration(parser, node)) {
+                ASTNode *varDeclNode = allocateNode(parser);
+                node->endToken = parser->current - 1;
+                *varDeclNode = *node;
+
+                node->startToken = startToken;
+                node->type = ASTNodeType_VariableDeclarationStatement;
+                ASTNodeVariableDeclarationStatement *statement = &node->variableDeclarationStatementNode;
+                statement->variableDeclaration = varDeclNode;
+
+                statement->initialValue = 0x0;
+                if(acceptToken(parser, TokenType_Equal)) {
+                    statement->initialValue = allocateNode(parser);
+                    parseExpression(parser, statement->initialValue);
+                }
+
+                expectToken(parser, TokenType_Semicolon);
+                node->endToken = parser->current - 1;
+            } else if(tryParseVariableDeclarationTuple(parser, node)) {
+                node->startToken = startToken;
+                expectToken(parser, TokenType_Semicolon);
+                node->endToken = parser->current - 1;
             } else {
-                parser->current -= 1;
+                node->startToken = parser->current;
+                node->type = ASTNodeType_ExpressionStatement;
+                node->expressionStatementNode.expression = allocateNode(parser);
+
+                parseExpression(parser, node->expressionStatementNode.expression);
+                expectToken(parser, TokenType_Semicolon);
+                node->endToken = parser->current - 1;
             }
-
-            catchStatement->body = allocateNode(parser);
-            parseStatement(parser, catchStatement->body);
-            catch->endToken = parser->current - 1;
-
-            SLL_QUEUE_PUSH(statement->firstCatch, lastCatch, catch);
-        }
-        node->endToken = parser->current - 1;
-    } else if(acceptToken(parser, TokenType_Assembly)) {
-        node->type = ASTNodeType_AssemblyStatement;
-        node->startToken = parser->current - 1;
-        ASTNodeAssemblyStatement *statement = &node->assemblyStatementNode;
-        statement->isEVMAsm = 0;
-        statement->flags = (TokenIdList){0};
-        if(acceptToken(parser, TokenType_StringLit)) {
-            statement->isEVMAsm = stringMatch(peekLastTokenString(parser), LIT_TO_STR("evmasm"));
-            if(!statement->isEVMAsm) {
-                reportError(parser, "Expected (\"evmasm\") as string literal, but got (\"%S\")", peekLastTokenString(parser));
-            }
-        }
-
-        if(acceptToken(parser, TokenType_LParen)) {
-            do {
-                expectToken(parser, TokenType_StringLit);
-                listPushTokenId(&statement->flags, peekLastTokenId(parser), parser->arena);
-            } while(acceptToken(parser, TokenType_Comma));
-            expectToken(parser, TokenType_RParen);
-        }
-
-        statement->body = allocateNode(parser);
-        parseYulBlock(parser, statement->body);
-        node->endToken = parser->current - 1;
-    } else {
-        u32 startToken = parser->current;
-        if(tryParseVariableDeclaration(parser, node)) {
-            ASTNode *varDeclNode = allocateNode(parser);
-            node->endToken = parser->current - 1;
-            *varDeclNode = *node;
-
-            node->startToken = startToken;
-            node->type = ASTNodeType_VariableDeclarationStatement;
-            ASTNodeVariableDeclarationStatement *statement = &node->variableDeclarationStatementNode;
-            statement->variableDeclaration = varDeclNode;
-
-            statement->initialValue = 0x0;
-            if(acceptToken(parser, TokenType_Equal)) {
-                statement->initialValue = allocateNode(parser);
-                parseExpression(parser, statement->initialValue);
-            }
-
-            expectToken(parser, TokenType_Semicolon);
-            node->endToken = parser->current - 1;
-        } else if(tryParseVariableDeclarationTuple(parser, node)) {
-            node->startToken = startToken;
-            expectToken(parser, TokenType_Semicolon);
-            node->endToken = parser->current - 1;
-        } else {
-            node->startToken = parser->current;
-            node->type = ASTNodeType_ExpressionStatement;
-            node->expressionStatementNode.expression = allocateNode(parser);
-
-            parseExpression(parser, node->expressionStatementNode.expression);
-            expectToken(parser, TokenType_Semicolon);
-            node->endToken = parser->current - 1;
-        }
+        } break;
     }
 }
 
