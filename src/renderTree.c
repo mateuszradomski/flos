@@ -341,6 +341,40 @@ preserveHardBreaksIntoDocument(Render *r, ASTNode *node) {
     }
 }
 
+static bool
+pushStarAlignedComment(Render *r, String comment) {
+    SplitIterator it = stringSplit(comment, '\n');
+    String line = stringNextInSplit(&it);
+
+    pushTrailing(r, wordText(stringTrim(line)));
+    pushTrailing(r, wordHardBreak());
+
+    String star = LIT_TO_STR("*");
+    String tail = LIT_TO_STR("*/");
+
+    u32 lineCount = 1;
+    while((line = stringNextInSplit(&it)).data) {
+        String trimmed = stringTrimLeft(line);
+        lineCount++;
+
+        if(lineCount == 2 && stringMatch(trimmed, tail)) {
+            pushTrailing(r, wordText(stringTrim(line)));
+            pushTrailing(r, wordHardBreak());
+            break;
+        }
+
+        if(!stringStartsWith(trimmed, star)) return false;
+
+        pushTrailing(r, wordSpace());
+        pushTrailing(r, wordText(stringTrim(line)));
+        pushTrailing(r, wordHardBreak());
+    }
+
+    r->wordCount--;
+    r->trailingCount--;
+    return lineCount != 1;
+}
+
 static void
 pushCommentsInRange(Render *r, u32 startOffset, u32 endOffset) {
     String input = (String) {
@@ -379,70 +413,19 @@ pushCommentsInRange(Render *r, u32 startOffset, u32 endOffset) {
             u8 *newline = memchr(input.data + i, '\n', input.size - i);
             i = newline ? i + (newline - (input.data + i)) : input.size;
 
-            String comment = {
-                .data = input.data + commentStart,
-                .size = i - commentStart
-            };
-
+            String comment = { .data = input.data + commentStart, .size = i - commentStart };
             pushTrailing(r, wordText(stringTrim(comment)));
         } else {
-            u32 newlineCount = 0;
-            u32 newlineCache[16] = {};
+            u8 *end = (u8 *)memchr2(input.data + i, input.size - i, '*', '/');
+            i = end ? (u32)(end - input.data) + 2 : input.size;
+            String comment = { .data = input.data + commentStart, .size = i - commentStart };
 
-            bool isStarAligned = true;
-            bool checkStarAlignment = false;
+            u32 storedWordCount = r->wordCount;
+            u32 storedTrailingCount = r->trailingCount;
 
-            while(i < input.size - 1 && (input.data[i] != '*' || input.data[i + 1] != '/')) {
-                if(input.data[i] == '\n') {
-                    if(newlineCount < ARRAY_LENGTH(newlineCache)) { newlineCache[newlineCount++] = i - commentStart; }
-                    checkStarAlignment = true;
-                }
-
-                if(checkStarAlignment && !(isWhitespace(input.data[i]) || input.data[i] == '*')) {
-                    isStarAligned = false;
-                }
-
-                if(checkStarAlignment && input.data[i] == '*') {
-                    checkStarAlignment = false;
-                }
-
-                i += 1;
-            }
-            i += 2;
-
-            String comment = {
-                .data = input.data + commentStart,
-                .size = i - commentStart
-            };
-
-            if(isStarAligned && newlineCount > 0) {
-                String line = { .data = comment.data, .size = 0 };
-                u32 lineCount = 0;
-
-                for(u32 k = 0; k < newlineCount; k++) {
-                    line.size = newlineCache[k] - (line.data - comment.data);
-                    if(++lineCount > 1) { pushTrailing(r, wordSpace()); }
-                    pushTrailing(r, wordText(stringTrim(line)));
-                    pushTrailing(r, wordHardBreak());
-                    line = (String){ .data = line.data + line.size + 1, .size = 0 };
-                }
-
-                for(u32 k = line.data - comment.data; k < comment.size; k++) {
-                    if(comment.data[k] == '\n') {
-                        if(++lineCount > 1) { pushTrailing(r, wordSpace()); }
-                        pushTrailing(r, wordText(stringTrim(line)));
-                        pushTrailing(r, wordHardBreak());
-                        line = (String){ .data = line.data + line.size + 1, .size = 0 };
-                    } else {
-                        line.size += 1;
-                    }
-                }
-
-                if(line.size > 0) {
-                    if(lineCount > 1) { pushTrailing(r, wordSpace()); }
-                    pushTrailing(r, wordText(stringTrim(line)));
-                }
-            } else {
+            if(!pushStarAlignedComment(r, comment)) {
+                r->wordCount = storedWordCount;
+                r->trailingCount = storedTrailingCount;
                 pushTrailing(r, wordText(comment));
             }
         }

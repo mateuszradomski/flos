@@ -204,7 +204,7 @@ contract Comments8 {
     function someFunction() {
         if(something) { }
         /* comment
-        * comment */
+         * comment */
         else { }
     }
 }

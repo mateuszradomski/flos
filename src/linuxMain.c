@@ -323,7 +323,7 @@ repetitionTesterMain(Arena *arena, String content) {
     u64 timingCount = 0;
     u64 testDuration = 10 * NS_IN_SECOND;
     u64 lastWhole = (u64)-1;
-    EnabledTests enabledTests = EnabledTests_All;
+    EnabledTests enabledTests = EnabledTests_Build;
 
     TokenizeResult tokens;
 
