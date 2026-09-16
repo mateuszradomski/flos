@@ -1227,3 +1227,94 @@ static u64
 base10DigitCount(u64 v) {
     return log10I(v) + 1;
 }
+
+#define MEMCHR2_BLOCK_SIZE 64
+
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
+_Static_assert(MEMCHR2_BLOCK_SIZE <= 255, "block offset must fit in a uint8_t");
+#endif
+
+#if defined(__AVX512BW__)
+#define MEMCHR2_VECTOR_WIDTH 64
+#elif defined(__AVX2__)
+#define MEMCHR2_VECTOR_WIDTH 32
+#else
+#define MEMCHR2_VECTOR_WIDTH 16
+#endif
+
+static inline uint64_t memchr2_read_u64(const uint8_t *p) {
+    uint64_t w;
+    memcpy(&w, p, sizeof(w));
+#if defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+    w = __builtin_bswap64(w);
+#endif
+    return w;
+}
+
+static inline unsigned memchr2_trailing_zero_bits(uint64_t x) {
+#if defined(__GNUC__) || defined(__clang__)
+    return (unsigned)__builtin_ctzll(x);
+#else
+    unsigned n = 0;
+    while ((x & 1) == 0) {
+        x >>= 1;
+        n++;
+    }
+    return n;
+#endif
+}
+
+/* Sets bit 7 of every byte that is zero, with no cross-byte borrows. */
+static inline uint64_t memchr2_zero_byte_flags(uint64_t x) {
+    const uint64_t low_bits = 0x7F7F7F7F7F7F7F7FULL;
+    const uint64_t high_bits = 0x8080808080808080ULL;
+    return ~(((x & low_bits) + low_bits) | x) & high_bits;
+}
+
+static inline int memchr2_block_has_pair(const uint8_t *restrict block, uint8_t ch1, uint8_t ch2) {
+    unsigned char any = 0;
+#if defined(__clang__)
+#pragma clang loop vectorize_width(MEMCHR2_VECTOR_WIDTH) interleave(enable)
+#elif defined(__GNUC__)
+#pragma GCC ivdep
+#endif
+    for (size_t i = 0; i < MEMCHR2_BLOCK_SIZE; i++) {
+        any += (block[i] == ch1) & (block[i + 1] == ch2);
+    }
+    return any;
+}
+
+const uint8_t *memchr2(const uint8_t *data, size_t len, uint8_t ch1, uint8_t ch2) {
+    if (len < 2) {
+        return NULL;
+    }
+
+    const uint64_t splat1 = (uint64_t)ch1 * 0x0101010101010101ULL;
+    const uint64_t splat2 = (uint64_t)ch2 * 0x0101010101010101ULL;
+
+    /* A block of starts needs one byte past its end to test the pair. */
+    size_t i = 0;
+    while (i + MEMCHR2_BLOCK_SIZE < len) {
+        if (memchr2_block_has_pair(data + i, ch1, ch2)) {
+            for (size_t j = 0; j < MEMCHR2_BLOCK_SIZE; j += 8) {
+                const uint64_t flags1 = memchr2_zero_byte_flags(memchr2_read_u64(data + i + j) ^ splat1);
+                if (flags1 != 0) {
+                    const uint64_t flags2 = memchr2_zero_byte_flags(memchr2_read_u64(data + i + j + 1) ^ splat2);
+                    const uint64_t matches = flags1 & flags2;
+                    if (matches != 0) {
+                        return data + i + j + (memchr2_trailing_zero_bits(matches) >> 3);
+                    }
+                }
+            }
+        }
+        i += MEMCHR2_BLOCK_SIZE;
+    }
+
+    for (; i + 1 < len; i++) {
+        if (data[i] == ch1 && data[i + 1] == ch2) {
+            return data + i;
+        }
+    }
+
+    return NULL;
+}
