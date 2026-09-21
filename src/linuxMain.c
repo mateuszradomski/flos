@@ -264,48 +264,6 @@ typedef struct TestEntry {
 	u64 runCount;
 } TestEntry;
 
-static void
-printBenchHeader(void) {
-    printf("  %-10s  %7s %7s %7s      %6s %6s %6s     %8s\n",
-           "", "--- ms", "(min/avg", "max) ---", "- cyc/b", "(min/avg", "max) -", "");
-    printf("  %-10s  %7s %7s %7s      %6s %6s %6s     %8s\n",
-           "Stage", "min", "avg", "max", "min", "avg", "max", "runs");
-}
-
-static void
-printBenchEntry(const char *name, TestEntry t, double cpuFreq, u64 contentSize) {
-    double toMs  = 1000.0 / cpuFreq;
-    double toCpb = 1.0 / (double)contentSize;
-
-    printf("  %-10s  %7.3f %7.3f %7.3f      %6.2f %6.2f %6.2f     %8llu\n",
-           name,
-           t.minCycles * toMs,  t.avgCycles * toMs,  t.maxCycles * toMs,
-           t.minCycles * toCpb, t.avgCycles * toCpb, t.maxCycles * toCpb,
-           t.runCount);
-}
-
-static void
-printCountdown(u64 startedAt, u64 testDuration, u64 minTiming, u64 contentSize, u64 runCount, u64 *lastWholeSecond, const char *label) {
-    u64 now = readTimer();
-    u64 endAt = startedAt + testDuration;
-    u64 remaining = (endAt > now) ? (endAt - now) : 0;
-    u64 wholeSecond = remaining / NS_IN_SECOND;
-    if(wholeSecond != *lastWholeSecond) {
-        double minMs = (double)minTiming * 1000.0 / (double)NS_IN_SECOND;
-        double minCpb = (double)minTiming / (double)contentSize;
-        printf("\r  %s: %llus, %.3fms min, %.2f c/b min, %llu runs    ",
-               label, (unsigned long long)wholeSecond, minMs, minCpb, (unsigned long long)runCount);
-        fflush(stdout);
-        *lastWholeSecond = wholeSecond;
-    }
-}
-
-static void
-clearCountdownLine(void) {
-    printf("\r\033[K");
-    fflush(stdout);
-}
-
 typedef enum EnabledTests {
     EnabledTests_Tokenize = (1 << 0),
     EnabledTests_Parse    = (1 << 1),
@@ -314,172 +272,144 @@ typedef enum EnabledTests {
     EnabledTests_All      = EnabledTests_Tokenize | EnabledTests_Parse | EnabledTests_Build | EnabledTests_Render,
 } EnabledTests;
 
+typedef struct RepStage {
+    const char *name;
+    const char *color;
+    u64 min, sum, runs;
+    u64 startedAt, lastSecond;
+} RepStage;
+
+static RepStage
+repBegin(const char *name, const char *color) {
+    return (RepStage){ .name = name, .color = color, .min = (u64)-1,
+                       .startedAt = readTimer(), .lastSecond = (u64)-1 };
+}
+
+static bool
+repRunning(RepStage *s, u64 duration) {
+    return s->startedAt + duration > readTimer();
+}
+
 static void
-repetitionTesterMain(Arena *arena, String content) {
-    u64 startedAt = readTimer();
-    u64 maxTiming = 0;
-    u64 minTiming = (u64)(-1);
-    u64 timingSum = 0;
-    u64 timingCount = 0;
-    u64 testDuration = 10 * NS_IN_SECOND;
-    u64 lastWhole = (u64)-1;
-    EnabledTests enabledTests = EnabledTests_Build;
+repRecord(RepStage *s, u64 timing, u64 duration) {
+    s->sum += timing;
+    s->runs += 1;
+    if(timing < s->min) { s->min = timing; s->startedAt = readTimer(); }
 
-    TokenizeResult tokens;
+    u64 now = readTimer();
+    u64 remaining = s->startedAt + duration > now ? s->startedAt + duration - now : 0;
+    u64 second = remaining / NS_IN_SECOND;
+    if(second != s->lastSecond) {
+        s->lastSecond = second;
+        double noise = 100.0 * ((double)s->sum / (double)s->runs / (double)s->min - 1.0);
+        printf("\r  %s" ANSI_BOLD "%-10s" ANSI_RESET ANSI_GREY "  %llus   "
+               ANSI_GREEN "%7.3f" ANSI_GREY " ms min   %+5.1f%% avg   %llu runs\033[K" ANSI_RESET,
+               s->color, s->name, (unsigned long long)second,
+               s->min * 1e-6, noise, (unsigned long long)s->runs);
+        fflush(stdout);
+    }
+}
 
-    if(enabledTests & EnabledTests_Tokenize) {
-        while(startedAt + testDuration > readTimer()) {
-            u64 start = arenaPos(arena);
+static void
+repEnd(void) {
+    printf("\r\033[K");
+    fflush(stdout);
+}
 
-            u64 timing = -readTimer();
-            tokens = tokenize(content, arena);
-            timing += readTimer();
-
-            arenaPopTo(arena, start);
-
-            timingSum += timing;
-            timingCount += 1;
-            maxTiming = maxTiming > timing ? maxTiming : timing;
-            if(timing < minTiming) {
-                minTiming = timing;
-                startedAt = readTimer();
-            }
-
-            printCountdown(startedAt, testDuration, minTiming, content.size, timingCount, &lastWhole, "Tokenize");
-        }
-        clearCountdownLine();
+static void
+printBench(const RepStage *s, int n) {
+    u64 totMin = 0;
+    double totAvg = 0;
+    for(int i = 0; i < n; i++) {
+        totMin += s[i].min;
+        totAvg += (double)s[i].sum / (double)s[i].runs;
     }
 
-    TestEntry lex = {
-        .minCycles = minTiming,
-        .maxCycles = maxTiming,
-        .avgCycles = timingSum / timingCount,
-        .runCount = timingCount,
-    };
+    printf("\n" ANSI_GREY "  %-10s %6s      %6s   %5s   %5s" ANSI_RESET "\n",
+           "Stage", "min", "avg", "share", "runs");
+
+    for(int i = 0; i <= n; i++) {
+        bool last = i == n;
+        u64 mn = last ? totMin : s[i].min;
+        double avg = last ? totAvg : (double)s[i].sum / (double)s[i].runs;
+        double noise = 100.0 * (avg / (double)mn - 1.0);
+
+        printf("  %-10s %6.3f" ANSI_GREY " ms" ANSI_RESET "   %s%+5.1f%%" ANSI_RESET,
+               last ? "Total" : s[i].name, mn * 1e-6,
+               noise > 10.0 ? ANSI_YELLOW : "", noise);
+
+        if(last) { printf("\n\n"); break; }
+        printf("   %4.1f%%   " ANSI_GREY "%5llu" ANSI_RESET "\n",
+               100.0 * (double)mn / (double)totMin, (unsigned long long)s[i].runs);
+    }
+}
+
+static void
+repetitionTesterMain(Arena *arena, String content) {
+    u64 duration = 10 * NS_IN_SECOND;
+    RepStage stages[4] = { 0 };
+
+    RepStage *s = &stages[0];
+    *s = repBegin("Tokenize", ANSI_BLUE);
+    TokenizeResult tokens;
+    while(repRunning(s, duration)) {
+        u64 start = arenaPos(arena);
+        u64 t = -readTimer();
+        tokens = tokenize(content, arena);
+        t += readTimer();
+        arenaPopTo(arena, start);
+        repRecord(s, t, duration);
+    }
+    repEnd();
 
     tokens = tokenize(content, arena);
     Parser parser;
     ASTNode node;
 
-    startedAt = readTimer();
-    maxTiming = 0;
-    minTiming = (u64)(-1);
-    timingSum = 0;
-    timingCount = 0;
-    lastWhole = (u64)-1;
-
-    if(enabledTests & EnabledTests_Parse) {
-        while(startedAt + testDuration > readTimer()) {
-            u64 start = arenaPos(arena);
-
-            u64 timing = -readTimer();
-            parser = createParser(tokens, arena);
-            node = parseSourceUnit(&parser);
-            timing += readTimer();
-
-            arenaPopTo(arena, start);
-
-            timingSum += timing;
-            timingCount += 1;
-            maxTiming = maxTiming > timing ? maxTiming : timing;
-            if(timing < minTiming) {
-                minTiming = timing;
-                startedAt = readTimer();
-            }
-            printCountdown(startedAt, testDuration, minTiming, content.size, timingCount, &lastWhole, "Parse");
-        }
-        clearCountdownLine();
+    s = &stages[1];
+    *s = repBegin("Parse", ANSI_RED);
+    while(repRunning(s, duration)) {
+        u64 start = arenaPos(arena);
+        u64 t = -readTimer();
+        parser = createParser(tokens, arena);
+        node = parseSourceUnit(&parser);
+        t += readTimer();
+        arenaPopTo(arena, start);
+        repRecord(s, t, duration);
     }
-
-    TestEntry parse = {
-        .minCycles = minTiming,
-        .maxCycles = maxTiming,
-        .avgCycles = timingSum / timingCount,
-        .runCount = timingCount,
-    };
+    repEnd();
 
     tokens = tokenize(content, arena);
     parser = createParser(tokens, arena);
     node = parseSourceUnit(&parser);
-
     Render render = createRender(arena, content, tokens, defaultFormatConfig());
     Render cleanRender = render;
 
-    startedAt = readTimer();
-    maxTiming = 0;
-    minTiming = (u64)(-1);
-    timingSum = 0;
-    timingCount = 0;
-    lastWhole = (u64)-1;
-
-    if(enabledTests & EnabledTests_Build) {
-        while(startedAt + testDuration > readTimer()) {
-            u64 timing = -readTimer();
-            buildDocument(&render, &node, content, tokens);
-            timing += readTimer();
-            render = cleanRender;
-
-            timingSum += timing;
-            timingCount += 1;
-            maxTiming = maxTiming > timing ? maxTiming : timing;
-            if(timing < minTiming) {
-                minTiming = timing;
-                startedAt = readTimer();
-            }
-            printCountdown(startedAt, testDuration, minTiming, content.size, timingCount, &lastWhole, "Document build");
-        }
-        clearCountdownLine();
+    s = &stages[2];
+    *s = repBegin("BuildDoc", ANSI_GREEN);
+    while(repRunning(s, duration)) {
+        u64 t = -readTimer();
+        buildDocument(&render, &node, content, tokens);
+        t += readTimer();
+        render = cleanRender;
+        repRecord(s, t, duration);
     }
-
-    TestEntry docBuild = {
-        .minCycles = minTiming,
-        .maxCycles = maxTiming,
-        .avgCycles = timingSum / timingCount,
-        .runCount = timingCount,
-    };
+    repEnd();
 
     buildDocument(&render, &node, content, tokens);
 
-    startedAt = readTimer();
-    maxTiming = 0;
-    minTiming = (u64)(-1);
-    timingSum = 0;
-    timingCount = 0;
-    lastWhole = (u64)-1;
-
-    if(enabledTests & EnabledTests_Render) {
-        while(startedAt + testDuration > readTimer()) {
-            u64 timing = -readTimer();
-            renderDocument(&render);
-            timing += readTimer();
-            render.writer = cleanRender.writer;
-
-            timingSum += timing;
-            timingCount += 1;
-            maxTiming = maxTiming > timing ? maxTiming : timing;
-            if(timing < minTiming) {
-                minTiming = timing;
-                startedAt = readTimer();
-            }
-
-            printCountdown(startedAt, testDuration, minTiming, content.size, timingCount, &lastWhole, "Document render");
-        }
-        clearCountdownLine();
+    s = &stages[3];
+    *s = repBegin("RenderDoc", ANSI_CYAN);
+    while(repRunning(s, duration)) {
+        u64 t = -readTimer();
+        renderDocument(&render);
+        t += readTimer();
+        render.writer = cleanRender.writer;
+        repRecord(s, t, duration);
     }
+    repEnd();
 
-    TestEntry docRender = {
-        .minCycles = minTiming,
-        .maxCycles = maxTiming,
-        .avgCycles = timingSum / timingCount,
-        .runCount = timingCount,
-    };
-
-    double cpuFreq = NS_IN_SECOND;
-    printBenchHeader();
-    printBenchEntry("Tokenize",  lex,       cpuFreq, content.size);
-    printBenchEntry("Parse",     parse,     cpuFreq, content.size);
-    printBenchEntry("BuildDoc",  docBuild,  cpuFreq, content.size);
-    printBenchEntry("RenderDoc", docRender, cpuFreq, content.size);
+    printBench(stages, 4);
 }
 
 static void
