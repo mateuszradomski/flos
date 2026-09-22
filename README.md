@@ -1,18 +1,16 @@
 # flos
 
-A hand-rolled, zero-dependency, multi-threaded C solidity formatter breaking GB/s of throughput.
+A Solidity formatter written in C. No dependencies beyond a C compiler and pthreads. Capable of formatting at over a gigabyte per second on a modern CPU.
 
-- Raw performance: uses a parallel pipeline that splits file discovery, tokenizing, parsing, and printing across all your available CPU cores. It will saturate your I/O and CPU, and it will not apologize
-- Hand-Rolled with Zero-Dep: No package manager. No dependency hell. Everything is from scratch—the multi-threaded work queue, the memory arenas, the parser, the pretty-printer. Just a C compiler and pthreads. That's it.
-- Intelligent Pretty-Printing: This isn't a naive line-by-line indenter. _flos_ builds a full Abstract Syntax Tree and uses a proper document-based rendering algorithm (based on Wadler algorithm) to intelligently break lines and group elements. The output is beautiful and consistent
-- It Won't Break Your Build: Tested on a mountain of real-world code to ensure it's not just fast, but unbreakable. Your code's syntax is sacred.
+- **Parallel.** File discovery, tokenizing, parsing, and printing take advantage of your multicore CPU. On a cold cache your SSD is the slow part: reading the files off disk takes longer than formatting them.
+- **Written from scratch.** The work queue, the lexer, the parser, and the pretty-printer are all in this repository. There is nothing to install. Running it on a Kindle is just one clang run away.
+- **A real pretty-printer.** flos parses the file into a full syntax tree and renders it with a Wadler-style document algorithm, so line breaks and grouping are decided by the structure of the code rather than by heuristics.
+- **Safe to run on a large codebase.** Built with the aim to be not only fast but correct. Verified across a large sample of real world contracts.
 
-## Rough benchmarks
-
-Expect better benchmarks in the future, but to deliver on the GB/s promise, here it is:
+## Benchmark
 
 ```
-$ flos .
+$ flos -v .
 
   ┏━━━━━━━━━━┳━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━━━━┓
   ┃  Thread  ┃  Files  ┃   Read   ┃  Token   ┃  Parse   ┃  Build   ┃  Render  ┃  Overall   ┃
@@ -35,21 +33,26 @@ $ flos .
 Formatted 8661 files in 262ms (2072 MB/s)
 ```
 
-Ran on M2 Pro, 16GB RAM, best of 10 runs.
+M2 Pro, 16 GB RAM, best of 10 runs. The per-thread columns are the throughput of each stage in isolation; the last line is wall-clock throughput for the whole run.
+On a cold file cache assume half of that throughput.
 
-## Usage
+## Building and running
 
 ```bash
-# Clone
 git clone https://github.com/mateuszradomski/flos
 cd flos
-
-# Compile
 bash build.sh
-
-# Use
-./flos <path>
+./flos <paths...>
 ```
 
-Currently it assumes 120 columns per line and 4 spaces per indentation level.
-Configure with `--line-length=<N>` and `--indent-width=<N>`.
+Paths can be `.sol` files or directories. Directories are walked recursively and files are formatted in place.
+
+```
+Options:
+  -v, --verbose           Print per-thread metrics after formatting.
+  --sanity-check          Reruns the formatting to ensure stable results.
+  --line-length=<N>       Maximum line width before wrapping (default: 120).
+  --indent-width=<N>      Number of spaces per indent level (default: 4).
+  -T=<N>, --threads=<N>   Number of worker threads.
+  -h, --help              Show this help message and exit.
+```
