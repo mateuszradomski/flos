@@ -832,16 +832,6 @@ createByteConsumer(u8 *data, u32 length) {
     return result;
 }
 
-static u32
-consumerGoodN(ByteConsumer *c, u32 size) {
-    return c->head + size <= c->end;
-}
-
-static void
-advanceN(ByteConsumer *c, u32 size) {
-    c->head += size;
-}
-
 static u8
 consumeByte(ByteConsumer *c) {
     return *(c->head++);
@@ -850,30 +840,6 @@ consumeByte(ByteConsumer *c) {
 static u8
 peekByte(ByteConsumer *c) {
     return *(c->head);
-}
-
-static u16
-consumeWord(ByteConsumer *c) {
-    u16 result = *(u16 *)c->head;
-    c->head += 2;
-    return result;
-}
-
-static u16
-peekWord(ByteConsumer *c) {
-    return *(u16 *)c->head;
-}
-
-static u32
-consumeDWord(ByteConsumer *c) {
-    u32 result = *(u32 *)c->head;
-    c->head += 4;
-    return result;
-}
-
-static u32
-peekDWord(ByteConsumer *c) {
-    return *(u32 *)c->head;
 }
 
 static String
