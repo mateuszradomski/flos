@@ -683,24 +683,18 @@ stringNextInSplit(SplitIterator *it) {
     String result = { };
 
     size_t readLength = (size_t)(it->head - it->string);
-
-    if(readLength < it->strLength) {
-        char *head = it->head;
-        result.data = (u8 *)head;
-        size_t toRead = it->strLength - readLength;
-        for(size_t i = 0; (i < toRead) && (head[0] != it->delim); i++) {
-            head++;
-            result.size += 1;
-        }
-
-        if(head[0] == it->delim) {
-            head++;
-        }
-        it->head = head;
-    } else {
-        result.data = 0x0;
+    if(readLength >= it->strLength) {
+        return result;
     }
 
+    size_t remaining = it->strLength - readLength;
+    char *found = memchr(it->head, it->delim, remaining);
+    size_t read = found ? (size_t)(found - it->head) : remaining;
+
+    result.data = (u8 *)it->head;
+    result.size = read;
+
+    it->head += read + (found ? 1 : 0);
     return result;
 }
 
