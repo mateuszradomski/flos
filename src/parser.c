@@ -683,8 +683,7 @@ parseIdentifier(Parser *parser) {
         tokenType == TokenType_Finney;
 
     if(isIdent) {
-        acceptToken(parser, tokenType);
-        return peekLastTokenId(parser);
+        return parser->current++;
     } else {
         return INVALID_TOKEN_ID;
     }
@@ -710,8 +709,7 @@ parseSubdenomination(Parser *parser) {
         tokenType == TokenType_Szabo;
 
     if(isSubdenomination) {
-        acceptToken(parser, tokenType);
-        return peekLastTokenId(parser);
+        return parser->current++;
     } else {
         return INVALID_TOKEN_ID;
     }
@@ -942,8 +940,8 @@ parseType(Parser *parser, ASTNode *node) {
         if(acceptToken(parser, TokenType_Returns)) {
             expectToken(parser, TokenType_LParen);
 
-            ASTNode *lastReturnParameter = 0x0;
             if(!acceptToken(parser, TokenType_RParen)) {
+                ASTNode *lastReturnParameter = 0x0;
                 parseFunctionParameters(parser, &function->firstReturnParameter, &lastReturnParameter);
                 expectToken(parser, TokenType_RParen);
             }
@@ -2198,11 +2196,11 @@ parseStatement(Parser *parser, ASTNode *node) {
             parseExpression(parser, statement->expression);
 
             statement->firstReturnParameter = MISSING_ELEMENT;
-            ASTNode *lastReturnParameter = 0x0;
             if(acceptToken(parser, TokenType_Returns)) {
                 statement->firstReturnParameter = 0x0;
                 expectToken(parser, TokenType_LParen);
 
+                ASTNode *lastReturnParameter = 0x0;
                 parseFunctionParameters(parser, &statement->firstReturnParameter, &lastReturnParameter);
                 expectToken(parser, TokenType_RParen);
             }
@@ -2468,54 +2466,50 @@ parseFunction(Parser *parser, ASTNode *node) {
     function->override = INVALID_TOKEN_ID;
     ASTNode *lastModifier = 0x0;
     for(;;) {
-        if (acceptToken(parser, TokenType_Internal)) {
-            assertError(function->visibility == INVALID_TOKEN_ID, parser, "Visibility modifier already set");
-            function->visibility = peekLastTokenId(parser);
-        } else if (acceptToken(parser, TokenType_External)) {
-            assertError(function->visibility == INVALID_TOKEN_ID, parser, "Visibility modifier already set");
-            function->visibility = peekLastTokenId(parser);
-        } else if (acceptToken(parser, TokenType_Private)) {
-            assertError(function->visibility == INVALID_TOKEN_ID, parser, "Visibility modifier already set");
-            function->visibility = peekLastTokenId(parser);
-        } else if (acceptToken(parser, TokenType_Public)) {
-            assertError(function->visibility == INVALID_TOKEN_ID, parser, "Visibility modifier already set");
-            function->visibility = peekLastTokenId(parser);
-        } else if (acceptToken(parser, TokenType_Pure)) {
-            assertError(function->stateMutability == INVALID_TOKEN_ID, parser, "State mutability modifier already set");
-            function->stateMutability = peekLastTokenId(parser);
-        } else if (acceptToken(parser, TokenType_View)) {
-            assertError(function->stateMutability == INVALID_TOKEN_ID, parser, "State mutability modifier already set");
-            function->stateMutability = peekLastTokenId(parser);
-        } else if (acceptToken(parser, TokenType_Payable)) {
-            assertError(function->stateMutability == INVALID_TOKEN_ID, parser, "State mutability modifier already set");
-            function->stateMutability = peekLastTokenId(parser);
-        } else if (acceptToken(parser, TokenType_Constant)) {
-            assertError(function->stateMutability == INVALID_TOKEN_ID, parser, "State mutability modifier already set");
-            function->stateMutability = peekLastTokenId(parser);
-        } else if (acceptToken(parser, TokenType_Virtual)) {
-            assertError(function->virtual == INVALID_TOKEN_ID, parser, "Virtual modifier already set");
-            function->virtual = peekLastTokenId(parser);
-        } else if (acceptToken(parser, TokenType_Override)) {
-            assertError(function->override == INVALID_TOKEN_ID, parser, "Override modifier already set");
-            function->override = peekLastTokenId(parser);
-            parseOverrideSpecifierArgs(parser, &function->firstOverride);
-        } else {
-            if(parseIdentifier(parser) != INVALID_TOKEN_ID) {
-                parser->current -= 1;
+        switch(peekTokenType(parser)) {
+            case TokenType_Internal:
+            case TokenType_External:
+            case TokenType_Private:
+            case TokenType_Public: {
+                assertError(function->visibility == INVALID_TOKEN_ID, parser, "Visibility modifier already set");
+                function->visibility = parser->current++;
+            } break;
+            case TokenType_Pure:
+            case TokenType_View:
+            case TokenType_Payable:
+            case TokenType_Constant: {
+                assertError(function->stateMutability == INVALID_TOKEN_ID, parser, "State mutability modifier already set");
+                function->stateMutability = parser->current++;
+            } break;
+            case TokenType_Virtual: {
+                assertError(function->virtual == INVALID_TOKEN_ID, parser, "Virtual modifier already set");
+                function->virtual = parser->current++;
+            } break;
+            case TokenType_Override: {
+                assertError(function->override == INVALID_TOKEN_ID, parser, "Override modifier already set");
+                function->override = parser->current++;
+                parseOverrideSpecifierArgs(parser, &function->firstOverride);
+            } break;
+            default: {
+                if(parseIdentifier(parser) != INVALID_TOKEN_ID) {
+                    parser->current -= 1;
 
-                ASTNode *modifier = allocateNode(parser);
-                parseModifierInvocation(parser, modifier);
+                    ASTNode *modifier = allocateNode(parser);
+                    parseModifierInvocation(parser, modifier);
 
-                SLL_QUEUE_PUSH(function->firstModifier, lastModifier, modifier);
-                continue;
-            }
+                    SLL_QUEUE_PUSH(function->firstModifier, lastModifier, modifier);
+                    continue;
+                }
 
-            break;
+                goto end;
+            } break;
         }
     }
 
-    ASTNode *lastReturnParameter = 0x0;
+end:
     if(acceptToken(parser, TokenType_Returns)) {
+        ASTNode *lastReturnParameter = 0x0;
+
         expectToken(parser, TokenType_LParen);
         parseFunctionParameters(parser, &function->firstReturnParameter, &lastReturnParameter);
         expectToken(parser, TokenType_RParen);
@@ -2628,50 +2622,68 @@ parseContractBody(Parser *parser, ASTNode **firstElement) {
     *firstElement = 0x0;
     ASTNode *lastElement = 0x0;
     expectToken(parser, TokenType_LBrace);
+
     while(!acceptToken(parser, TokenType_RBrace)) {
         ASTNode *element = allocateNode(parser);
 
-        if(acceptToken(parser, TokenType_Constructor)) {
-            parseConstructor(parser, element);
-        } else if(acceptToken(parser, TokenType_Function)) {
-            parser->current -= 1;
-            if(!tryParseStateVariableDeclaration(parser, element)) {
-                parser->current += 1;
+        switch(advanceToken(parser)) {
+            case TokenType_Constructor: {
+                parseConstructor(parser, element);
+            } break;
+            case TokenType_Function: {
+                parser->current -= 1;
+                if(!tryParseStateVariableDeclaration(parser, element)) {
+                    parser->current += 1;
+                    parseFunction(parser, element);
+                }
+            } break;
+            case TokenType_Modifier: {
+                parseModifier(parser, element);
+            } break;
+            case TokenType_Fallback: {
                 parseFunction(parser, element);
+                element->type = ASTNodeType_FallbackFunction;
+            } break;
+            case TokenType_Receive: {
+                parseFunction(parser, element);
+                element->type = ASTNodeType_ReceiveFunction;
+            } break;
+            case TokenType_Struct: {
+                parseStruct(parser, element);
+            } break;
+            case TokenType_Using: {
+                parseUsing(parser, element);
+            } break;
+            case TokenType_Enum: {
+                parseEnum(parser, element);
+            } break;
+            case TokenType_Type: {
+                parseTypedef(parser, element);
+            } break;
+            case TokenType_Event: {
+                parseEvent(parser, element);
+            } break;
+            case TokenType_Error: {
+                parser->current -= 1;
+                if(!tryParseStateVariableDeclaration(parser, element)) {
+                    parser->current += 1;
+                    parseError(parser, element);
+                }
+            } break;
+            case TokenType_EOF: {
+                goto end;
+            } break;
+            default: {
+                parser->current -= 1;
+                assertError(tryParseStateVariableDeclaration(parser, element),
+                            parser, "Expected state variable declaration");
             }
-        } else if(acceptToken(parser, TokenType_Modifier)) {
-            parseModifier(parser, element);
-        } else if(acceptToken(parser, TokenType_Fallback)) {
-            parseFunction(parser, element);
-            element->type = ASTNodeType_FallbackFunction;
-        } else if(acceptToken(parser, TokenType_Receive)) {
-            parseFunction(parser, element);
-            element->type = ASTNodeType_ReceiveFunction;
-        } else if(acceptToken(parser, TokenType_Struct)) {
-            parseStruct(parser, element);
-        } else if(acceptToken(parser, TokenType_Using)) {
-            parseUsing(parser, element);
-        } else if(acceptToken(parser, TokenType_Enum)) {
-            parseEnum(parser, element);
-        } else if(acceptToken(parser, TokenType_Type)) {
-            parseTypedef(parser, element);
-        } else if(acceptToken(parser, TokenType_Event)) {
-            parseEvent(parser, element);
-        } else if(acceptToken(parser, TokenType_Error)) {
-            parser->current -= 1;
-            if(!tryParseStateVariableDeclaration(parser, element)) {
-                parser->current += 1;
-                parseError(parser, element);
-            }
-        } else if(acceptToken(parser, TokenType_EOF)) {
-            break;
-        } else {
-            assertError(tryParseStateVariableDeclaration(parser, element),
-                        parser, "Expected state variable declaration");
         }
 
         SLL_QUEUE_PUSH(*firstElement, lastElement, element);
     }
+
+end:;
 }
 
 static void
@@ -3084,49 +3096,40 @@ parseSourceUnit(Parser *parser) {
     while(true) {
         ASTNode *child = allocateNode(parser);
 
-        if(acceptToken(parser, TokenType_Pragma)) {
-            parsePragma(parser, child);
-        } else if(acceptToken(parser, TokenType_Import)) {
-            parseImport(parser, child);
-        } else if(acceptToken(parser, TokenType_Using)) {
-            parseUsing(parser, child);
-        } else if(acceptToken(parser, TokenType_Enum)) {
-            parseEnum(parser, child);
-        } else if(acceptToken(parser, TokenType_Struct)) {
-            parseStruct(parser, child);
-        } else if(acceptToken(parser, TokenType_Error)) {
-            parseError(parser, child);
-        } else if(acceptToken(parser, TokenType_Event)) {
-            parseEvent(parser, child);
-        } else if(acceptToken(parser, TokenType_Type)) {
-            parseTypedef(parser, child);
-        } else if(acceptToken(parser, TokenType_Function)) {
-            parseFunction(parser, child);
-        } else if(acceptToken(parser, TokenType_Contract)) {
-            parseContract(parser, child);
-        } else if(acceptToken(parser, TokenType_Abstract)) {
-            parseAbstractContract(parser, child);
-        } else if(acceptToken(parser, TokenType_Interface)) {
-            parseInterface(parser, child);
-        } else if(acceptToken(parser, TokenType_Library)) {
-            parseLibrary(parser, child);
-        } else if(acceptToken(parser, TokenType_EOF)) {
-            node.endToken = MIN(parser->current - 2, parser->tokenCount - 1);
-            break;
-        } else {
-            u32 startToken = parser->current;
-            ASTNode *type = allocateNode(parser);
-            bool success = parseType(parser, type);
-            if(!success) {
-                reportError(parser, "Expected type, but got (\"%S\")", peekLastTokenString(parser));
-            }
-            expectToken(parser, TokenType_Constant);
-            parseConstVariable(parser, child, type);
-            child->startToken = startToken;
+        switch(advanceToken(parser)) {
+            case TokenType_Pragma:    { parsePragma(parser, child); } break;
+            case TokenType_Import:    { parseImport(parser, child); } break;
+            case TokenType_Using:     { parseUsing(parser, child); } break;
+            case TokenType_Enum:      { parseEnum(parser, child); } break;
+            case TokenType_Struct:    { parseStruct(parser, child); } break;
+            case TokenType_Error:     { parseError(parser, child); } break;
+            case TokenType_Event:     { parseEvent(parser, child); } break;
+            case TokenType_Type:      { parseTypedef(parser, child); } break;
+            case TokenType_Function:  { parseFunction(parser, child); } break;
+            case TokenType_Contract:  { parseContract(parser, child); } break;
+            case TokenType_Abstract:  { parseAbstractContract(parser, child); } break;
+            case TokenType_Interface: { parseInterface(parser, child); } break;
+            case TokenType_Library:   { parseLibrary(parser, child); } break;
+            case TokenType_EOF: {
+                node.endToken = MIN(parser->current - 2, parser->tokenCount - 1);
+                goto end;
+            } break;
+            default: {
+                u32 startToken = --parser->current;
+                ASTNode *type = allocateNode(parser);
+                bool success = parseType(parser, type);
+                if(!success) {
+                    reportError(parser, "Expected type, but got (\"%S\")", peekLastTokenString(parser));
+                }
+                expectToken(parser, TokenType_Constant);
+                parseConstVariable(parser, child, type);
+                child->startToken = startToken;
+            } break;
         }
 
         SLL_QUEUE_PUSH(sourceUnit->firstChild, lastChild, child);
     }
+end:
 
     // printASTNodeSizes(parser->arena);
     // printNodeHistogram(parser);
