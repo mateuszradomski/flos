@@ -818,19 +818,15 @@ stringPushf(Arena *arena, const char *format, ...) {
 }
 
 typedef struct ByteConsumer {
-    u8 *data;
     u8 *head;
     u8 *end;
-    u32 length;
 } ByteConsumer;
 
 static ByteConsumer
 createByteConsumer(u8 *data, u32 length) {
     ByteConsumer result = {
-        .data = data,
         .head = data,
         .end = data + length,
-        .length = length,
     };
 
     return result;

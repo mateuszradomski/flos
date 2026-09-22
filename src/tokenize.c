@@ -597,7 +597,7 @@ categorizeSymbol(String symbol) {
 
 static u32
 consumeUntilDelimiter(ByteConsumer *c, u8 delimiter) {
-    u32 remaining = c->length - (u32)(c->head - c->data);
+    u32 remaining = (size_t)(c->end - c->head);
     u8 *found = memchr(c->head, delimiter, remaining);
     u32 read = found ? (u32)(found - c->head) : remaining;
     c->head += read;
@@ -609,7 +609,7 @@ consumeUntilMultilineCommentEnd(ByteConsumer *c) {
     u32 read = 0;
 
     while(peekByte(c)) {
-        u32 remaining = c->length - (u32)(c->head - c->data) - 1;
+        u32 remaining = (size_t)(c->end - c->head) - 1;
         u8 *found = memchr(c->head + 1, '/', remaining);
         if(!found) {
             read += remaining;
