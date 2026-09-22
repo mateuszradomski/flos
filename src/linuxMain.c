@@ -264,14 +264,6 @@ typedef struct TestEntry {
 	u64 runCount;
 } TestEntry;
 
-typedef enum EnabledTests {
-    EnabledTests_Tokenize = (1 << 0),
-    EnabledTests_Parse    = (1 << 1),
-    EnabledTests_Build    = (1 << 2),
-    EnabledTests_Render   = (1 << 3),
-    EnabledTests_All      = EnabledTests_Tokenize | EnabledTests_Parse | EnabledTests_Build | EnabledTests_Render,
-} EnabledTests;
-
 typedef struct RepStage {
     const char *name;
     const char *color;
@@ -329,6 +321,8 @@ printBench(const RepStage *s, int n) {
            "Stage", "min", "avg", "share", "runs");
 
     for(int i = 0; i <= n; i++) {
+        if(s[i].runs == 0) continue;
+
         bool last = i == n;
         u64 mn = last ? totMin : s[i].min;
         double avg = last ? totAvg : (double)s[i].sum / (double)s[i].runs;
@@ -344,40 +338,53 @@ printBench(const RepStage *s, int n) {
     }
 }
 
+typedef enum EnabledTests {
+    EnabledTests_Tokenize = (1 << 0),
+    EnabledTests_Parse    = (1 << 1),
+    EnabledTests_Build    = (1 << 2),
+    EnabledTests_Render   = (1 << 3),
+    EnabledTests_All      = EnabledTests_Tokenize | EnabledTests_Parse | EnabledTests_Build | EnabledTests_Render,
+} EnabledTests;
+
 static void
 repetitionTesterMain(Arena *arena, String content) {
+    EnabledTests enabled = EnabledTests_All;
     u64 duration = 10 * NS_IN_SECOND;
     RepStage stages[4] = { 0 };
 
-    RepStage *s = &stages[0];
-    *s = repBegin("Tokenize", ANSI_BLUE);
     TokenizeResult tokens;
-    while(repRunning(s, duration)) {
-        u64 start = arenaPos(arena);
-        u64 t = -readTimer();
-        tokens = tokenize(content, arena);
-        t += readTimer();
-        arenaPopTo(arena, start);
-        repRecord(s, t, duration);
+    if(enabled & EnabledTests_Tokenize) {
+        RepStage *s = &stages[0];
+        *s = repBegin("Tokenize", ANSI_BLUE);
+        while(repRunning(s, duration)) {
+            u64 start = arenaPos(arena);
+            u64 t = -readTimer();
+            tokens = tokenize(content, arena);
+            t += readTimer();
+            arenaPopTo(arena, start);
+            repRecord(s, t, duration);
+        }
+        repEnd();
     }
-    repEnd();
 
     tokens = tokenize(content, arena);
     Parser parser;
     ASTNode node;
 
-    s = &stages[1];
-    *s = repBegin("Parse", ANSI_RED);
-    while(repRunning(s, duration)) {
-        u64 start = arenaPos(arena);
-        u64 t = -readTimer();
-        parser = createParser(tokens, arena);
-        node = parseSourceUnit(&parser);
-        t += readTimer();
-        arenaPopTo(arena, start);
-        repRecord(s, t, duration);
+    if(enabled & EnabledTests_Parse) {
+        RepStage *s = &stages[1];
+        *s = repBegin("Parse", ANSI_RED);
+        while(repRunning(s, duration)) {
+            u64 start = arenaPos(arena);
+            u64 t = -readTimer();
+            parser = createParser(tokens, arena);
+            node = parseSourceUnit(&parser);
+            t += readTimer();
+            arenaPopTo(arena, start);
+            repRecord(s, t, duration);
+        }
+        repEnd();
     }
-    repEnd();
 
     tokens = tokenize(content, arena);
     parser = createParser(tokens, arena);
@@ -385,29 +392,33 @@ repetitionTesterMain(Arena *arena, String content) {
     Render render = createRender(arena, content, tokens, defaultFormatConfig());
     Render cleanRender = render;
 
-    s = &stages[2];
-    *s = repBegin("BuildDoc", ANSI_GREEN);
-    while(repRunning(s, duration)) {
-        u64 t = -readTimer();
-        buildDocument(&render, &node, content, tokens);
-        t += readTimer();
-        render = cleanRender;
-        repRecord(s, t, duration);
+    if(enabled & EnabledTests_Build) {
+        RepStage *s = &stages[2];
+        *s = repBegin("BuildDoc", ANSI_GREEN);
+        while(repRunning(s, duration)) {
+            u64 t = -readTimer();
+            buildDocument(&render, &node, content, tokens);
+            t += readTimer();
+            render = cleanRender;
+            repRecord(s, t, duration);
+        }
+        repEnd();
     }
-    repEnd();
 
     buildDocument(&render, &node, content, tokens);
 
-    s = &stages[3];
-    *s = repBegin("RenderDoc", ANSI_CYAN);
-    while(repRunning(s, duration)) {
-        u64 t = -readTimer();
-        renderDocument(&render);
-        t += readTimer();
-        render.writer = cleanRender.writer;
-        repRecord(s, t, duration);
+    if(enabled & EnabledTests_Render) {
+        RepStage *s = &stages[3];
+        *s = repBegin("RenderDoc", ANSI_CYAN);
+        while(repRunning(s, duration)) {
+            u64 t = -readTimer();
+            renderDocument(&render);
+            t += readTimer();
+            render.writer = cleanRender.writer;
+            repRecord(s, t, duration);
+        }
+        repEnd();
     }
-    repEnd();
 
     printBench(stages, 4);
 }
