@@ -543,7 +543,6 @@ allocateNode(Parser *parser) {
 
 static void
 reportErrorVarArgs(Parser *parser, const char *file, u32 line, const char *userErrorFormat, va_list args) {
-#ifdef WASM
     va_list copiedArgs;
     va_copy(copiedArgs, args);
     String userError = stringPushfv(parser->arena, userErrorFormat, copiedArgs);
@@ -552,19 +551,12 @@ reportErrorVarArgs(Parser *parser, const char *file, u32 line, const char *userE
     u32 byteOffset = parser->tokens.tokenStrings[parser->current].data - parser->tokens.tokenStrings[0].data;
     String error = stringPushf(parser->arena, "ERROR [%s:%d] - [%d]: %S", file, line, byteOffset, userError);
 
+#ifdef WASM
     memoryUsed = arenaTakenBytes(parser->arena);
     bumpPointerArenaTop = (unsigned int)structPush(parser->arena, int);
     javascriptThrowErrorStringPtr(&error);
     unreachable();
 #else
-    va_list copiedArgs;
-    va_copy(copiedArgs, args);
-    String userError = stringPushfv(parser->arena, userErrorFormat, copiedArgs);
-    va_end(copiedArgs);
-
-    u32 byteOffset = parser->tokens.tokenStrings[parser->current].data - parser->tokens.tokenStrings[0].data;
-    String error = stringPushf(parser->arena, "ERROR [%s:%d] - [%d]: %S", file, line, byteOffset, userError);
-
     printf("%.*s\n", (u32)error.size, error.data);
     assert(false);
 #endif

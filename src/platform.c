@@ -170,7 +170,6 @@ walkDirectory(Walker *w, Arena *arena, String path) {
     }
 
     int returned = -1;
-    long base = 0;
     do {
         returned = getdents64(fd, dirData, dirDataCapacity);
         void *head = dirData;
@@ -395,15 +394,15 @@ macosWalkDirectoryPrivate(Walker *w, Arena *arena, String path) {
             Entry entry = decodeEntry(head);
             head += entry.entryLength;
 
+            if(stringMatch(entry.name, LIT_TO_STR(".")) || stringMatch(entry.name, LIT_TO_STR(".."))) {
+                continue;
+            }
+
             switch(entry.type) {
                 case FileType_File: {
                     walkerEnqueueFile(w, path, entry.name);
                 } break;
                 case FileType_Directory: {
-                    if(stringMatch(entry.name, LIT_TO_STR(".")) || stringMatch(entry.name, LIT_TO_STR(".."))) {
-                        continue;
-                    }
-
                     walkerPushDirectory(w, path, entry.name);
                 } break;
             }
